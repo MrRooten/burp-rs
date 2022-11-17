@@ -20,6 +20,7 @@ async fn shutdown_signal() {
 #[derive(Clone,Default)]
 struct ProxyHandler {
     index    : u32,
+    
 }
 
 #[async_trait]
@@ -30,7 +31,13 @@ impl HttpHandler for ProxyHandler {
         req: Request<Body>,
     ) -> RequestOrResponse {
         println!("{:?}", req);
-        let mut history = &LogHistory::single().unwrap();
+        let history = LogHistory::single();
+        let history = match history {
+            Some(h) => h,
+            None => {
+                return RequestOrResponse::Request(req);
+            }
+        };
         let log = ReqResLog::new();
         self.index = history.push_log(log);
         RequestOrResponse::Request(req)
@@ -41,10 +48,16 @@ impl HttpHandler for ProxyHandler {
         let s = body::to_bytes(body).await.unwrap();
         let res = Response::new(Body::from(s.clone()));
         let res_log = LogResponse::from(res);
-        let mut history = &LogHistory::single().unwrap();
+        let history = LogHistory::single();
+        let history = match history {
+            Some(h) => h,
+            None => {
+                return Response::new(Body::from(s.clone()));
+            }
+        };
         history.set_resp(self.index, res_log);
         println!("{:?}", s);
-        res
+        Response::new(Body::from(s.clone()))
     }
 }
 

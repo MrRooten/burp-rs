@@ -79,7 +79,7 @@ impl LogHistory {
 
     pub fn set_resp(&mut self, index: u32, resp: LogResponse) {
         self.lock.lock();
-        let log = self.history.get(&index).unwrap();
+        let log = self.history.get_mut(&index).unwrap();
         log.set_resp(resp);
     }
 }
