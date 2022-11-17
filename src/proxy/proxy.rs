@@ -8,15 +8,19 @@ use hudsucker::{
 use rustls_pemfile as pemfile;
 use std::net::SocketAddr;
 use tracing::*;
+use crate::proxy::log::{LogHistory, ReqResLog, LogResponse};
 
+use super::log::HTTP_LOG;
 async fn shutdown_signal() {
     tokio::signal::ctrl_c()
         .await
         .expect("Failed to install CTRL+C signal handler");
 }
 
-#[derive(Clone)]
-struct ProxyHandler;
+#[derive(Clone,Default)]
+struct ProxyHandler {
+    index    : u32,
+}
 
 #[async_trait]
 impl HttpHandler for ProxyHandler {
@@ -26,6 +30,9 @@ impl HttpHandler for ProxyHandler {
         req: Request<Body>,
     ) -> RequestOrResponse {
         println!("{:?}", req);
+        let mut history = &LogHistory::single().unwrap();
+        let log = ReqResLog::new();
+        self.index = history.push_log(log);
         RequestOrResponse::Request(req)
     }
 
@@ -33,6 +40,9 @@ impl HttpHandler for ProxyHandler {
         let body = res.body_mut();
         let s = body::to_bytes(body).await.unwrap();
         let res = Response::new(Body::from(s.clone()));
+        let res_log = LogResponse::from(res);
+        let mut history = &LogHistory::single().unwrap();
+        history.set_resp(self.index, res_log);
         println!("{:?}", s);
         res
     }
@@ -70,8 +80,8 @@ pub async fn proxy(addr: &str) {
         .with_addr(sock)
         .with_rustls_client()
         .with_ca(ca)
-        .with_http_handler(ProxyHandler)
-        .with_websocket_handler(ProxyHandler)
+        .with_http_handler(ProxyHandler::default())
+        .with_websocket_handler(ProxyHandler::default())
         .build();
 
     if let Err(e) = proxy.start(shutdown_signal()).await {
