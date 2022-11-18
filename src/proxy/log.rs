@@ -9,12 +9,15 @@ pub struct ReqResLog {
 }
 
 impl ReqResLog {
-    pub fn new() -> Self {
-        unimplemented!()
+    pub fn new(req: LogRequest) -> Self {
+        ReqResLog {
+            request  : Some(req),
+            response : None
+        }
     }
 
     pub fn set_resp(&mut self, resp: LogResponse) {
-        unimplemented!()
+        self.response = Some(resp);
     }
 }
 

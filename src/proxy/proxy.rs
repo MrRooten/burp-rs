@@ -8,7 +8,7 @@ use hudsucker::{
 use rustls_pemfile as pemfile;
 use std::net::SocketAddr;
 use tracing::*;
-use crate::proxy::log::{LogHistory, ReqResLog, LogResponse};
+use crate::proxy::log::{LogHistory, ReqResLog, LogResponse, LogRequest};
 
 use super::log::HTTP_LOG;
 async fn shutdown_signal() {
@@ -28,9 +28,11 @@ impl HttpHandler for ProxyHandler {
     async fn handle_request(
         &mut self,
         _ctx: &HttpContext,
-        req: Request<Body>,
+        mut req: Request<Body>,
     ) -> RequestOrResponse {
-        println!("{:?}", req);
+        
+        let body = req.body_mut();
+        let s = body::to_bytes(body).await.unwrap();
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -38,7 +40,14 @@ impl HttpHandler for ProxyHandler {
                 return RequestOrResponse::Request(req);
             }
         };
-        let log = ReqResLog::new();
+        let mut new_req = Request::new(Body::from(s.clone()));
+        new_req.headers_mut().clone_from(req.headers());
+        new_req.method_mut().clone_from(req.method());
+        new_req.uri_mut().clone_from(req.uri());
+        new_req.version_mut().clone_from(&req.version());
+        new_req.extensions().clone_from(&req.extensions());
+        println!("{:?}", new_req);
+        let log = ReqResLog::new(LogRequest::from(new_req));
         self.index = history.push_log(log);
         RequestOrResponse::Request(req)
     }
@@ -47,7 +56,13 @@ impl HttpHandler for ProxyHandler {
         let body = res.body_mut();
         let s = body::to_bytes(body).await.unwrap();
         let res = Response::new(Body::from(s.clone()));
-        let res_log = LogResponse::from(res);
+        let mut new_res = Response::new(Body::from(s.clone()));
+        new_res.extensions().clone_from(&res.extensions());
+        new_res.headers_mut().clone_from(res.headers());
+        new_res.status_mut().clone_from(&res.status());
+        new_res.version_mut().clone_from(&res.version());
+        let res_log = LogResponse::from(new_res);
+        
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -56,7 +71,7 @@ impl HttpHandler for ProxyHandler {
             }
         };
         history.set_resp(self.index, res_log);
-        println!("{:?}", s);
+        println!("{:?}", res);
         Response::new(Body::from(s.clone()))
     }
 }
