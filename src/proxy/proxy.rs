@@ -8,8 +8,8 @@ use rustls_pemfile as pemfile;
 
 use std::net::SocketAddr;
 use tracing::*;
-use crate::proxy::log::{LogHistory, ReqResLog, LogResponse, LogRequest};
-use hyper::{Body, Request, Response, body::{self}};
+use crate::proxy::{log::{LogHistory, ReqResLog, LogResponse, LogRequest, SiteMap}, filter::{is_capture_res, is_capture_req}};
+use hyper::{Body, Request, Response, body::{self}, Method};
 
 async fn shutdown_signal() {
     tokio::signal::ctrl_c()
@@ -23,38 +23,30 @@ struct ProxyHandler {
     
 }
 
-async fn copy_req(req: &mut Request<Body>) -> (Request<Body>,Request<Body>) {
+async fn copy_req(req: &mut Request<Body>) -> Request<Body> {
     let body = req.body_mut();
+    
     let s = body::to_bytes(body).await.unwrap();
     let mut new_req = Request::new(Body::from(s.clone()));
-    let mut save_req = Request::new(Body::from(s));
+    *req.body_mut() = Body::from(s);
     new_req.headers_mut().clone_from(req.headers());
     new_req.method_mut().clone_from(req.method());
     new_req.uri_mut().clone_from(req.uri());
     new_req.version_mut().clone_from(&req.version());
     new_req.extensions().clone_from(&req.extensions());
-    save_req.headers_mut().clone_from(req.headers());
-    save_req.method_mut().clone_from(req.method());
-    save_req.uri_mut().clone_from(req.uri());
-    save_req.version_mut().clone_from(&req.version());
-    save_req.extensions().clone_from(&req.extensions());
-    (new_req,save_req)
+    new_req
 }
 
-async fn copy_resp(resp: &mut Response<Body>) -> (Response<Body>,Response<Body>) {
+async fn copy_resp(resp: &mut Response<Body>) -> Response<Body> {
     let body = resp.body_mut();
     let s = body::to_bytes(body).await.unwrap();
     let mut new_res = Response::new(Body::from(s.clone()));
-    let mut save_res = Response::new(Body::from(s));
+    *resp.body_mut() = Body::from(s);
     new_res.extensions().clone_from(&resp.extensions());
     new_res.headers_mut().clone_from(resp.headers());
     new_res.status_mut().clone_from(&resp.status());
     new_res.version_mut().clone_from(&resp.version());
-    save_res.extensions().clone_from(&resp.extensions());
-    save_res.headers_mut().clone_from(resp.headers());
-    save_res.status_mut().clone_from(&resp.status());
-    save_res.version_mut().clone_from(&resp.version());
-    (new_res,save_res)
+    new_res
 }
 #[async_trait]
 impl HttpHandler for ProxyHandler {
@@ -63,6 +55,9 @@ impl HttpHandler for ProxyHandler {
         _ctx: &HttpContext,
         mut req: Request<Body>,
     ) -> RequestOrResponse {
+        if req.method() == Method::CONNECT {
+            return RequestOrResponse::Request(req);
+        }
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -70,29 +65,35 @@ impl HttpHandler for ProxyHandler {
                 return RequestOrResponse::Request(req);
             }
         };
-        let (new_req, save_req) = copy_req(&mut req).await;
-        println!("{:?}", new_req);
+        let new_req = copy_req(&mut req).await;
+        println!("{:?}", req);
         let log = ReqResLog::new(LogRequest::from(new_req));
-        self.index = history.push_log(log);
-        RequestOrResponse::Request(save_req)
+        println!("{}",log.get_request().unwrap().get_url());
+        if is_capture_req(&req) {
+            self.index = history.push_log(log);
+        }
+        let s = SiteMap::single();
+        RequestOrResponse::Request(req)
     }
 
     async fn handle_response(&mut self, _ctx: &HttpContext, mut res: Response<Body>) -> Response<Body> {
         
-        let (new_res,save_res) = copy_resp(&mut res).await;
-        let res_log = LogResponse::from(save_res);
+        let new_res = copy_resp(&mut res).await;
+        let res_log = LogResponse::from(new_res);
         
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
             None => {
-                return new_res;
+                return res;
             }
         };
-        println!("{:?}", new_res);
-        history.set_resp(self.index, res_log);
+        println!("{:?}", res);
+        if is_capture_res(&res) {
+            history.set_resp(self.index, res_log);
+        }
         
-        new_res
+        res
     }
 }
 
