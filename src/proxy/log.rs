@@ -21,6 +21,7 @@ impl ReqResLog {
     }
 }
 
+#[derive(Debug)]
 pub struct LogRequest {
     orignal     : Request<Body>
 }
@@ -32,6 +33,8 @@ impl LogRequest {
         }
     }
 }
+
+#[derive(Debug)]
 pub struct LogResponse {
     orignal     : Response<Body>
 }

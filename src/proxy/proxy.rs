@@ -1,16 +1,16 @@
 use hudsucker::{
     async_trait::async_trait,
     certificate_authority::RcgenAuthority,
-    hyper::{Body, Request, Response, body},
     tokio_tungstenite::tungstenite::Message,
     *,
 };
 use rustls_pemfile as pemfile;
+
 use std::net::SocketAddr;
 use tracing::*;
 use crate::proxy::log::{LogHistory, ReqResLog, LogResponse, LogRequest};
+use hyper::{Body, Request, Response, body::{self}};
 
-use super::log::HTTP_LOG;
 async fn shutdown_signal() {
     tokio::signal::ctrl_c()
         .await
@@ -23,6 +23,39 @@ struct ProxyHandler {
     
 }
 
+async fn copy_req(req: &mut Request<Body>) -> (Request<Body>,Request<Body>) {
+    let body = req.body_mut();
+    let s = body::to_bytes(body).await.unwrap();
+    let mut new_req = Request::new(Body::from(s.clone()));
+    let mut save_req = Request::new(Body::from(s));
+    new_req.headers_mut().clone_from(req.headers());
+    new_req.method_mut().clone_from(req.method());
+    new_req.uri_mut().clone_from(req.uri());
+    new_req.version_mut().clone_from(&req.version());
+    new_req.extensions().clone_from(&req.extensions());
+    save_req.headers_mut().clone_from(req.headers());
+    save_req.method_mut().clone_from(req.method());
+    save_req.uri_mut().clone_from(req.uri());
+    save_req.version_mut().clone_from(&req.version());
+    save_req.extensions().clone_from(&req.extensions());
+    (new_req,save_req)
+}
+
+async fn copy_resp(resp: &mut Response<Body>) -> (Response<Body>,Response<Body>) {
+    let body = resp.body_mut();
+    let s = body::to_bytes(body).await.unwrap();
+    let mut new_res = Response::new(Body::from(s.clone()));
+    let mut save_res = Response::new(Body::from(s));
+    new_res.extensions().clone_from(&resp.extensions());
+    new_res.headers_mut().clone_from(resp.headers());
+    new_res.status_mut().clone_from(&resp.status());
+    new_res.version_mut().clone_from(&resp.version());
+    save_res.extensions().clone_from(&resp.extensions());
+    save_res.headers_mut().clone_from(resp.headers());
+    save_res.status_mut().clone_from(&resp.status());
+    save_res.version_mut().clone_from(&resp.version());
+    (new_res,save_res)
+}
 #[async_trait]
 impl HttpHandler for ProxyHandler {
     async fn handle_request(
@@ -30,9 +63,6 @@ impl HttpHandler for ProxyHandler {
         _ctx: &HttpContext,
         mut req: Request<Body>,
     ) -> RequestOrResponse {
-        println!("{:?}", req);
-        let body = req.body_mut();
-        let s = body::to_bytes(body).await.unwrap();
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -40,29 +70,17 @@ impl HttpHandler for ProxyHandler {
                 return RequestOrResponse::Request(req);
             }
         };
-        let mut new_req = Request::new(Body::from(s.clone()));
-        new_req.headers_mut().clone_from(req.headers());
-        new_req.method_mut().clone_from(req.method());
-        new_req.uri_mut().clone_from(req.uri());
-        new_req.version_mut().clone_from(&req.version());
-        new_req.extensions().clone_from(&req.extensions());
-        
+        let (new_req, save_req) = copy_req(&mut req).await;
+        println!("{:?}", new_req);
         let log = ReqResLog::new(LogRequest::from(new_req));
         self.index = history.push_log(log);
-        RequestOrResponse::Request(req)
+        RequestOrResponse::Request(save_req)
     }
 
     async fn handle_response(&mut self, _ctx: &HttpContext, mut res: Response<Body>) -> Response<Body> {
-        println!("{:?}", res);
-        let body = res.body_mut();
-        let s = body::to_bytes(body).await.unwrap();
-        let mut new_res = Response::new(Body::from(s.clone()));
-        new_res.extensions().clone_from(&res.extensions());
-        new_res.headers_mut().clone_from(res.headers());
-        new_res.status_mut().clone_from(&res.status());
-        new_res.version_mut().clone_from(&res.version());
-        res.body().clone_from(&&Body::from(s.clone()));
-        let res_log = LogResponse::from(res);
+        
+        let (new_res,save_res) = copy_resp(&mut res).await;
+        let res_log = LogResponse::from(save_res);
         
         let history = LogHistory::single();
         let history = match history {
@@ -71,6 +89,7 @@ impl HttpHandler for ProxyHandler {
                 return new_res;
             }
         };
+        println!("{:?}", new_res);
         history.set_resp(self.index, res_log);
         
         new_res

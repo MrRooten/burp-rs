@@ -207,6 +207,7 @@ name = "burp-rs"
 version = "0.1.0"
 dependencies = [
  "hudsucker",
+ "hyper",
  "hyper-rustls",
  "rustls-pemfile",
  "tokio",
