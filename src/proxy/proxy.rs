@@ -30,7 +30,7 @@ impl HttpHandler for ProxyHandler {
         _ctx: &HttpContext,
         mut req: Request<Body>,
     ) -> RequestOrResponse {
-        
+        println!("{:?}", req);
         let body = req.body_mut();
         let s = body::to_bytes(body).await.unwrap();
         let history = LogHistory::single();
@@ -46,33 +46,34 @@ impl HttpHandler for ProxyHandler {
         new_req.uri_mut().clone_from(req.uri());
         new_req.version_mut().clone_from(&req.version());
         new_req.extensions().clone_from(&req.extensions());
-        println!("{:?}", new_req);
+        
         let log = ReqResLog::new(LogRequest::from(new_req));
         self.index = history.push_log(log);
         RequestOrResponse::Request(req)
     }
 
     async fn handle_response(&mut self, _ctx: &HttpContext, mut res: Response<Body>) -> Response<Body> {
+        println!("{:?}", res);
         let body = res.body_mut();
         let s = body::to_bytes(body).await.unwrap();
-        let res = Response::new(Body::from(s.clone()));
         let mut new_res = Response::new(Body::from(s.clone()));
         new_res.extensions().clone_from(&res.extensions());
         new_res.headers_mut().clone_from(res.headers());
         new_res.status_mut().clone_from(&res.status());
         new_res.version_mut().clone_from(&res.version());
-        let res_log = LogResponse::from(new_res);
+        res.body().clone_from(&&Body::from(s.clone()));
+        let res_log = LogResponse::from(res);
         
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
             None => {
-                return Response::new(Body::from(s.clone()));
+                return new_res;
             }
         };
         history.set_resp(self.index, res_log);
-        println!("{:?}", res);
-        Response::new(Body::from(s.clone()))
+        
+        new_res
     }
 }
 
