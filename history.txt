@@ -1,6 +1,0 @@
-#V2
-helo
-askldfj
-ls
-skdfj
-exit

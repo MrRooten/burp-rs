@@ -1,0 +1,8 @@
+filter:
+    allow_response_size: "1M"
+    allow_request_ext: ""
+    deny_file_type: ""
+
+http:
+    parallel: 5
+    

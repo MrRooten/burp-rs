@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use hudsucker::hyper::{Request, Body, Response};
-use hyper::Version;
+use hyper::body::Bytes;
+use hyper::{Version, StatusCode, body};
 use url::Url;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -49,13 +50,15 @@ impl ReqResLog {
 
 #[derive(Debug)]
 pub struct LogRequest {
-    orignal     : Request<Body>
+    orignal     : Request<Body>,
+    body        : Bytes
 }
 
 impl LogRequest {
-    pub fn from(req: Request<Body>) -> LogRequest {
+    pub fn from(req: Request<Body>,body: Bytes) -> LogRequest {
         LogRequest {
-            orignal : req
+            orignal : req,
+            body    : body
         }
     }
 
@@ -70,17 +73,56 @@ impl LogRequest {
         return s;
     }
 
+    pub fn get_header(&self, key: &str) -> Option<String> {
+        let value = self.orignal.headers().get(key);
+        match value {
+            Some(v) => {
+                return Some(String::from_utf8_lossy(v.as_bytes()).to_string());
+            },
+            None => {
+                return None;
+            }
+        };
+    }
 
+    pub fn get_cookie(&self, key: &str) -> Option<String> {
+        return self.get_header(key);
+    }
+
+    pub fn get_body(&self) -> &Bytes {
+        return &self.body;
+    }
 }
 
 #[derive(Debug)]
 pub struct LogResponse {
-    orignal     : Response<Body>
+    orignal     : Response<Body>,
+    body        : Bytes
 }
 
 impl LogResponse {
-    pub fn from(res: Response<Body>) -> LogResponse {
-        LogResponse { orignal: res }
+    pub fn from(res: Response<Body>, body: Bytes) -> LogResponse {
+        LogResponse { orignal: res ,body: body}
+    }
+
+    pub fn get_header(&self, key: &str) -> Option<String> {
+        let value = self.orignal.headers().get(key);
+        match value {
+            Some(v) => {
+                return Some(String::from_utf8_lossy(v.as_bytes()).to_string());
+            },
+            None => {
+                return None;
+            }
+        };
+    }
+
+    pub fn get_status(&self) -> StatusCode {
+        self.orignal.status()
+    }
+
+    pub fn get_body(&mut self) -> &Bytes {
+        &self.body
     }
 }
 
