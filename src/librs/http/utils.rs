@@ -8,10 +8,9 @@ use hyper::{
     header::*,
     Body, Client, Method, Request, Response, Uri,
 };
-use hyper_native_tls::NativeTlsClient;
-use hyper_rustls::HttpsConnector;
 
-use crate::{proxy::log::ReqResLog, utils::STError};
+
+use crate::{proxy::log::{ReqResLog, LogRequest}, utils::STError};
 
 pub struct HttpSession {}
 
@@ -43,6 +42,10 @@ impl HttpRequest {
             request: request,
             body: Bytes::new(),
         }
+    }
+
+    pub fn from_log_request(request: &LogRequest) -> HttpRequest {
+        unimplemented!()
     }
 
     pub fn set_header(&mut self, key: &str, value: &str) {
