@@ -1,9 +1,11 @@
 use hyper::{Request, Body, Response};
 
-pub fn is_capture_req(req: &Request<Body>) -> bool {
+use super::log::{LogRequest, LogResponse};
+
+pub fn is_capture_req(req: &LogRequest) -> bool {
     true
 }
 
-pub fn is_capture_res(res: &Response<Body>) -> bool {
+pub fn is_capture_res(res: &LogResponse) -> bool {
     true
 }

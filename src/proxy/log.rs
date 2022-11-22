@@ -1,11 +1,12 @@
 #![allow(dead_code)]
-use hudsucker::hyper::{Request, Body, Response};
+use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{Version, StatusCode, body};
+use hyper::{Version, StatusCode, body, http};
 use url::Url;
 use std::collections::HashMap;
 use std::sync::Mutex;
-
+use http::Request;
+use crate::librs::http::utils::HttpResponse;
 use crate::utils::STError;
 #[derive(Default)]
 pub struct ReqResLog {
@@ -13,7 +14,13 @@ pub struct ReqResLog {
     response    : Option<LogResponse>
 }
 
+
+
 impl ReqResLog {
+    pub fn from_http_response(response: &HttpResponse) -> ReqResLog {
+        unimplemented!()
+    }
+
     pub fn new(req: LogRequest) -> Self {
         ReqResLog {
             request  : Some(req),
@@ -46,6 +53,27 @@ impl ReqResLog {
             }
         }
     }
+
+    pub fn clone(&self) -> Option<ReqResLog>{
+        let s = match &self.request {
+            Some(s) => s,
+            None => {
+                return None;
+            }
+        };
+
+        let mut log = ReqResLog::new(s.clone());
+        let s = match &self.response {
+            Some(s) => s,
+            None => {
+                return Some(log);
+            }
+        };
+
+        log.set_resp(s.clone());
+        return Some(log);
+
+    }
 }
 
 #[derive(Debug)]
@@ -59,6 +87,19 @@ impl LogRequest {
         LogRequest {
             orignal : req,
             body    : body
+        }
+    }
+
+    pub fn clone(&self) -> LogRequest {
+        let mut new_req = Request::new(Body::from(""));
+        new_req.headers_mut().clone_from(self.orignal.headers());
+        new_req.method_mut().clone_from(self.orignal.method());
+        new_req.uri_mut().clone_from(self.orignal.uri());
+        new_req.version_mut().clone_from(&self.orignal.version());
+        new_req.extensions().clone_from(&self.orignal.extensions());
+        LogRequest {
+            orignal: new_req,
+            body: Bytes::from(self.body.clone()),
         }
     }
 
@@ -101,6 +142,7 @@ pub struct LogResponse {
 }
 
 impl LogResponse {
+
     pub fn from(res: Response<Body>, body: Bytes) -> LogResponse {
         LogResponse { orignal: res ,body: body}
     }
@@ -123,6 +165,18 @@ impl LogResponse {
 
     pub fn get_body(&mut self) -> &Bytes {
         &self.body
+    }
+
+    pub fn clone(&self) -> Self {
+        let mut new_res = Response::new(Body::from(""));
+        new_res.extensions().clone_from(&self.orignal.extensions());
+        new_res.headers_mut().clone_from(self.orignal.headers());
+        new_res.status_mut().clone_from(&self.orignal.status());
+        new_res.version_mut().clone_from(&self.orignal.version());
+        return Self {
+            orignal: new_res,
+            body: self.body.clone(),
+        };
     }
 }
 

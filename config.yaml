@@ -1,7 +1,8 @@
-filter:
-    allow_response_size: "1M"
-    allow_request_ext: ""
-    deny_file_type: ""
+request_filter:
+    ext: "jpg"
+
+response_body_filter:
+    mime: ""
 
 http:
     parallel: 5

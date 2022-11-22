@@ -66,9 +66,10 @@ impl HttpHandler for ProxyHandler {
         };
         let log = copy_req(&mut req).await;
         println!("{:?}", req);
-        let log = ReqResLog::new(log);
-        if is_capture_req(&req) {
-            self.index = history.push_log(log);
+        if is_capture_req(&log) {
+            let reqres_log = ReqResLog::new(log);
+            let b = reqres_log.clone();
+            self.index = history.push_log(reqres_log);
         }
         let s = SiteMap::single();
         RequestOrResponse::Request(req)
@@ -86,7 +87,7 @@ impl HttpHandler for ProxyHandler {
             }
         };
         println!("{:?}", res);
-        if is_capture_res(&res) {
+        if is_capture_res(&res_log) {
             history.set_resp(self.index, res_log);
         }
         
