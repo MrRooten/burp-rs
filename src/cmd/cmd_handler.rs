@@ -1,4 +1,4 @@
-use stdext::function_name;
+
 
 use crate::utils::STError;
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
@@ -21,6 +21,7 @@ impl CMDHandler {
 
     pub fn init(&mut self) {
         self.proc_names.push("help".to_string());
+        self.proc_names.push("help_info".to_string());
     }
 
     pub fn help(&mut self) -> Result<(),STError>{

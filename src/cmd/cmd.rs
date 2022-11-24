@@ -1,17 +1,57 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
 
-use rustyline::highlight::Highlighter;
+use rustyline::completion::{FilenameCompleter, Completer, Pair};
+
+use rustyline::error::ReadlineError;
+use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
 use rustyline::hint::HistoryHinter;
-use rustyline::{
-    Cmd, ConditionalEventHandler, Editor, Event, EventContext, EventHandler, KeyEvent, RepeatCount,
-    Result,
-};
+use rustyline::validate::MatchingBracketValidator;
+use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline_derive::{Completer, Helper, Hinter, Validator};
 
 use super::cmd_handler::CMDHandler;
 
-#[derive(Completer, Helper, Hinter, Validator)]
-struct MyHelper(#[rustyline(Hinter)] HistoryHinter);
+struct MyCompleter;
+
+impl Completer for MyCompleter {
+    type Candidate = String;
+    fn complete(
+        &self, // FIXME should be `&mut self`
+        line: &str,
+        pos: usize,
+        ctx: &rustyline::Context<'_>,
+    ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
+        let _ = (line, pos, ctx);
+        let handler = CMDHandler::get_handler();
+        let candiates = handler.get_procs();
+        let mut res = Vec::<String>::default();
+        for candidate in candiates {
+            if candidate.starts_with(line) {
+                res.push(candidate.to_string());
+            }
+        }
+        Ok((0, res))
+    }
+
+    fn update(&self, line: &mut rustyline::line_buffer::LineBuffer, start: usize, elected: &str) {
+        let end = line.pos();
+        line.replace(start..end, elected);
+    }
+
+}
+
+
+#[derive(Helper, Completer, Hinter, Validator)]
+struct MyHelper {
+    #[rustyline(Completer)]
+    completer: MyCompleter,
+    highlighter: MatchingBracketHighlighter,
+    #[rustyline(Validator)]
+    validator: MatchingBracketValidator,
+    #[rustyline(Hinter)]
+    hinter: HistoryHinter,
+    colored_prompt: String,
+}
 
 impl Highlighter for MyHelper {
     fn highlight_prompt<'b, 's: 'b, 'p: 'b>(
@@ -20,101 +60,73 @@ impl Highlighter for MyHelper {
         default: bool,
     ) -> Cow<'b, str> {
         if default {
-            Owned(format!("\x1b[1;32m{prompt}\x1b[m"))
+            Borrowed(&self.colored_prompt)
         } else {
             Borrowed(prompt)
         }
     }
 
     fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
-        Owned(format!("\x1b[1m{hint}\x1b[m"))
+        Owned("\x1b[1m".to_owned() + hint + "\x1b[m")
+    }
+
+    fn highlight<'l>(&self, line: &'l str, pos: usize) -> Cow<'l, str> {
+        self.highlighter.highlight(line, pos)
+    }
+
+    fn highlight_char(&self, line: &str, pos: usize) -> bool {
+        self.highlighter.highlight_char(line, pos)
     }
 }
 
-#[derive(Clone)]
-struct CompleteHintHandler;
-impl ConditionalEventHandler for CompleteHintHandler {
-    fn handle(&self, evt: &Event, _: RepeatCount, _: bool, ctx: &EventContext) -> Option<Cmd> {
-        if !ctx.has_hint() {
-            return None; // default
-        }
-        if let Some(k) = evt.get(0) {
-            #[allow(clippy::if_same_then_else)]
-            if *k == KeyEvent::ctrl('E') {
-                Some(Cmd::CompleteHint)
-            } else if *k == KeyEvent::alt('f') && ctx.line().len() == ctx.pos() {
-                let text = ctx.hint_text()?;
-                let mut start = 0;
-                if let Some(first) = text.chars().next() {
-                    if !first.is_alphanumeric() {
-                        start = text.find(|c: char| c.is_alphanumeric()).unwrap_or_default();
-                    }
-                }
-
-                let text = text
-                    .chars()
-                    .enumerate()
-                    .take_while(|(i, c)| *i <= start || c.is_alphanumeric())
-                    .map(|(_, c)| c)
-                    .collect::<String>();
-
-                Some(Cmd::Insert(1, text))
-            } else {
-                None
-            }
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-struct TabEventHandler;
-impl ConditionalEventHandler for TabEventHandler {
-    fn handle(&self, evt: &Event, n: RepeatCount, _: bool, ctx: &EventContext) -> Option<Cmd> {
-        debug_assert_eq!(*evt, Event::from(KeyEvent::from('\t')));
-        let handler = CMDHandler::get_handler();
-        let procs = handler.get_procs();
-        let mut will_show = Vec::<String>::default();
-        for proc in procs {
-            if proc.starts_with(ctx.line()) {
-                will_show.push(proc.to_string());
-            }
-        }
-
-        if will_show.len() == 1 {
-            let ret = will_show[0][ctx.pos()..].to_string() + " ";
-            return Some(Cmd::Insert(n, ret));
-        }
-
-        if will_show.len() > 0 {
-            println!("{:?}",will_show);
-        }
-        Some(Cmd::Insert(n, "".to_string()))
-    }
-}
-
-pub fn cmd() -> Result<()> {
+// To debug rustyline:
+// RUST_LOG=rustyline=debug cargo run --example example 2> debug.log
+pub fn cmd() -> rustyline::Result<()> {
     let handler = CMDHandler::get_handler_mut();
     handler.init();
-    let mut rl = Editor::<MyHelper>::new()?;
-    rl.set_helper(Some(MyHelper(HistoryHinter {})));
-
-    let ceh = Box::new(CompleteHintHandler);
-    rl.bind_sequence(KeyEvent::ctrl('E'), EventHandler::Conditional(ceh.clone()));
-    rl.bind_sequence(KeyEvent::alt('f'), EventHandler::Conditional(ceh));
-    rl.bind_sequence(
-        KeyEvent::from('\t'),
-        EventHandler::Conditional(Box::new(TabEventHandler)),
-    );
-
-    rl.bind_sequence(
-        Event::KeySeq(vec![KeyEvent::ctrl('X'), KeyEvent::ctrl('E')]),
-        EventHandler::Simple(Cmd::Suspend), // TODO external editor
-    );
-
-    loop {
-        let line = rl.readline("> ")?;
-        rl.add_history_entry(line.as_str());
-        println!("Line: {line}");
+    let config = Config::builder()
+        .history_ignore_space(true)
+        .completion_type(CompletionType::List)
+        .edit_mode(EditMode::Emacs)
+        .build();
+    let h = MyHelper {
+        completer: MyCompleter,
+        highlighter: MatchingBracketHighlighter::new(),
+        hinter: HistoryHinter {},
+        colored_prompt: "".to_owned(),
+        validator: MatchingBracketValidator::new(),
+    };
+    let mut rl = Editor::with_config(config)?;
+    rl.set_helper(Some(h));
+    rl.bind_sequence(KeyEvent::alt('n'), Cmd::HistorySearchForward);
+    rl.bind_sequence(KeyEvent::alt('p'), Cmd::HistorySearchBackward);
+    if rl.load_history("history.txt").is_err() {
+        println!("No previous history.");
     }
+    let mut count = 1;
+    loop {
+        let p = format!("{count}> ");
+        rl.helper_mut().expect("No helper").colored_prompt = format!("\x1b[1;32m{p}\x1b[0m");
+        let readline = rl.readline(&p);
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(line.as_str());
+                println!("Line: {line}");
+            }
+            Err(ReadlineError::Interrupted) => {
+                println!("Interrupted");
+                break;
+            }
+            Err(ReadlineError::Eof) => {
+                println!("Encountered Eof");
+                break;
+            }
+            Err(err) => {
+                println!("Error: {err:?}");
+                break;
+            }
+        }
+        count += 1;
+    }
+    rl.append_history("history.txt")
 }
