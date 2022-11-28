@@ -26,8 +26,8 @@ impl Completer for MyCompleter {
         let candiates = handler.get_procs();
         let mut res = Vec::<String>::default();
         for candidate in candiates {
-            if candidate.starts_with(line) {
-                res.push(candidate.to_string());
+            if candidate.get_name().starts_with(line) {
+                res.push(candidate.get_name().to_string());
             }
         }
         Ok((0, res))
@@ -112,6 +112,8 @@ pub fn cmd() -> rustyline::Result<()> {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
                 println!("Line: {line}");
+                let handler = CMDHandler::get_handler();
+                handler.process(line)
             }
             Err(ReadlineError::Interrupted) => {
                 println!("Interrupted");

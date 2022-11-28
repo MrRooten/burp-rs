@@ -1,35 +1,57 @@
 
 
-use crate::utils::STError;
+use std::collections::HashMap;
+
+use crate::{utils::STError};
+
+use super::handlers::Helper;
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
 
 
 #[derive(Default)]
 pub struct CMDHandler {
-    proc_names       : Vec<String>,
+    procs           : Vec<Box<dyn CMDProc>>
 }
+
+pub type CMDOptions = HashMap<String,Option<String>>;
+
+pub trait  CMDProc {
+    fn get_name(&self) -> &str;
+
+    fn get_opts(&self) -> &CMDOptions;
+
+    fn process(&self, line: &Vec<&str>) -> Result<(),STError>;
+}
+
+
 
 impl CMDHandler {
     pub const fn new() -> Self {
-        let mut s = Self { proc_names: Vec::new() };
+        let mut s = Self { procs: Vec::new() };
         s
     }
 
     pub fn process(&self, line: String) {
-
+        let opts = line.split(" ").filter(|&x| !x.is_empty()).collect::<Vec<&str>>();
+        println!("{:?}",opts);
+        let proc_name = opts[0];
+        for _proc in &self.procs {
+            if _proc.get_name().eq(proc_name) {
+                let res = _proc.process(&opts);
+            }
+        }
     }
 
     pub fn init(&mut self) {
-        self.proc_names.push("help".to_string());
-        self.proc_names.push("help_info".to_string());
+        self.procs.push(Box::new(Helper::new()));
     }
 
-    pub fn help(&mut self) -> Result<(),STError>{
-        Ok(())
+    pub fn get_opts(&self) -> &Vec<String> {
+        unimplemented!()
     }
 
-    pub fn get_procs(&self) -> &Vec<String> {
-        &self.proc_names
+    pub fn get_procs(&self) -> &Vec<Box<dyn CMDProc>> {
+        &self.procs
     }
 
     pub fn get_handler() -> &'static CMDHandler {
