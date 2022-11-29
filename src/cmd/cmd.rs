@@ -111,7 +111,7 @@ pub fn cmd() -> rustyline::Result<()> {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
-                println!("Line: {line}");
+                //println!("Line: {line}");
                 let handler = CMDHandler::get_handler();
                 handler.process(line)
             }

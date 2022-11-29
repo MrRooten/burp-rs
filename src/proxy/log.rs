@@ -242,6 +242,10 @@ impl LogHistory {
 
         history.get_log(index)
     }
+
+    pub fn get_req_num(&self) -> usize {
+        return self.history.len();
+    }
 }
 
 pub struct Site {

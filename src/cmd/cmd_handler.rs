@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{utils::STError};
 
-use super::handlers::Helper;
+use super::handlers::{Helper, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
 
 
@@ -21,6 +21,7 @@ pub trait  CMDProc {
     fn get_opts(&self) -> &CMDOptions;
 
     fn process(&self, line: &Vec<&str>) -> Result<(),STError>;
+    
 }
 
 
@@ -33,7 +34,6 @@ impl CMDHandler {
 
     pub fn process(&self, line: String) {
         let opts = line.split(" ").filter(|&x| !x.is_empty()).collect::<Vec<&str>>();
-        println!("{:?}",opts);
         let proc_name = opts[0];
         for _proc in &self.procs {
             if _proc.get_name().eq(proc_name) {
@@ -44,6 +44,7 @@ impl CMDHandler {
 
     pub fn init(&mut self) {
         self.procs.push(Box::new(Helper::new()));
+        self.procs.push(Box::new(ProxyLogInfo::new()));
     }
 
     pub fn get_opts(&self) -> &Vec<String> {

@@ -65,7 +65,7 @@ impl HttpHandler for ProxyHandler {
             }
         };
         let log = copy_req(&mut req).await;
-        println!("{:?}", req);
+        //println!("{:?}", req);
         if is_capture_req(&log) {
             let reqres_log = ReqResLog::new(log);
             let b = reqres_log.clone();
@@ -86,7 +86,7 @@ impl HttpHandler for ProxyHandler {
                 return res;
             }
         };
-        println!("{:?}", res);
+        //println!("{:?}", res);
         if is_capture_res(&res_log) {
             history.set_resp(self.index, res_log);
         }
@@ -105,7 +105,6 @@ impl WebSocketHandler for ProxyHandler {
 
 
 pub async fn proxy(addr: &str) {
-    tracing_subscriber::fmt::init();
     let sock: SocketAddr = addr.parse().unwrap();
     let mut private_key_bytes: &[u8] = include_bytes!("../ca/rs.key");
     let mut ca_cert_bytes: &[u8] = include_bytes!("../ca/rs.cer");
