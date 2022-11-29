@@ -23,6 +23,6 @@ yaml-rust = "0.4"
 log = "0.4.0"
 hyper-native-tls = { version="0.3.0"}
 reqwest = { version = "0.11", features = ["json"] }
-
+chrono = "0.4.23"
 [target.'cfg(target_family = "linux")']
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]

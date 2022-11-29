@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use chrono::{Utc, DateTime};
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
 use hyper::{Version, StatusCode, body, http};
@@ -8,10 +9,13 @@ use std::sync::Mutex;
 use http::Request;
 use crate::librs::http::utils::HttpResponse;
 use crate::utils::STError;
-#[derive(Default)]
+
+
+
 pub struct ReqResLog {
     request     : Option<LogRequest>,
-    response    : Option<LogResponse>
+    response    : Option<LogResponse>,
+    record_t    : DateTime<Utc>
 }
 
 
@@ -24,7 +28,8 @@ impl ReqResLog {
     pub fn new(req: LogRequest) -> Self {
         ReqResLog {
             request  : Some(req),
-            response : None
+            response : None,
+            record_t : Utc::now()
         }
     }
 
@@ -79,14 +84,16 @@ impl ReqResLog {
 #[derive(Debug)]
 pub struct LogRequest {
     orignal     : Request<Body>,
-    body        : Bytes
+    body        : Bytes,
+    record_t    : DateTime<Utc>
 }
 
 impl LogRequest {
     pub fn from(req: Request<Body>,body: Bytes) -> LogRequest {
         LogRequest {
             orignal : req,
-            body    : body
+            body    : body,
+            record_t: Utc::now()
         }
     }
 
@@ -100,6 +107,7 @@ impl LogRequest {
         LogRequest {
             orignal: new_req,
             body: Bytes::from(self.body.clone()),
+            record_t : self.record_t.clone()
         }
     }
 
@@ -133,6 +141,10 @@ impl LogRequest {
     pub fn get_body(&self) -> &Bytes {
         return &self.body;
     }
+
+    pub fn to_string(&self) -> String {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug)]
@@ -142,7 +154,6 @@ pub struct LogResponse {
 }
 
 impl LogResponse {
-
     pub fn from(res: Response<Body>, body: Bytes) -> LogResponse {
         LogResponse { orignal: res ,body: body}
     }
@@ -157,6 +168,10 @@ impl LogResponse {
                 return None;
             }
         };
+    }
+
+    pub fn to_string() -> String {
+        unimplemented!()
     }
 
     pub fn get_status(&self) -> StatusCode {
