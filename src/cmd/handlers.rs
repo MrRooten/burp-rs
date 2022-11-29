@@ -194,3 +194,22 @@ impl CMDProc for DebugLog {
         Ok(())
     }
 }
+
+pub struct CatLog {
+    name    : String,
+    opts    : CMDOptions
+}
+
+impl CMDProc for CatLog {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        todo!()
+    }
+}
