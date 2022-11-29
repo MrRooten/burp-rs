@@ -2,6 +2,15 @@ use std::{error::{Error, self}, fmt};
 
 use super::STError;
 
+#[macro_export]
+macro_rules! st_error {
+    (  $e:expr  ) => {
+        {
+            STError::from(Box::new($e))
+        }
+    };
+    
+}
 
 impl STError {
     pub fn new(msg: &str) -> STError{
@@ -20,6 +29,7 @@ impl STError {
         result
     }
 }
+
 
 impl fmt::Display for STError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

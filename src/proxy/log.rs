@@ -2,12 +2,13 @@
 use chrono::{Utc, DateTime};
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{Version, StatusCode, body, http};
+use hyper::{StatusCode, http};
 use url::Url;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use http::Request;
 use crate::librs::http::utils::HttpResponse;
+use crate::st_error;
 use crate::utils::STError;
 
 
@@ -170,6 +171,9 @@ impl LogResponse {
         };
     }
 
+    pub fn get_size(&self) -> usize {
+        return self.body.len();
+    }
     pub fn to_string() -> String {
         unimplemented!()
     }
@@ -178,7 +182,7 @@ impl LogResponse {
         self.orignal.status()
     }
 
-    pub fn get_body(&mut self) -> &Bytes {
+    pub fn get_body(&self) -> &Bytes {
         &self.body
     }
 
@@ -218,18 +222,24 @@ impl LogHistory {
         }
     }
 
-    pub fn push_log(&mut self, log: ReqResLog) -> u32 {
-        self.lock.lock();
+    pub fn push_log(&mut self, log: ReqResLog) -> Result<u32,STError> {
+        let result = self.lock.lock();
+        let lock = match result {
+            Ok(lock) => lock,
+            Err(e) => {
+                return Err(STError::new(&e.to_string()));
+            }
+        };
         self.last_index += 1;
         self.history.insert(self.last_index, log);
         let sitemap = match SiteMap::single() {
             Some(s) => s,
             None => {
-                return self.last_index;
+                return Err(STError::new("Error to get SiteMap single instance"));
             }
         };
-        sitemap.push(self.last_index);
-        self.last_index
+        let _ = sitemap.push(self.last_index);
+        Ok(self.last_index)
     }
 
     pub fn remove_log(&mut self, index: u32) {
@@ -260,6 +270,10 @@ impl LogHistory {
 
     pub fn get_req_num(&self) -> usize {
         return self.history.len();
+    }
+
+    pub fn get_history(&self) -> &HashMap<u32,ReqResLog> {
+        &self.history
     }
 }
 

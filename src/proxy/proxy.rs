@@ -69,7 +69,13 @@ impl HttpHandler for ProxyHandler {
         if is_capture_req(&log) {
             let reqres_log = ReqResLog::new(log);
             let b = reqres_log.clone();
-            self.index = history.push_log(reqres_log);
+            self.index = match history.push_log(reqres_log) {
+                Ok(index) => index,
+                Err(e) => {
+                    self.index
+                }
+            }
+            
         }
         let s = SiteMap::single();
         RequestOrResponse::Request(req)

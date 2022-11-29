@@ -1,39 +1,39 @@
+use std::{collections::HashMap};
 
+use crate::{utils::STError, cmd::handlers::DebugLog};
 
-use std::collections::HashMap;
-
-use crate::{utils::STError};
-
-use super::handlers::{Helper, ProxyLogInfo};
+use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
-
 
 #[derive(Default)]
 pub struct CMDHandler {
-    procs           : Vec<Box<dyn CMDProc>>
+    procs: Vec<Box<dyn CMDProc>>,
 }
 
-pub type CMDOptions = HashMap<String,Option<String>>;
+pub type CMDOptions = HashMap<String, Option<String>>;
 
-pub trait  CMDProc {
+pub trait CMDProc {
     fn get_name(&self) -> &str;
 
     fn get_opts(&self) -> &CMDOptions;
 
-    fn process(&self, line: &Vec<&str>) -> Result<(),STError>;
-    
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError>;
 }
-
-
 
 impl CMDHandler {
     pub const fn new() -> Self {
-        let mut s = Self { procs: Vec::new() };
+        let s = Self { procs: Vec::new() };
         s
     }
 
     pub fn process(&self, line: String) {
-        let opts = line.split(" ").filter(|&x| !x.is_empty()).collect::<Vec<&str>>();
+        let opts = line
+            .split(" ")
+            .filter(|&x| !x.is_empty())
+            .collect::<Vec<&str>>();
+        if opts.len() == 0 {
+            return ;
+        }
         let proc_name = opts[0];
         for _proc in &self.procs {
             if _proc.get_name().eq(proc_name) {
@@ -43,8 +43,17 @@ impl CMDHandler {
     }
 
     pub fn init(&mut self) {
-        self.procs.push(Box::new(Helper::new()));
-        self.procs.push(Box::new(ProxyLogInfo::new()));
+        #[macro_export]
+        macro_rules! hi {
+            (  $x:ident  ) => {{
+                self.procs.push(Box::new($x::new()))
+            }};
+        }
+        hi!(Helper);
+        hi!(ProxyLogInfo);
+        hi!(ListHistory);
+        hi!(Exit);
+        hi!(DebugLog);
     }
 
     pub fn get_opts(&self) -> &Vec<String> {
@@ -56,14 +65,10 @@ impl CMDHandler {
     }
 
     pub fn get_handler() -> &'static CMDHandler {
-        unsafe {
-            &CMD_HANDLER
-        }
+        unsafe { &CMD_HANDLER }
     }
 
     pub fn get_handler_mut() -> &'static mut CMDHandler {
-        unsafe {
-            &mut CMD_HANDLER
-        }
+        unsafe { &mut CMD_HANDLER }
     }
 }

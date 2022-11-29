@@ -1,6 +1,6 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
 
-use rustyline::completion::{FilenameCompleter, Completer, Pair};
+use rustyline::completion::{Completer};
 
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
@@ -116,8 +116,8 @@ pub fn cmd() -> rustyline::Result<()> {
                 handler.process(line)
             }
             Err(ReadlineError::Interrupted) => {
-                println!("Interrupted");
-                break;
+                println!("Please use exit command to exit");
+                continue;
             }
             Err(ReadlineError::Eof) => {
                 println!("Encountered Eof");
