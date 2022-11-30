@@ -1,4 +1,5 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
+use std::io::Write;
 
 use rustyline::completion::{Completer};
 
@@ -6,7 +7,7 @@ use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
 use rustyline::hint::HistoryHinter;
 use rustyline::validate::MatchingBracketValidator;
-use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
+use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent, ExternalPrinter};
 use rustyline_derive::{Completer, Helper, Hinter, Validator};
 
 use super::cmd_handler::CMDHandler;
@@ -100,6 +101,7 @@ pub fn cmd() -> rustyline::Result<()> {
     rl.set_helper(Some(h));
     rl.bind_sequence(KeyEvent::alt('n'), Cmd::HistorySearchForward);
     rl.bind_sequence(KeyEvent::alt('p'), Cmd::HistorySearchBackward);
+    rl.bind_sequence(KeyEvent::ctrl('l'), Cmd::ClearScreen);
     if rl.load_history("history.txt").is_err() {
         println!("No previous history.");
     }
@@ -111,7 +113,10 @@ pub fn cmd() -> rustyline::Result<()> {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
-                //println!("Line: {line}");
+                if line.eq("clear") {
+                    let mut printer = rl.create_external_printer()?;
+                    printer.print("\x1B[2J\x1B[1;1H".to_string());
+                }
                 let handler = CMDHandler::get_handler();
                 handler.process(line)
             }

@@ -213,7 +213,8 @@ impl CMDProc for CatResponse {
         let index = line[1].to_string().parse::<u32>().unwrap();
 
         let s = LogHistory::get_httplog(index).unwrap();
-        println!("{:?}",s.get_response().unwrap().get_body());
+        let s = format!("{:?}",s.get_response().unwrap().get_body());
+        pager(&s);
         Ok(())
     }
 }
@@ -222,6 +223,34 @@ impl CatResponse {
     pub fn new() -> Self {
         Self {
             name: "cat_response".to_string(),
+            opts: Default::default(),
+        }
+    }
+}
+
+pub struct ClearScreen {
+    name    : String,
+    opts    : CMDOptions
+}
+
+impl CMDProc for ClearScreen {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        Ok(())
+    }
+}
+
+impl ClearScreen {
+    pub fn new() -> Self {
+        Self {
+            name: "clear".to_string(),
             opts: Default::default(),
         }
     }

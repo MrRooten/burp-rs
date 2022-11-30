@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 
-use crate::{utils::STError, cmd::handlers::{DebugLog, CatResponse, CatRequest}};
+use crate::{utils::STError, cmd::handlers::{DebugLog, CatResponse, ClearScreen, CatRequest}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
@@ -55,6 +55,7 @@ impl CMDHandler {
         hi!(Exit);
         hi!(DebugLog);
         hi!(CatResponse);
+        hi!(ClearScreen);
         hi!(CatRequest);
     }
 
