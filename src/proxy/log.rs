@@ -2,13 +2,12 @@
 use chrono::{Utc, DateTime};
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{StatusCode, http};
+use hyper::{StatusCode, http, Version};
 use url::Url;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use http::Request;
 use crate::librs::http::utils::HttpResponse;
-use crate::st_error;
 use crate::utils::STError;
 
 
@@ -144,7 +143,34 @@ impl LogRequest {
     }
 
     pub fn to_string(&self) -> String {
-        unimplemented!()
+        let mut ret = String::new();
+        ret.push_str(&self.orignal.method().to_string());
+        ret.push_str(" ");
+        ret.push_str(self.orignal.uri().path_and_query().unwrap().as_str());
+        ret.push_str(" ");
+        if self.orignal.version() == Version::HTTP_09 {
+            ret.push_str("HTTP/0.9");
+        }
+        else if self.orignal.version() == Version::HTTP_10 {
+            ret.push_str("HTTP/0.9");
+        }
+        else if self.orignal.version() == Version::HTTP_2 {
+            ret.push_str("HTTP/2");
+        }
+        else if self.orignal.version() == Version::HTTP_3 {
+            ret.push_str("HTTP/3");
+        }
+
+        ret.push_str("\r\n");
+
+        for kv in self.orignal.headers() {
+            ret.push_str(kv.0.as_str());
+            ret.push_str(": ");
+            ret.push_str(kv.1.to_str().unwrap());
+            ret.push_str("\r\n");
+        }
+        ret.push_str("\r\n");
+        return ret;
     }
 }
 

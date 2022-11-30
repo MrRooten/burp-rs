@@ -25,5 +25,15 @@ hyper-native-tls = { version="0.3.0"}
 reqwest = { version = "0.11", features = ["json"] }
 chrono = "0.4.23"
 colored = "2"
+
+[dependencies.minus]
+version = "5.1.0"
+features = [
+    # Enable features you want. For example
+    "dynamic_output",
+    "search",
+    "static_output"
+]
+
 [target.'cfg(target_family = "linux")']
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]

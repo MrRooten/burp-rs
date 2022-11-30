@@ -4,7 +4,7 @@ use hyper::StatusCode;
 
 use crate::{proxy::log::LogHistory, utils::{STError, log::logs}};
 
-use super::cmd_handler::*;
+use super::{cmd_handler::*, pager::pager};
 
 #[derive(Default)]
 pub struct Helper {
@@ -195,12 +195,12 @@ impl CMDProc for DebugLog {
     }
 }
 
-pub struct CatLog {
+pub struct CatResponse {
     name    : String,
     opts    : CMDOptions
 }
 
-impl CMDProc for CatLog {
+impl CMDProc for CatResponse {
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -210,6 +210,52 @@ impl CMDProc for CatLog {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        todo!()
+        let index = line[1].to_string().parse::<u32>().unwrap();
+
+        let s = LogHistory::get_httplog(index).unwrap();
+        println!("{:?}",s.get_response().unwrap().get_body());
+        Ok(())
+    }
+}
+
+impl CatResponse {
+    pub fn new() -> Self {
+        Self {
+            name: "cat_response".to_string(),
+            opts: Default::default(),
+        }
+    }
+}
+
+pub struct CatRequest {
+    name    : String,
+    opts    : CMDOptions
+}
+
+impl CMDProc for CatRequest {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        let index = line[1].to_string().parse::<u32>().unwrap();
+        
+        let s = LogHistory::get_httplog(index).unwrap();
+        let s = s.get_request().unwrap().to_string();
+        pager(&s);
+        Ok(())
+    }
+}
+
+impl CatRequest {
+    pub fn new() -> Self {
+        Self {
+            name: "cat_request".to_string(),
+            opts: Default::default(),
+        }
     }
 }
