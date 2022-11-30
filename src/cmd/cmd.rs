@@ -1,6 +1,7 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
 use std::io::Write;
 
+use colored::Colorize;
 use rustyline::completion::{Completer};
 
 use rustyline::error::ReadlineError;
@@ -107,8 +108,8 @@ pub fn cmd() -> rustyline::Result<()> {
     }
     let mut count = 1;
     loop {
-        let p = format!("{count}> ");
-        rl.helper_mut().expect("No helper").colored_prompt = format!("\x1b[1;32m{p}\x1b[0m");
+        let p = format!("burp-rs {count}> ");
+        rl.helper_mut().expect("No helper").colored_prompt = format!("{}",p.bright_blue());
         let readline = rl.readline(&p);
         match readline {
             Ok(line) => {
@@ -116,6 +117,7 @@ pub fn cmd() -> rustyline::Result<()> {
                 if line.eq("clear") {
                     let mut printer = rl.create_external_printer()?;
                     printer.print("\x1B[2J\x1B[1;1H".to_string());
+
                 }
                 let handler = CMDHandler::get_handler();
                 handler.process(line)

@@ -1,6 +1,6 @@
 use std::{thread};
 
-use burp_rs::{cmd::{cmd::cmd}, proxy::proxy::proxy, utils::log::init};
+use burp_rs::{cmd::{cmd::cmd}, proxy::proxy::proxy, utils::{log::init, banner}};
 
 #[tokio::main]
 async fn _main() {
@@ -13,5 +13,6 @@ async fn _main() {
 }
 
 fn main() {
+    banner();
     _main();
 }

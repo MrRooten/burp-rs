@@ -104,7 +104,7 @@ impl HttpHandler for ProxyHandler {
 #[async_trait]
 impl WebSocketHandler for ProxyHandler {
     async fn handle_message(&mut self, _ctx: &WebSocketContext, msg: Message) -> Option<Message> {
-        println!("{:?}", msg);
+        //println!("{:?}", msg);
         Some(msg)
     }
 }

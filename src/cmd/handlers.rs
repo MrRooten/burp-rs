@@ -213,7 +213,12 @@ impl CMDProc for CatResponse {
         let index = line[1].to_string().parse::<u32>().unwrap();
 
         let s = LogHistory::get_httplog(index).unwrap();
-        let s = format!("{:?}",s.get_response().unwrap().get_body());
+        let s = match s.get_response() {
+            Some(s) => format!("{:?}",s),
+            None => {
+                "".to_string()
+            }
+        };
         pager(&s);
         Ok(())
     }

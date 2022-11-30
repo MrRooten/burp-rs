@@ -25,7 +25,7 @@ impl Log for Logger {
                 log = Some(format!("{} - {}", record.level().to_string().green(), record.args()));
             } 
             unsafe {
-                logs.push(log.unwrap_or_default());
+                //logs.push(log.unwrap_or_default());
             }
         }
     }
