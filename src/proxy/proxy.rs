@@ -5,10 +5,11 @@ use hudsucker::{
     *,
 };
 use rustls_pemfile as pemfile;
+use tokio::spawn;
 
 use std::net::SocketAddr;
 use tracing::*;
-use crate::proxy::{log::{LogHistory, ReqResLog, LogResponse, LogRequest, SiteMap}, filter::{is_capture_res, is_capture_req}};
+use crate::{proxy::{log::{LogHistory, ReqResLog, LogResponse, LogRequest, SiteMap}, filter::{is_capture_res, is_capture_req}}, modules::passive::PassiveScanner};
 use hyper::{Body, Request, Response, body::{self}, Method};
 
 async fn shutdown_signal() {
@@ -84,7 +85,7 @@ impl HttpHandler for ProxyHandler {
     async fn handle_response(&mut self, _ctx: &HttpContext, mut res: Response<Body>) -> Response<Body> {
         
         let res_log = copy_resp(&mut res).await;
- 
+        
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -94,6 +95,11 @@ impl HttpHandler for ProxyHandler {
         };
         //println!("{:?}", res);
         if is_capture_res(&res_log) {
+            let index = self.index.clone();
+            spawn(async move {
+                let scanner = PassiveScanner::new();
+                scanner.passive_scan(index);
+            });
             history.set_resp(self.index, res_log);
         }
         

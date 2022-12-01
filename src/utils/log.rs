@@ -25,7 +25,11 @@ impl Log for Logger {
                 log = Some(format!("{} - {}", record.level().to_string().green(), record.args()));
             } 
             unsafe {
-                //logs.push(log.unwrap_or_default());
+                let log = match log {
+                    Some(log) => log,
+                    None => "".to_string()
+                };
+                logs.push(log);
             }
         }
     }
