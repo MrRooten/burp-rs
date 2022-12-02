@@ -16,20 +16,22 @@ impl Log for Logger {
         if self.enabled(record.metadata()) {
             let mut log = Option::<String>::default();
             if record.level() == log::Level::Debug {
-                log = Some(format!("{} - {}", record.level().to_string().blue(), record.args()));
+                log = Some(format!("{} {} {}", record.level().to_string().blue(), record.file().unwrap_or(""), record.args()));
             } else if record.level() == log::Level::Error {
-                log = Some(format!("{} - {}", record.level().to_string().red(), record.args()));
+                log = Some(format!("{} {} {}", record.level().to_string().red(), record.file().unwrap_or(""), record.args()));
             } else if record.level() == log::Level::Warn {
-                log = Some(format!("{} - {}", record.level().to_string().yellow(), record.args()));
+                log = Some(format!("{} {} {}", record.level().to_string().yellow(), record.file().unwrap_or(""), record.args()));
             } else if record.level() == log::Level::Info {
-                log = Some(format!("{} - {}", record.level().to_string().green(), record.args()));
+                log = Some(format!("{} {} {}", record.level().to_string().green(), record.file().unwrap_or(""), record.args()));
             } 
             unsafe {
                 let log = match log {
                     Some(log) => log,
                     None => "".to_string()
                 };
-                logs.push(log);
+                if log.contains("hudsucker") == false {
+                    logs.push(log);
+                }
             }
         }
     }

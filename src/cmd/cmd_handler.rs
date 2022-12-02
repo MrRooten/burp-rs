@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 
-use crate::{utils::STError, cmd::handlers::{DebugLog, CatResponse, ClearScreen, CatRequest}};
+use crate::{utils::STError, cmd::handlers::{DebugLog, CatResponse, ClearScreen, CatRequest, DebugLogInfo}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
@@ -57,6 +57,7 @@ impl CMDHandler {
         hi!(CatResponse);
         hi!(ClearScreen);
         hi!(CatRequest);
+        hi!(DebugLogInfo);
     }
 
     pub fn get_opts(&self) -> &Vec<String> {

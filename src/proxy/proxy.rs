@@ -10,7 +10,7 @@ use tokio::spawn;
 use std::net::SocketAddr;
 use tracing::*;
 use crate::{proxy::{log::{LogHistory, ReqResLog, LogResponse, LogRequest, SiteMap}, filter::{is_capture_res, is_capture_req}}, modules::passive::PassiveScanner};
-use hyper::{Body, Request, Response, body::{self}, Method};
+use hyper::{Body, Request, Response, body::{self, Bytes}, Method};
 
 async fn shutdown_signal() {
     tokio::signal::ctrl_c()
@@ -24,8 +24,18 @@ struct ProxyHandler {
 }
 
 async fn copy_req(req: &mut Request<Body>) -> LogRequest {
-    let body = req.body_mut();
     
+    let mut new_req = Request::new(Body::from(""));
+    new_req.headers_mut().clone_from(req.headers());
+    new_req.method_mut().clone_from(req.method());
+    new_req.uri_mut().clone_from(req.uri());
+    new_req.version_mut().clone_from(&req.version());
+    new_req.extensions().clone_from(&req.extensions());
+    return LogRequest::from(new_req,Bytes::new());
+}
+
+async fn copy_req_header(req: &mut Request<Body>) -> LogRequest {
+    let body = req.body_mut();
     let s = body::to_bytes(body).await.unwrap();
     let mut new_req = Request::new(Body::from(""));
     *req.body_mut() = Body::from(s.clone());
@@ -48,6 +58,17 @@ async fn copy_resp(resp: &mut Response<Body>) -> LogResponse {
     new_res.version_mut().clone_from(&resp.version());
     return LogResponse::from(new_res,s);
 }
+
+async fn copy_resp_header(resp: &mut Response<Body>) -> LogResponse {
+    let body = resp.body_mut();
+    let mut new_res = Response::new(Body::from(""));
+    new_res.extensions().clone_from(&resp.extensions());
+    new_res.headers_mut().clone_from(resp.headers());
+    new_res.status_mut().clone_from(&resp.status());
+    new_res.version_mut().clone_from(&resp.version());
+    return LogResponse::from(new_res,Bytes::new());
+}
+
 #[async_trait]
 impl HttpHandler for ProxyHandler {
     async fn handle_request(
@@ -65,11 +86,11 @@ impl HttpHandler for ProxyHandler {
                 return RequestOrResponse::Request(req);
             }
         };
-        let log = copy_req(&mut req).await;
+        
         //println!("{:?}", req);
-        if is_capture_req(&log) {
+        if is_capture_req(&req) {
+            let log = copy_req(&mut req).await;
             let reqres_log = ReqResLog::new(log);
-            let b = reqres_log.clone();
             self.index = match history.push_log(reqres_log) {
                 Ok(index) => index,
                 Err(e) => {
@@ -77,6 +98,15 @@ impl HttpHandler for ProxyHandler {
                 }
             }
             
+        } else {
+            let log = copy_req_header(&mut req).await;
+            let reqres_log = ReqResLog::new(log);
+            self.index = match history.push_log(reqres_log) {
+                Ok(index) => index,
+                Err(e) => {
+                    self.index
+                }
+            }
         }
         let s = SiteMap::single();
         RequestOrResponse::Request(req)
@@ -84,7 +114,7 @@ impl HttpHandler for ProxyHandler {
 
     async fn handle_response(&mut self, _ctx: &HttpContext, mut res: Response<Body>) -> Response<Body> {
         
-        let res_log = copy_resp(&mut res).await;
+        
         
         let history = LogHistory::single();
         let history = match history {
@@ -94,15 +124,18 @@ impl HttpHandler for ProxyHandler {
             }
         };
         //println!("{:?}", res);
-        if is_capture_res(&res_log) {
-            let index = self.index.clone();
-            spawn(async move {
-                let scanner = PassiveScanner::new();
-                scanner.passive_scan(index);
-            });
+        if is_capture_res(&res) {
+            let res_log = copy_resp(&mut res).await;
+            history.set_resp(self.index, res_log);
+        } else {
+            let res_log = copy_resp_header(&mut res).await;
             history.set_resp(self.index, res_log);
         }
-        
+        let index = self.index.clone();
+        spawn(async move {
+            let scanner = PassiveScanner::new();
+            scanner.passive_scan(index);
+        });
         res
     }
 }

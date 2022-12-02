@@ -3,6 +3,7 @@ use chrono::{Utc, DateTime};
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
 use hyper::{StatusCode, http, Version};
+use rustyline::history;
 use url::Url;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -46,6 +47,28 @@ impl ReqResLog {
                 return None;
             }
         }
+    }
+
+    pub fn get_size(&self) -> usize {
+        let mut ret = 0;
+
+        let request = match &self.request {
+            Some(r) => r,
+            None => {
+                return 0;
+            }
+        };
+
+        let response = match &self.response {
+            Some(r) => r,
+            None => {
+                return request.body.len();
+            }
+        };
+
+        ret = request.body.len() + response.body.len();
+
+        return ret;
     }
 
     pub fn get_response(&self) -> Option<&LogResponse> {
@@ -246,6 +269,15 @@ impl LogHistory {
             }
             &mut HTTP_LOG
         }
+    }
+
+    pub fn get_size(&self) -> usize {
+        let mut ret = 0;
+        for vk in &self.history {
+            ret += vk.1.get_size();
+        }
+
+        return ret;
     }
 
     pub fn push_log(&mut self, log: ReqResLog) -> Result<u32,STError> {

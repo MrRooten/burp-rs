@@ -92,7 +92,14 @@ impl CMDProc for ProxyLogInfo {
                 return Err(STError::new("Error to get LogHistory"));
             }
         };
-
+        let size = history.get_size();
+        if size < 1024 {
+            println!("Proxy traffic size: {} byte", size);
+        } else if size > 1024 && size < 1024*1024 {
+            println!("Proxy traffic size: {} KB", size/1024);
+        } else if size > 1024*1024 {
+            println!("Proxy traffic size: {} MB", size/(1024*1024));
+        }
         println!("Proxy Request:{}",history.get_req_num());
         Ok(())
     }
@@ -291,5 +298,50 @@ impl CatRequest {
             name: "cat_request".to_string(),
             opts: Default::default(),
         }
+    }
+}
+
+pub struct DebugLogInfo {
+    name    : String,
+    opts    : CMDOptions
+}
+
+impl DebugLogInfo {
+    pub fn new() -> Self {
+        Self {
+            name: "log_info".to_string(),
+            opts: Default::default(),
+        }
+    }
+}
+
+impl CMDProc for DebugLogInfo {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        unsafe {
+            let mut size = 0;
+            let mut num = 0;
+            for log in &logs {
+                size += log.as_bytes().len();
+                num += 1;
+            }
+            if size < 1024 {
+                println!("Log size: {} byte", size);
+            } else if size > 1024 && size < 1024*1024 {
+                println!("Log size: {} KB", size/1024);
+            } else if size > 1024*1024 {
+                println!("Log size: {} MB", size/(1024*1024));
+            }
+            println!("Log num: {}", num);
+        }
+
+        Ok(())
     }
 }
