@@ -5,14 +5,30 @@ use std::{
     time::Duration
 };
 
-pub(crate) fn pager(s: &str) -> Result<(), MinusError> {
+use crate::{st_error, utils::STError};
+
+pub(crate) fn pager(s: &str) -> Result<(), STError> {
     // Initialize the pager
     let mut pager = Pager::new();
     pager.set_run_no_overflow(true)?;
-    pager.set_exit_strategy(minus::ExitStrategy::PagerQuit);
-    for i in 0..=10u32 {
-        writeln!(pager, "{}", i)?;
+    let e = pager.set_exit_strategy(minus::ExitStrategy::PagerQuit);
+    match e {
+        Ok(o) => {},
+        Err(e) => {
+            return Err(st_error!(e));
+        }
     }
-    page_all(pager)?;
+    match writeln!(pager,"{}", s) {
+        Ok(o) => {},
+        Err(e) => {
+            return Err(st_error!(e));
+        }
+    }
+    match page_all(pager) {
+        Ok(o) => {},
+        Err(e) => {
+            return Err(st_error!(e));
+        }
+    };
     Ok(())
 }
