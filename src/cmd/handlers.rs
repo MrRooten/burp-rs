@@ -1,16 +1,19 @@
 use std::process;
 
 use hyper::StatusCode;
+use log::Level;
 
-use crate::{proxy::log::LogHistory, utils::{STError, log::logs}};
+use crate::{
+    proxy::log::LogHistory,
+    utils::{log::{LOGS, LEVEL}, STError},
+};
 
 use super::{cmd_handler::*, pager::pager};
 
 #[derive(Default)]
 pub struct Helper {
-    name    : String,
-    opts    : CMDOptions,
-    
+    name: String,
+    opts: CMDOptions,
 }
 
 impl CMDProc for Helper {
@@ -22,27 +25,24 @@ impl CMDProc for Helper {
         return &self.opts;
     }
 
-    fn process(&self, line: &Vec<&str>) -> Result<(),crate::utils::STError> {
+    fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
         println!("help");
         Ok(())
     }
-
-    
 }
 
 impl Helper {
     pub fn new() -> Self {
         Self {
             name: "help".to_string(),
-            opts: Default::default()
+            opts: Default::default(),
         }
     }
 }
 #[derive(Default)]
 pub struct Exit {
-    name    : String,
-    opts    : CMDOptions,
-    
+    name: String,
+    opts: CMDOptions,
 }
 
 impl CMDProc for Exit {
@@ -54,25 +54,23 @@ impl CMDProc for Exit {
         return &self.opts;
     }
 
-    fn process(&self, line: &Vec<&str>) -> Result<(),crate::utils::STError> {
+    fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
         process::exit(0);
     }
-
-    
 }
 
 impl Exit {
     pub fn new() -> Self {
         Self {
             name: "exit".to_string(),
-            opts: Default::default()
+            opts: Default::default(),
         }
     }
 }
 
 pub struct ProxyLogInfo {
-    name    : String,
-    opts    : CMDOptions
+    name: String,
+    opts: CMDOptions,
 }
 
 impl CMDProc for ProxyLogInfo {
@@ -84,7 +82,7 @@ impl CMDProc for ProxyLogInfo {
         return &self.opts;
     }
 
-    fn process(&self, line: &Vec<&str>) -> Result<(),crate::utils::STError> {
+    fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
         let history = LogHistory::single();
         let history = match history {
             Some(s) => s,
@@ -95,16 +93,14 @@ impl CMDProc for ProxyLogInfo {
         let size = history.get_size();
         if size < 1024 {
             println!("Proxy traffic size: {} byte", size);
-        } else if size > 1024 && size < 1024*1024 {
-            println!("Proxy traffic size: {} KB", size/1024);
-        } else if size > 1024*1024 {
-            println!("Proxy traffic size: {} MB", size/(1024*1024));
+        } else if size > 1024 && size < 1024 * 1024 {
+            println!("Proxy traffic size: {} KB", size / 1024);
+        } else if size > 1024 * 1024 {
+            println!("Proxy traffic size: {} MB", size / (1024 * 1024));
         }
-        println!("Proxy Request:{}",history.get_req_num());
+        println!("Proxy Request:{}", history.get_req_num());
         Ok(())
     }
-
-    
 }
 
 impl ProxyLogInfo {
@@ -117,8 +113,8 @@ impl ProxyLogInfo {
 }
 
 pub struct ListHistory {
-    name    : String,
-    opts    : CMDOptions
+    name: String,
+    opts: CMDOptions,
 }
 
 impl ListHistory {
@@ -139,7 +135,7 @@ impl CMDProc for ListHistory {
         &self.opts
     }
 
-    fn process(&self, line: &Vec<&str>) -> Result<(),STError> {
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         let history = LogHistory::single();
         let history = match history {
             Some(s) => s,
@@ -156,21 +152,21 @@ impl CMDProc for ListHistory {
             let response = history.get(key).unwrap().get_response();
             let status = match response {
                 Some(r) => r.get_status(),
-                None => StatusCode::GONE
+                None => StatusCode::GONE,
             };
             let size = match response {
                 Some(r) => r.get_size(),
-                None => 0
+                None => 0,
             };
-            println!("{} {} {} {}",key,request.get_url(),status,size);
+            println!("{} {} {} {}", key, request.get_url(), status, size);
         }
         Ok(())
     }
 }
 
 pub struct DebugLog {
-    name    : String,
-    opts    : CMDOptions
+    name: String,
+    opts: CMDOptions,
 }
 
 impl DebugLog {
@@ -193,7 +189,7 @@ impl CMDProc for DebugLog {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         unsafe {
-            for log in &logs {
+            for log in &LOGS {
                 println!("{}", log);
             }
         }
@@ -203,8 +199,8 @@ impl CMDProc for DebugLog {
 }
 
 pub struct CatResponse {
-    name    : String,
-    opts    : CMDOptions
+    name: String,
+    opts: CMDOptions,
 }
 
 impl CMDProc for CatResponse {
@@ -221,10 +217,8 @@ impl CMDProc for CatResponse {
 
         let s = LogHistory::get_httplog(index).unwrap();
         let s = match s.get_response() {
-            Some(s) => format!("{:?}",s),
-            None => {
-                "".to_string()
-            }
+            Some(s) => format!("{:?}", s),
+            None => "".to_string(),
         };
         pager(&s);
         Ok(())
@@ -241,8 +235,8 @@ impl CatResponse {
 }
 
 pub struct ClearScreen {
-    name    : String,
-    opts    : CMDOptions
+    name: String,
+    opts: CMDOptions,
 }
 
 impl CMDProc for ClearScreen {
@@ -268,9 +262,54 @@ impl ClearScreen {
     }
 }
 
+pub struct DebugLevel {
+    name: String,
+    opts: CMDOptions,
+}
+
+impl CMDProc for DebugLevel {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        unsafe {
+            if line.len() == 1 {
+                println!("{}", LEVEL.to_string());
+                return Ok(())
+            }
+            if line[1].eq("info") {
+                LEVEL = Level::Info;
+            } else if line[1].eq("debug") {
+                LEVEL = Level::Debug;
+            } else if line[1].eq("warn") {
+                LEVEL = Level::Warn;
+            } else if line[1].eq("error") {
+                LEVEL = Level::Error;
+            } else {
+                println!("Only support <info> <debug> <warn> <error>");
+            }
+        }
+        return Ok(());
+    }
+}
+
+impl DebugLevel {
+    pub fn new() -> Self {
+        Self {
+            name: "debug_level".to_string(),
+            opts: Default::default(),
+        }
+    }
+}
+
 pub struct CatRequest {
-    name    : String,
-    opts    : CMDOptions
+    name: String,
+    opts: CMDOptions,
 }
 
 impl CMDProc for CatRequest {
@@ -284,7 +323,7 @@ impl CMDProc for CatRequest {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         let index = line[1].to_string().parse::<u32>().unwrap();
-        
+
         let s = LogHistory::get_httplog(index).unwrap();
         let s = s.get_request().unwrap().to_string();
         pager(&s);
@@ -302,8 +341,8 @@ impl CatRequest {
 }
 
 pub struct DebugLogInfo {
-    name    : String,
-    opts    : CMDOptions
+    name: String,
+    opts: CMDOptions,
 }
 
 impl DebugLogInfo {
@@ -328,16 +367,16 @@ impl CMDProc for DebugLogInfo {
         unsafe {
             let mut size = 0;
             let mut num = 0;
-            for log in &logs {
+            for log in &LOGS {
                 size += log.as_bytes().len();
                 num += 1;
             }
             if size < 1024 {
                 println!("Log size: {} byte", size);
-            } else if size > 1024 && size < 1024*1024 {
-                println!("Log size: {} KB", size/1024);
-            } else if size > 1024*1024 {
-                let s = (size / (1024*1024)) as f32;
+            } else if size > 1024 && size < 1024 * 1024 {
+                println!("Log size: {} KB", size / 1024);
+            } else if size > 1024 * 1024 {
+                let s = (size / (1024 * 1024)) as f32;
                 println!("Log size: {} MB", s);
             }
             println!("Log num: {}", num);

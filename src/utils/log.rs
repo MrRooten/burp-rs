@@ -5,11 +5,13 @@ use colored::Colorize;
 use log::{Level, Log};
 
 pub struct Logger;
-pub static mut logs: Vec<String> = vec![];
-
+pub static mut LOGS: Vec<String> = vec![];
+pub static mut LEVEL: Level = Level::Info;
 impl Log for Logger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() <= Level::Info
+        unsafe {
+            metadata.level() <= LEVEL
+        }
     }
 
     fn log(&self, record: &log::Record) {
@@ -30,7 +32,7 @@ impl Log for Logger {
                     None => "".to_string()
                 };
                 if log.contains("hudsucker") == false {
-                    logs.push(log);
+                    LOGS.push(log);
                 }
             }
         }

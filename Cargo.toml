@@ -35,5 +35,3 @@ features = [
     "static_output"
 ]
 
-[target.'cfg(target_family = "linux")']
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]

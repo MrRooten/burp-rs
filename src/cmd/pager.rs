@@ -10,7 +10,12 @@ use crate::{st_error, utils::STError};
 pub(crate) fn pager(s: &str) -> Result<(), STError> {
     // Initialize the pager
     let mut pager = Pager::new();
-    pager.set_run_no_overflow(true)?;
+    match pager.set_run_no_overflow(true) {
+        Ok(o) => {},
+        Err(e) => {
+            return Err(st_error!(e));
+        }
+    };
     let e = pager.set_exit_strategy(minus::ExitStrategy::PagerQuit);
     match e {
         Ok(o) => {},
