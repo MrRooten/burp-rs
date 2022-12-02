@@ -1,4 +1,4 @@
-use minus::{dynamic_paging, MinusError, Pager};
+use minus::{dynamic_paging, MinusError, Pager, page_all};
 use std::{
     fmt::Write, 
     thread::{spawn, sleep}, 
@@ -8,14 +8,11 @@ use std::{
 pub(crate) fn pager(s: &str) -> Result<(), MinusError> {
     // Initialize the pager
     let mut pager = Pager::new();
-    // Run the pager in a separate thread
-    let pager2 = pager.clone();
-    pager.set_exit_strategy(minus::ExitStrategy::PagerQuit).unwrap();
-    let pager_thread = spawn(move || dynamic_paging(pager2));
-    
-
-    writeln!(pager, "{}", s);
-
-    pager_thread.join().unwrap()?;
+    pager.set_run_no_overflow(true)?;
+    pager.set_exit_strategy(minus::ExitStrategy::PagerQuit);
+    for i in 0..=10u32 {
+        writeln!(pager, "{}", i)?;
+    }
+    page_all(pager)?;
     Ok(())
 }

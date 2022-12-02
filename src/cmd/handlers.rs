@@ -337,7 +337,8 @@ impl CMDProc for DebugLogInfo {
             } else if size > 1024 && size < 1024*1024 {
                 println!("Log size: {} KB", size/1024);
             } else if size > 1024*1024 {
-                println!("Log size: {} MB", size/(1024*1024));
+                let s = (size / (1024*1024)) as f32;
+                println!("Log size: {} MB", s);
             }
             println!("Log num: {}", num);
         }
