@@ -9,29 +9,48 @@ pub static mut LOGS: Vec<String> = vec![];
 pub static mut LEVEL: Level = Level::Info;
 impl Log for Logger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        unsafe {
-            metadata.level() <= LEVEL
-        }
+        unsafe { metadata.level() <= LEVEL }
     }
 
     fn log(&self, record: &log::Record) {
+        //println!("{:?}",record);
         if self.enabled(record.metadata()) {
             let mut log = Option::<String>::default();
             if record.level() == log::Level::Debug {
-                log = Some(format!("{} {} {}", record.level().to_string().blue(), record.file().unwrap_or(""), record.args()));
+                log = Some(format!(
+                    "{} {} {}",
+                    record.level().to_string().blue(),
+                    record.file().unwrap_or(""),
+                    record.args()
+                ));
             } else if record.level() == log::Level::Error {
-                log = Some(format!("{} {} {}", record.level().to_string().red(), record.file().unwrap_or(""), record.args()));
+                log = Some(format!(
+                    "{} {} {}",
+                    record.level().to_string().red(),
+                    record.file().unwrap_or(""),
+                    record.args()
+                ));
             } else if record.level() == log::Level::Warn {
-                log = Some(format!("{} {} {}", record.level().to_string().yellow(), record.file().unwrap_or(""), record.args()));
+                log = Some(format!(
+                    "{} {} {}",
+                    record.level().to_string().yellow(),
+                    record.file().unwrap_or(""),
+                    record.args()
+                ));
             } else if record.level() == log::Level::Info {
-                log = Some(format!("{} {} {}", record.level().to_string().green(), record.file().unwrap_or(""), record.args()));
-            } 
+                log = Some(format!(
+                    "{} {} {}",
+                    record.level().to_string().green(),
+                    record.file().unwrap_or(""),
+                    record.args()
+                ));
+            }
             unsafe {
                 let log = match log {
                     Some(log) => log,
-                    None => "".to_string()
+                    None => "".to_string(),
                 };
-                if log.contains("hudsucker") == false {
+                if record.target().starts_with("burp_rs") {
                     LOGS.push(log);
                 }
             }
@@ -68,7 +87,7 @@ pub fn init() -> Result<(), STError> {
     //    }
     //}
 
-    let result = log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info));
+    let result = log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Debug));
 
     match result {
         Ok(o) => {
@@ -78,4 +97,13 @@ pub fn init() -> Result<(), STError> {
             return Err(st_error!(e));
         }
     }
+}
+
+//Avoid big cost of fmt 
+pub fn can_debug() -> bool {
+    unsafe { if LEVEL >= Level::Debug {
+        return true;
+    } }
+
+    return false;
 }

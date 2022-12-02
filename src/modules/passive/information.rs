@@ -1,4 +1,4 @@
-use log::info;
+use log::{info, debug};
 
 use crate::modules::IPassive;
 

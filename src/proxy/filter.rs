@@ -1,16 +1,23 @@
-use hyper::{Request, Body, Response, body};
-use log::{info, debug};
+use hyper::{body, Body, Request, Response};
+use log::{debug, info, Level};
+
+use crate::{utils::log::{LEVEL, can_debug}};
 
 use super::log::{LogRequest, LogResponse};
 
 pub fn is_capture_req(req: &Request<Body>) -> bool {
-    debug!("Send request: {:?}",req);
+    if can_debug() {
+        debug!("burp-rs:Send request: {:?}", req);
+    }
     true
 }
 
 pub fn is_capture_res(res: &Response<Body>) -> bool {
     let content_type = res.headers().get("content-type");
-    debug!("Recive Response: {:?}",res);
+    if can_debug() {
+        debug!("burp-rs:Recive Response: {:?}", res);
+    }
+
     match content_type {
         Some(t) => {
             let s = t.to_str();
@@ -19,22 +26,16 @@ pub fn is_capture_res(res: &Response<Body>) -> bool {
                     if o.contains("text") || o.contains("json") || o.contains("xml") {
                         return true;
                     }
-                },
-                Err(e) => {
-                    
                 }
+                Err(e) => {}
             }
-        },
-        None => {
-
         }
+        None => {}
     };
     let s = res.headers().get("content-length");
     let value = match s {
         Some(v) => v,
-        None => {
-            return false
-        }
+        None => return false,
     };
 
     let value = value.to_str();
@@ -43,17 +44,14 @@ pub fn is_capture_res(res: &Response<Body>) -> bool {
             let length = s.parse::<u32>();
             match length {
                 Ok(o) => {
-                    if o < 1024*1024 {
+                    if o < 1024 * 1024 {
                         return true;
                     } else {
                         return false;
                     }
-                },
-                Err(e) => {
-
                 }
+                Err(e) => {}
             }
-            
         }
         Err(e) => {
             return false;
