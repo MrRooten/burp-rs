@@ -26,9 +26,9 @@ impl Issue {
         Self { 
             name: name.to_string(), 
             detail: detail.to_string(), 
-            level: level, 
+            level, 
             confidence: confidance,
-            httplog: unimplemented!()
+            httplog: None
         }
     }
 
@@ -49,7 +49,7 @@ impl Issue {
     }
 
     fn get_httplog(&self) -> Option<&ReqResLog> {
-        unimplemented!()
+        None
     }
 }
 
@@ -61,7 +61,7 @@ pub trait IPassive {
     fn help(&self) -> Helper;
 }
 
-use std::{collections::HashMap, ops::Deref};
+use std::{collections::HashMap};
 
 use crate::{utils::STError, proxy::log::ReqResLog};
 

@@ -1,6 +1,6 @@
 
-pub mod information;
-use self::information::FingerIdentity;
+pub mod finger_identity;
+use self::finger_identity::FingerIdentity;
 
 use super::IPassive;
 

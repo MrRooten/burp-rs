@@ -1,11 +1,16 @@
 use std::process;
 
+use colored::Colorize;
 use hyper::StatusCode;
 use log::Level;
 
 use crate::{
-    proxy::log::LogHistory,
-    utils::{log::{LOGS, LEVEL}, STError},
+    proxy::log::{LogHistory, SiteMap},
+    st_error,
+    utils::{
+        log::{LEVEL, LOGS},
+        STError,
+    },
 };
 
 use super::{cmd_handler::*, pager::pager};
@@ -158,7 +163,14 @@ impl CMDProc for ListHistory {
                 Some(r) => r.get_size(),
                 None => 0,
             };
-            println!("{} {} {} {}", key, request.get_url(), status, size);
+
+            let mut url_brief = request.get_url();
+            if url_brief.len() > 61 {
+                url_brief = url_brief[0..60].to_string();
+                url_brief.push_str("...");
+            }
+
+            println!("{} {} {} {}", key, url_brief, status, size);
         }
         Ok(())
     }
@@ -213,14 +225,23 @@ impl CMDProc for CatResponse {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        if line.len() <= 1 {
+            let s = format!("{} ${{num}}", self.get_name());
+            return Err(STError::new(&s));
+        }
         let index = line[1].to_string().parse::<u32>().unwrap();
 
         let s = LogHistory::get_httplog(index).unwrap();
         let s = match s.get_response() {
-            Some(s) => format!("{:?}", s),
+            Some(s) => s.to_string(),
             None => "".to_string(),
         };
-        pager(&s);
+        match pager(&s) {
+            Ok(o) => {}
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        }
         Ok(())
     }
 }
@@ -228,7 +249,7 @@ impl CMDProc for CatResponse {
 impl CatResponse {
     pub fn new() -> Self {
         Self {
-            name: "cat_response".to_string(),
+            name: "cat_resp".to_string(),
             opts: Default::default(),
         }
     }
@@ -280,7 +301,7 @@ impl CMDProc for DebugLevel {
         unsafe {
             if line.len() == 1 {
                 println!("{}", LEVEL.to_string());
-                return Ok(())
+                return Ok(());
             }
             if line[1].eq("info") {
                 LEVEL = Level::Info;
@@ -322,11 +343,20 @@ impl CMDProc for CatRequest {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        if line.len() <= 1 {
+            let s = format!("{} ${{num}}", self.get_name());
+            return Err(STError::new(&s));
+        }
         let index = line[1].to_string().parse::<u32>().unwrap();
 
         let s = LogHistory::get_httplog(index).unwrap();
         let s = s.get_request().unwrap().to_string();
-        pager(&s);
+        match pager(&s) {
+            Ok(o) => {}
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        }
         Ok(())
     }
 }
@@ -334,7 +364,7 @@ impl CMDProc for CatRequest {
 impl CatRequest {
     pub fn new() -> Self {
         Self {
-            name: "cat_request".to_string(),
+            name: "cat_req".to_string(),
             opts: Default::default(),
         }
     }
@@ -383,5 +413,108 @@ impl CMDProc for DebugLogInfo {
         }
 
         Ok(())
+    }
+}
+
+pub struct SearchLog {
+    opts: CMDOptions,
+}
+
+impl CMDProc for SearchLog {
+    fn get_name(&self) -> &str {
+        return "search_log";
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        todo!()
+    }
+}
+
+impl SearchLog {
+    pub fn new() -> Self {
+        SearchLog {
+            opts: Default::default(),
+        }
+    }
+}
+
+pub struct Sitemap {
+    opts: CMDOptions,
+}
+
+impl CMDProc for Sitemap {
+    fn get_name(&self) -> &str {
+        return "sitemap";
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        let map = match SiteMap::single() {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("Can not get Sitemap Single instance"));
+            }
+        };
+        if line.len() <= 1 {
+            let hosts = map.get_hosts();
+            let mut result = String::new();
+            for host in hosts {
+                let push = format!("host: {}\n", host.green());
+                result.push_str(&push);
+            }
+
+            match pager(&result) {
+                Ok(o) => {}
+                Err(e) => {
+                    return Err(st_error!(e));
+                }
+            }
+
+            return Ok(());
+        }
+
+        let httplog = match map.get_httplogs_by_host(line[1]) {
+            Some(log) => log,
+            None => {
+                return Err(STError::new("Not exist in logs"));
+            }
+        };
+
+        for key in httplog {
+            let request = LogHistory::get_httplog(*key).unwrap().get_request().unwrap();
+            let response = LogHistory::get_httplog(*key).unwrap().get_response();
+            let status = match response {
+                Some(r) => r.get_status(),
+                None => StatusCode::GONE,
+            };
+            let size = match response {
+                Some(r) => r.get_size(),
+                None => 0,
+            };
+
+            let mut url_brief = request.get_url();
+            if url_brief.len() > 61 {
+                url_brief = url_brief[0..60].to_string();
+                url_brief.push_str("...");
+            }
+
+            println!("{} {} {} {}", key, url_brief, status, size);
+        }
+        Ok(())
+    }
+}
+
+impl Sitemap {
+    pub fn new() -> Sitemap {
+        Sitemap {
+            opts: Default::default(),
+        }
     }
 }

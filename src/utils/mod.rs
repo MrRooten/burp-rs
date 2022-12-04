@@ -7,6 +7,7 @@ use colored::Colorize;
 pub mod error;
 pub mod config;
 pub mod log;
+pub mod utils;
 #[derive(Debug,Default)]
 pub struct STError {
     detail  : String,

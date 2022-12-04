@@ -1,6 +1,3 @@
-use std::fs;
-use std::path::Path;
-
 use colored::Colorize;
 use log::{Level, Log};
 

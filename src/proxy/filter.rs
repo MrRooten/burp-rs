@@ -1,9 +1,9 @@
-use hyper::{body, Body, Request, Response};
-use log::{debug, info, Level};
+use hyper::{Body, Request, Response};
+use log::{debug};
 
-use crate::{utils::log::{LEVEL, can_debug}};
+use crate::{utils::log::{can_debug}};
 
-use super::log::{LogRequest, LogResponse};
+
 
 pub fn is_capture_req(req: &Request<Body>) -> bool {
     if can_debug() {

@@ -1,16 +1,16 @@
 #![allow(dead_code)]
 use chrono::{Utc, DateTime};
+use flate2::read::GzDecoder;
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
 use hyper::{StatusCode, http, Version};
-use rustyline::history;
 use url::Url;
 use std::collections::HashMap;
+use std::io::Read;
 use std::sync::Mutex;
 use http::Request;
 use crate::librs::http::utils::HttpResponse;
 use crate::utils::STError;
-
 
 
 pub struct ReqResLog {
@@ -18,8 +18,6 @@ pub struct ReqResLog {
     response    : Option<LogResponse>,
     record_t    : DateTime<Utc>
 }
-
-
 
 impl ReqResLog {
     pub fn from_http_response(response: &HttpResponse) -> ReqResLog {
@@ -50,8 +48,6 @@ impl ReqResLog {
     }
 
     pub fn get_size(&self) -> usize {
-        let mut ret = 0;
-
         let request = match &self.request {
             Some(r) => r,
             None => {
@@ -66,7 +62,7 @@ impl ReqResLog {
             }
         };
 
-        ret = request.body.len() + response.body.len();
+        let ret = request.body.len() + response.body.len();
 
         return ret;
     }
@@ -200,12 +196,20 @@ impl LogRequest {
 #[derive(Debug)]
 pub struct LogResponse {
     orignal     : Response<Body>,
-    body        : Bytes
+    body        : Bytes,
+    c_type      : String
 }
 
 impl LogResponse {
     pub fn from(res: Response<Body>, body: Bytes) -> LogResponse {
-        LogResponse { orignal: res ,body: body}
+        let content_type = res.headers().get("content-type");
+        let content_type = match content_type {
+            Some(c) => c.to_str().unwrap().to_string(),
+            None => {
+                return LogResponse { orignal: res ,body: body, c_type: "".to_string()};
+            }
+        };
+        LogResponse { orignal: res ,body: body, c_type: content_type}
     }
 
     pub fn get_header(&self, key: &str) -> Option<String> {
@@ -223,8 +227,46 @@ impl LogResponse {
     pub fn get_size(&self) -> usize {
         return self.body.len();
     }
-    pub fn to_string() -> String {
-        unimplemented!()
+    pub fn to_string(&self) -> String {
+        let mut ret = String::new();
+        ret.push_str(&self.orignal.status().to_string());
+        ret.push_str("\r\n");
+        for kv in self.orignal.headers() {
+            ret.push_str(kv.0.as_str());
+            ret.push_str(": ");
+            ret.push_str(kv.1.to_str().unwrap());
+            ret.push_str("\r\n");
+        }
+        ret.push_str("\r\n");
+        ret.push_str(&self.get_body_string());
+        ret
+    }
+
+    pub fn get_beauty_string(&self) -> String {
+        let mut ret = String::new();
+        ret.push_str(&self.orignal.status().to_string());
+        ret.push_str("\r\n");
+        for kv in self.orignal.headers() {
+            ret.push_str(kv.0.as_str());
+            ret.push_str(": ");
+            ret.push_str(kv.1.to_str().unwrap());
+            ret.push_str("\r\n");
+        }
+        ret.push_str("\r\n");
+        let c_type = self.get_header("content-type");
+        let body = match c_type {
+            Some(c) => {
+                if c.contains("html") || c.contains("xml") {
+                    let s = self.get_body_string();
+                    return s;
+                }
+
+                self.get_body_string()
+            },
+            None => self.get_body_string()
+        };
+        ret.push_str(&body);
+        ret
     }
 
     pub fn get_status(&self) -> StatusCode {
@@ -244,8 +286,110 @@ impl LogResponse {
         return Self {
             orignal: new_res,
             body: self.body.clone(),
+            c_type: self.c_type.clone()
         };
     }
+    fn find_subsequence(&self, haystack: &[u8], needle: &[u8]) -> Option<usize> {
+        haystack.windows(needle.len()).position(|window| window == needle)
+    }
+    pub fn contains(&self, s: &str, ignore_case: bool) -> bool {
+        if ignore_case {
+            if self.orignal.status().to_string().to_lowercase().contains(&s.to_lowercase()) {
+                return true;
+            }
+
+            for kv in self.orignal.headers() {
+                if kv.0.to_string().to_lowercase().contains(&s.to_lowercase()) {
+                    return true;
+                }
+
+                match kv.1.to_str() {
+                    Ok(o) => {
+                        if o.to_lowercase().contains(&o.to_lowercase()) {
+                            return true;
+                        }
+                    }, 
+                    Err(e) => {
+
+                    }
+                }
+            }
+            
+            let find = self.find_subsequence(&self.body, s.as_bytes());
+            if find.is_some() {
+                return true;
+            }
+
+            let body_s = String::from_utf8_lossy(&self.body).to_string();
+            if body_s.to_lowercase().contains(&s.to_lowercase()) {
+                return true;
+            }
+
+            return false;
+        } else {
+            if self.orignal.status().to_string().contains(s) {
+                return true;
+            }
+
+            for kv in self.orignal.headers() {
+
+                if kv.0.to_string().contains(s) {
+                    return true;
+                }
+
+                match kv.1.to_str() {
+                    Ok(o) => {
+                        if o.contains(s) {
+                            return true;
+                        }
+                    }, 
+                    Err(e) => {
+
+                    }
+                }
+            }
+
+            let find = self.find_subsequence(&self.body, s.as_bytes());
+            if find.is_none() {
+                return false;
+            } else {
+                return true;
+            }
+        }
+    }
+
+    pub fn get_body_string(&self) -> String {
+        let e_type = self.orignal.headers().get("content-encoding");
+        let e_type = match e_type {
+            Some(s) => {
+                let s = match s.to_str() {
+                    Ok(o) => {
+                        o
+                    },
+                    Err(e) => {
+                        ""
+                    }
+                };
+
+                s
+            }
+            None => {
+                ""
+            }
+        };
+
+        if e_type.contains("gzip") {
+            let s: &[u8] = &self.body;
+            let mut d = GzDecoder::new(s);
+            let mut s = String::new();
+            d.read_to_string(&mut s).unwrap();
+            return s;
+        }
+        
+        return String::from_utf8_lossy(&self.body).to_string();
+    }
+
+
 }
 
 pub static mut HTTP_LOG: Option<LogHistory> = None;
@@ -309,7 +453,14 @@ impl LogHistory {
     }
 
     pub fn set_resp(&mut self, index: u32, resp: LogResponse) {
-        self.lock.lock();
+        match self.lock.lock() {
+            Ok(o) => {
+
+            },
+            Err(e) => {
+
+            }
+        };
         let log = self.history.get_mut(&index).unwrap();
         log.set_resp(resp);
     }
@@ -348,6 +499,10 @@ impl Site {
 
     pub fn push_httplog(&mut self, index: u32) {
         self.logs.push(index);
+    }
+
+    pub fn get_logs(&self) -> &Vec<u32> {
+        &self.logs
     }
 }
 pub struct SiteMap {
@@ -395,5 +550,21 @@ impl SiteMap {
 
         site.push_httplog(index);
         Ok(())
+    }
+
+    pub fn get_hosts(&self) -> Vec<String> {
+        self.map.keys().cloned().collect()
+    }
+
+    pub fn get_httplogs_by_host(&self, s: &str) -> Option<&Vec<u32>> {
+        let site = match self.map.get(s) {
+            Some(si) => si,
+            None => {
+                return None;
+            }
+        };
+
+
+        Some(site.get_logs())
     }
 }

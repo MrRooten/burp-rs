@@ -1,5 +1,4 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
-use std::io::Write;
 
 use colored::Colorize;
 use rustyline::completion::{Completer};
@@ -116,7 +115,14 @@ pub fn cmd() -> rustyline::Result<()> {
                 rl.add_history_entry(line.as_str());
                 if line.eq("clear") {
                     let mut printer = rl.create_external_printer()?;
-                    printer.print("\x1B[2J\x1B[1;1H".to_string());
+                    match printer.print("\x1B[2J\x1B[1;1H".to_string()) {
+                        Ok(()) => {
+
+                        },
+                        Err(e) => {
+                            println!("Can not print clear chars sequence");
+                        }
+                    }
 
                 }
                 let handler = CMDHandler::get_handler();

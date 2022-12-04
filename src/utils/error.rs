@@ -1,4 +1,4 @@
-use std::{error::{Error, self}, fmt};
+use std::{error::{Error}, fmt};
 
 use super::STError;
 

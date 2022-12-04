@@ -1,8 +1,6 @@
-use minus::{dynamic_paging, MinusError, Pager, page_all};
+use minus::{Pager, page_all};
 use std::{
     fmt::Write, 
-    thread::{spawn, sleep}, 
-    time::Duration
 };
 
 use crate::{st_error, utils::STError};
