@@ -50,6 +50,14 @@ impl TokenPrinter {
             i += 1;
         }
     }
+
+    fn special_tag(&self, name: &str) -> bool {
+        if name.eq("link") {
+            return true;
+        }
+
+        return false;
+    }
 }
 
 impl TokenSink for TokenPrinter {
@@ -99,7 +107,11 @@ impl TokenSink for TokenPrinter {
                         attr.name.local, attr.value
                     ));
                 }
-                if tag.self_closing {
+                let mut self_closing = tag.self_closing;
+                if self.special_tag(&tag.name) {
+                    self_closing = true;
+                }
+                if self_closing {
                     self.result_s.push_str(&format!(" \x1b[31m/\x1b[0m"));
                     if self.indent_num >= 1 {
                         self.indent_num -= 1;
