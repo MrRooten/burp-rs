@@ -3,6 +3,7 @@ use std::process;
 use colored::Colorize;
 use hyper::StatusCode;
 use log::Level;
+use minus::Pager;
 
 use crate::{
     proxy::log::{LogHistory, SiteMap},
@@ -233,10 +234,11 @@ impl CMDProc for CatResponse {
 
         let s = LogHistory::get_httplog(index).unwrap();
         let s = match s.get_response() {
-            Some(s) => s.to_string(),
+            Some(s) => s.get_beauty_string(),
             None => "".to_string(),
         };
-        match pager(&s) {
+        let p = Pager::new();
+        match pager(&s, p) {
             Ok(o) => {}
             Err(e) => {
                 return Err(st_error!(e));
@@ -351,7 +353,8 @@ impl CMDProc for CatRequest {
 
         let s = LogHistory::get_httplog(index).unwrap();
         let s = s.get_request().unwrap().to_string();
-        match pager(&s) {
+        let p = Pager::new();
+        match pager(&s, p) {
             Ok(o) => {}
             Err(e) => {
                 return Err(st_error!(e));
@@ -469,8 +472,8 @@ impl CMDProc for Sitemap {
                 let push = format!("host: {}\n", host.green());
                 result.push_str(&push);
             }
-
-            match pager(&result) {
+            let p = Pager::new();
+            match pager(&result, p) {
                 Ok(o) => {}
                 Err(e) => {
                     return Err(st_error!(e));

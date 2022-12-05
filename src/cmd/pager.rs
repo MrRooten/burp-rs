@@ -1,31 +1,40 @@
-use minus::{Pager, page_all};
+use minus::{ExitStrategy};
 use std::{
-    fmt::Write, 
+    thread::spawn, 
 };
 
-use crate::{st_error, utils::STError};
+use crate::{utils::STError, st_error};
 
-pub(crate) fn pager(s: &str) -> Result<(), STError> {
+pub(crate) fn pager(s: &str, p: minus::Pager) -> Result<(), STError> {
+    p.set_exit_strategy(ExitStrategy::PagerQuit).unwrap();
     // Initialize the pager
-    let mut pager = Pager::new();
-    let e = pager.set_exit_strategy(minus::ExitStrategy::PagerQuit);
-    match e {
-        Ok(o) => {},
+    let changes = || {
+        p.push_str(s).unwrap_or_else(|_| {});
+        Result::<(), Box<dyn std::error::Error>>::Ok(())
+    };
+
+    let p = p.clone();
+    let res1 = spawn(|| minus::dynamic_paging(p));
+    let res2 = changes();
+    match res1.join() {
+        Ok(o) => {
+            match o {
+                Ok(o) => {},
+                Err(e) => {
+                    return Err(st_error!(e));
+                }
+            }
+        },
         Err(e) => {
-            return Err(st_error!(e));
-        }
-    }
-    match writeln!(pager,"{}", s) {
-        Ok(o) => {},
-        Err(e) => {
-            return Err(st_error!(e));
-        }
-    }
-    match page_all(pager) {
-        Ok(o) => {},
-        Err(e) => {
-            return Err(st_error!(e));
+            
         }
     };
+    match res2 {
+        Ok(o) => {},
+        Err(e) => {
+            return Err(STError::from(e));
+        },
+    }
+
     Ok(())
 }

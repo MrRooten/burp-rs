@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use chrono::{Utc, DateTime};
+use colored::Colorize;
 use flate2::read::GzDecoder;
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
@@ -11,6 +12,7 @@ use std::sync::Mutex;
 use http::Request;
 use crate::librs::http::utils::HttpResponse;
 use crate::utils::STError;
+use crate::utils::utils::tidy_html;
 
 
 pub struct ReqResLog {
@@ -244,24 +246,25 @@ impl LogResponse {
 
     pub fn get_beauty_string(&self) -> String {
         let mut ret = String::new();
-        ret.push_str(&self.orignal.status().to_string());
-        ret.push_str("\r\n");
+        ret.push_str(&self.orignal.status().to_string().green());
+        ret.push_str("\n");
         for kv in self.orignal.headers() {
-            ret.push_str(kv.0.as_str());
+            let key = kv.0.as_str().blue();
+            ret.push_str(&key.blue());
             ret.push_str(": ");
-            ret.push_str(kv.1.to_str().unwrap());
-            ret.push_str("\r\n");
+            ret.push_str(&kv.1.to_str().unwrap().red());
+            ret.push_str("\n");
         }
-        ret.push_str("\r\n");
+        ret.push_str("\n");
         let c_type = self.get_header("content-type");
         let body = match c_type {
             Some(c) => {
-                if c.contains("html") || c.contains("xml") {
-                    let s = self.get_body_string();
-                    return s;
+                if c.contains("html") {
+                    let s = tidy_html(&self.get_body_string());
+                    s
+                } else {
+                    self.get_body_string()
                 }
-
-                self.get_body_string()
             },
             None => self.get_body_string()
         };
