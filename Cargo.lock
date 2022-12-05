@@ -261,6 +261,7 @@ dependencies = [
  "hyper-rustls",
  "log 0.4.17",
  "minus",
+ "prettify-js",
  "reqwest",
  "rustls-pemfile",
  "rustyline",
@@ -1812,6 +1813,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
+name = "prettify-js"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7ff18ec712649921186715eeee7d880c3c5fb41c86a5a3524057da346e27771"
+dependencies = [
+ "log 0.4.17",
+ "ress",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2008,6 +2021,16 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "winreg",
+]
+
+[[package]]
+name = "ress"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fb1cedc0fd02351568b53be91c4ba2f94beb31ff730bd7df1e54e9b19169b9b"
+dependencies = [
+ "log 0.4.17",
+ "unicode-xid",
 ]
 
 [[package]]

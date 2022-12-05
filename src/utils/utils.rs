@@ -90,13 +90,15 @@ impl TokenSink for TokenPrinter {
                     }
                     EndTag => {
                         if tag.name.eq("script") {
-                            self.result_s.push_str(&format!("{}",self.unparse_text));
+                            let (pretty, _) = prettify_js::prettyprint(&self.unparse_text);
+                            self.result_s.push_str(&format!("{}",pretty));
                             self.unparse_text = String::new();
                         }
                         if self.indent_num >= 1 {
                             self.indent_num -= 1;
                         }
                         self.process_indent();
+                        
                         self.result_s.push_str(&format!("<\x1b[31m/{}\x1b[0m", tag.name));
                         if tag.name.eq("script") {
                             self.in_script = false;
