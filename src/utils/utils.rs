@@ -52,7 +52,8 @@ impl TokenPrinter {
     }
 
     fn special_tag(&self, name: &str) -> bool {
-        if name.eq("link") {
+        let tags = vec!["meta","link","input"];
+        if tags.contains(&name) {
             return true;
         }
 
