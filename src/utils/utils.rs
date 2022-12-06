@@ -1,4 +1,7 @@
+use std::borrow::Cow;
 use std::default::Default;
+use std::io::BufRead;
+use std::path::Path;
 
 use html5ever::tendril::*;
 use html5ever::tokenizer::BufferQueue;
@@ -7,16 +10,19 @@ use html5ever::tokenizer::{CharacterTokens, EndTag, NullCharacterToken, StartTag
 use html5ever::tokenizer::{
     ParseError, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
 };
-
+use syntect::dumps::{dump_to_file, from_dump_file};
+use syntect::easy::{HighlightFile, HighlightLines};
+use syntect::highlighting::{Highlighter, Style, Theme, ThemeSet};
+use syntect::parsing::SyntaxSet;
+use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 struct TokenPrinter {
     in_char_run: bool,
     in_script: bool,
     unparse_text: String,
     indent_num: u32,
-    result_s    : String
+    result_s: String,
 }
-
 
 impl TokenPrinter {
     fn is_char(&mut self, is_char: bool) {
@@ -52,8 +58,10 @@ impl TokenPrinter {
     }
 
     fn special_tag(&self, name: &str) -> bool {
-        let tags = vec!["area", "base", "br", "col", "command", "embed", "hr", 
-        "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr"];
+        let tags = vec![
+            "area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen",
+            "link", "meta", "param", "source", "track", "wbr",
+        ];
         if tags.contains(&name) {
             return true;
         }
@@ -75,7 +83,7 @@ impl TokenSink for TokenPrinter {
             NullCharacterToken => self.do_char(' '),
             TagToken(tag) => {
                 self.is_char(false);
-                if !tag.name.eq("script") && self.in_script==true {
+                if !tag.name.eq("script") && self.in_script == true {
                     return TokenSinkResult::Continue;
                 }
                 // This is not proper HTML serialization, of course.
@@ -83,7 +91,8 @@ impl TokenSink for TokenPrinter {
                     StartTag => {
                         self.process_indent();
                         self.indent_num += 1;
-                        self.result_s.push_str(&format!("<\x1b[32m{}\x1b[0m", tag.name));
+                        self.result_s
+                            .push_str(&format!("<{}", tag.name));
                         if tag.name.eq("script") {
                             self.in_script = true;
                         }
@@ -91,15 +100,16 @@ impl TokenSink for TokenPrinter {
                     EndTag => {
                         if tag.name.eq("script") {
                             let (pretty, _) = prettify_js::prettyprint(&self.unparse_text);
-                            self.result_s.push_str(&format!("{}",pretty));
+                            self.result_s.push_str(&format!("{}", pretty));
                             self.unparse_text = String::new();
                         }
                         if self.indent_num >= 1 {
                             self.indent_num -= 1;
                         }
                         self.process_indent();
-                        
-                        self.result_s.push_str(&format!("<\x1b[31m/{}\x1b[0m", tag.name));
+
+                        self.result_s
+                            .push_str(&format!("</{}", tag.name));
                         if tag.name.eq("script") {
                             self.in_script = false;
                         }
@@ -107,7 +117,7 @@ impl TokenSink for TokenPrinter {
                 }
                 for attr in tag.attrs.iter() {
                     self.result_s.push_str(&format!(
-                        " \x1b[36m{}\x1b[0m='\x1b[34m{}\x1b[0m'",
+                        " {}='{}'",
                         attr.name.local, attr.value
                     ));
                 }
@@ -116,7 +126,7 @@ impl TokenSink for TokenPrinter {
                     self_closing = true;
                 }
                 if self_closing {
-                    self.result_s.push_str(&format!(" \x1b[31m/\x1b[0m"));
+                    self.result_s.push_str(&format!(" /"));
                     if self.indent_num >= 1 {
                         self.indent_num -= 1;
                     }
@@ -157,7 +167,7 @@ pub fn tidy_html(html: &str) -> String {
         in_script: false,
         unparse_text: "".to_string(),
         indent_num: 0,
-        result_s    : "".to_string()
+        result_s: "".to_string(),
     };
 
     let mut tok = Tokenizer::new(
@@ -175,3 +185,43 @@ pub fn tidy_html(html: &str) -> String {
     tok.sink.result_s
 }
 
+fn load_theme(tm_file: &str, enable_caching: bool) -> Theme {
+    let tm_path = Path::new(tm_file);
+
+    if enable_caching {
+        let tm_cache = tm_path.with_extension("tmdump");
+
+        if tm_cache.exists() {
+            from_dump_file(tm_cache).unwrap()
+        } else {
+            let theme = ThemeSet::get_theme(tm_path).unwrap();
+            dump_to_file(&theme, tm_cache).unwrap();
+            theme
+        }
+    } else {
+        ThemeSet::get_theme(tm_path).unwrap()
+    }
+}
+
+pub fn highlighter(js: &str) -> String{
+    let mut res = String::new();
+    let theme_file: String = "base16-ocean.dark".to_string();
+    let ts = ThemeSet::load_defaults();
+    let theme = ts
+        .themes
+        .get(&theme_file)
+        .map(Cow::Borrowed)
+        .unwrap_or_else(|| Cow::Owned(load_theme(&theme_file, false)));
+
+    let ss = SyntaxSet::load_defaults_newlines();
+    let syntax = ss.find_syntax_by_extension("js").unwrap();
+    let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
+    let s = js;
+    for line in LinesWithEndings::from(s) {
+        // LinesWithEndings enables use of newlines mode
+        let ranges: Vec<(Style, &str)> = h.highlight_line(line, &ss).unwrap();
+        let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
+        res.push_str(&escaped);
+    }
+    return res;
+}

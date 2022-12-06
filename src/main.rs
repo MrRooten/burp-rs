@@ -1,6 +1,6 @@
 use std::{thread, env};
 
-use burp_rs::{cmd::{cmd::cmd}, proxy::proxy::proxy, utils::{log::init, banner}};
+use burp_rs::{cmd::{cmd::cmd}, proxy::proxy::proxy, utils::{log::init, banner, utils::highlighter}};
 
 
 
@@ -16,6 +16,7 @@ async fn _main(addr: &str) {
 
 fn main() {
     banner();
+    highlighter("");
     let args: Vec<String> = env::args().collect();
     if args.len() <= 2 {
         println!("{} 127.0.0.1:3000",args[0]);

@@ -192,6 +192,8 @@ impl CMDProc for ListHistory {
         let history = history.get_history();
         let mut keys = history.keys().collect::<Vec<&u32>>();
         keys.sort();
+        let p = Pager::new();
+        let mut output = String::new();
         for key in keys {
             let request = history.get(key).unwrap().get_request().unwrap();
             let response = history.get(key).unwrap().get_response();
@@ -210,7 +212,24 @@ impl CMDProc for ListHistory {
                 url_brief.push_str("...");
             }
 
-            println!("{} {} {} {}", key, url_brief, status, size);
+            let c_type = match response {
+                Some(r) => {
+                    match r.get_header("content-type") {
+                        Some(v) => v,
+                        None => "".to_string()
+                    }
+                },
+                None => "".to_string()
+            };
+            let item = format!("{} {} {} {} {}", key, url_brief, status, size, c_type);
+            output = item + &output;
+        }
+
+        match pager(&output, p) {
+            Ok(o) => {}
+            Err(e) => {
+                return Err(st_error!(e));
+            }
         }
         Ok(())
     }
@@ -285,9 +304,21 @@ impl CMDProc for CatResponse {
             let s = format!("{} ${{num}}", self.get_name());
             return Err(STError::new(&s));
         }
-        let index = line[1].to_string().parse::<u32>().unwrap();
+        let index = line[1].to_string().parse::<u32>();
+        let index = match index {
+            Ok(o) => o,
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        };
 
-        let s = LogHistory::get_httplog(index).unwrap();
+        let s = LogHistory::get_httplog(index);
+        let s = match s {
+            Some(o) => o,
+            None => {
+                return Err(STError::new("Not such a response"));
+            }
+        };
         let s = match s.get_response() {
             Some(s) => s.get_beauty_string(),
             None => "".to_string(),

@@ -13,7 +13,7 @@ use http::Request;
 use crate::librs::http::utils::HttpResponse;
 use crate::librs::object::object::IObject;
 use crate::utils::STError;
-use crate::utils::utils::tidy_html;
+use crate::utils::utils::{tidy_html, highlighter};
 
 
 pub struct ReqResLog {
@@ -315,13 +315,17 @@ impl LogResponse {
                 } else if c.contains("json") {
                     let (s,_) = prettify_js::prettyprint(&self.get_body_string());
                     s
-                } else {
+                } else if c.contains("javascript") {
+                    let (s,_) = prettify_js::prettyprint(&self.get_body_string());
+                    s
+                }
+                else {
                     self.get_body_string()
                 }
             },
             None => self.get_body_string()
         };
-        ret.push_str(&body);
+        ret.push_str(&highlighter(&body));
         ret
     }
 
