@@ -214,7 +214,7 @@ pub fn highlighter(js: &str) -> String{
         .unwrap_or_else(|| Cow::Owned(load_theme(&theme_file, false)));
 
     let ss = SyntaxSet::load_defaults_newlines();
-    let syntax = ss.find_syntax_by_extension("js").unwrap();
+    let syntax = ss.find_syntax_by_extension("html").unwrap();
     let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
     let s = js;
     for line in LinesWithEndings::from(s) {
