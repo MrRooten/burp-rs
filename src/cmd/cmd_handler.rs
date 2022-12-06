@@ -1,5 +1,7 @@
 use std::{collections::HashMap};
 
+use colored::Colorize;
+
 use crate::{utils::STError, cmd::handlers::{DebugLog, CatResponse, ClearScreen, CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
@@ -42,8 +44,11 @@ impl CMDHandler {
         for _proc in &self.procs {
             if _proc.get_name().eq(proc_name) {
                 let res = _proc.process(&opts);
+                return;
             }
         }
+
+        println!("{} not found command, please use {} command for more commands", proc_name.green(), "help".green());
     }
 
     pub fn init(&mut self) {

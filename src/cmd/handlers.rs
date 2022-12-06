@@ -34,6 +34,16 @@ impl CMDProc for Helper {
     fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
         let mut handler = CMDHandler::new();
         handler.init();
+        if line.len() == 2 {
+            for proc in handler.get_procs() {
+                if line[1].eq(proc.get_name()) {
+                    println!("{}: {}", proc.get_name().green(),proc.get_help());
+                    println!("\t{}",proc.get_detail());
+                    return Ok(())
+                }
+            }
+            println!("Command {} not found", line[1]);
+        }
         for proc in handler.get_procs() {
             println!("{}: {}", proc.get_name().green(),proc.get_help());
             println!("\t{}",proc.get_detail());
