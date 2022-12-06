@@ -221,7 +221,7 @@ impl CMDProc for ListHistory {
                 },
                 None => "".to_string()
             };
-            let item = format!("{} {} {} {} {}", key, url_brief, status, size, c_type);
+            let item = format!("{} {} {} {} {}\n", key, url_brief, status, size, c_type);
             output = item + &output;
         }
 
