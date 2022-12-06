@@ -11,6 +11,7 @@ use std::io::Read;
 use std::sync::Mutex;
 use http::Request;
 use crate::librs::http::utils::HttpResponse;
+use crate::librs::object::object::IObject;
 use crate::utils::STError;
 use crate::utils::utils::tidy_html;
 
@@ -107,6 +108,55 @@ pub struct LogRequest {
     orignal     : Request<Body>,
     body        : Bytes,
     record_t    : DateTime<Utc>
+}
+
+impl IObject for LogRequest {
+    fn get_object(&self, path: &str) -> Option<String> {
+        let path = path.trim();
+        if path.len() == 0 {
+            let s = format!("{:?}",vec!["url","headers","body","method","protocol"]);
+            return Some(s);
+        }
+        let spl = path.split(".").collect::<Vec<&str>>();
+        if spl.len() == 0 {
+            let s = format!("{:?}",vec!["url","headers","body","method","protocol"]);
+            return Some(s);
+        }
+
+        let s1 = spl[0];
+        if s1.eq("uri") || s1.eq("url") {
+            let s = self.orignal.uri().to_string();
+            return Some(s);
+        }
+        else if s1.eq("headers") {
+            if spl.len() == 1 {
+                let s = format!("{:?}",self.orignal.headers());
+                return Some(s);
+            }
+            let s2 = spl[1];
+            let value = self.get_header(s2);
+            let value = match value {
+                Some(v) => v,
+                None => {
+                    return None;
+                }
+            };
+
+            return Some(value);
+
+        }
+        else if s1.eq("body") {
+            return Some(String::from_utf8_lossy(&self.body).to_string());
+        }
+        else if s1.eq("method") {
+            return Some(self.orignal.method().to_string())
+        }
+        else if s1.eq("protocol") {
+            let s = format!("{:?}",self.orignal.version());
+            return Some(s);
+        }
+        return None;
+    }
 }
 
 impl LogRequest {

@@ -175,4 +175,3 @@ pub fn tidy_html(html: &str) -> String {
     tok.sink.result_s
 }
 
-

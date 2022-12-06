@@ -11,7 +11,7 @@ use crate::{
     utils::{
         log::{LEVEL, LOGS},
         STError,
-    },
+    }, librs::object::object::IObject,
 };
 
 use super::{cmd_handler::*, pager::pager};
@@ -349,9 +349,21 @@ impl CMDProc for CatRequest {
             let s = format!("{} ${{num}}", self.get_name());
             return Err(STError::new(&s));
         }
-        let index = line[1].to_string().parse::<u32>().unwrap();
+        let index = line[1].to_string().parse::<u32>();
+        let index = match index {
+            Ok(o) => o,
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        };
 
-        let s = LogHistory::get_httplog(index).unwrap();
+        let s = LogHistory::get_httplog(index);
+        let s = match s {
+            Some(o) => o,
+            None => {
+                return Err(STError::new("Not such a request"));
+            }
+        };
         let s = s.get_request().unwrap().to_string();
         let p = Pager::new();
         match pager(&s, p) {
@@ -370,6 +382,70 @@ impl CatRequest {
             name: "cat_req".to_string(),
             opts: Default::default(),
         }
+    }
+}
+
+pub struct GetRequest {
+    name: String,
+    opts: CMDOptions,
+}
+
+impl GetRequest {
+    pub fn new() -> Self {
+        Self {
+            name: "get_req".to_string(),
+            opts: Default::default(),
+        }
+    }
+}
+
+impl CMDProc for GetRequest {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &&self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        if line.len() <= 1 {
+            let s = format!("{} ${{num}}", self.get_name());
+            return Err(STError::new(&s));
+        }
+
+        let path = line[1].split(".").collect::<Vec<&str>>();
+        let index = path[0].to_string().parse::<u32>();
+        let index = match index {
+            Ok(o) => o,
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        };
+        let mut object_path = String::new();
+        if path.len() >= 2 {
+            object_path = path[1..path.len()].join(".");
+        }
+        
+        let s = LogHistory::get_httplog(index);
+        let s = match s {
+            Some(o) => o,
+            None => {
+                return Err(STError::new("No such a request"));
+            }
+        };
+
+        let req = s.get_request();
+        let req = match req {
+            Some(r) => {
+                r
+            },
+            None => {
+                return Err(STError::new("No such a request in log"));
+            }
+        };
+        println!("{:?}",req.get_object(&object_path));
+        Ok(())
     }
 }
 
@@ -491,7 +567,10 @@ impl CMDProc for Sitemap {
         };
 
         for key in httplog {
-            let request = LogHistory::get_httplog(*key).unwrap().get_request().unwrap();
+            let request = LogHistory::get_httplog(*key)
+                .unwrap()
+                .get_request()
+                .unwrap();
             let response = LogHistory::get_httplog(*key).unwrap().get_response();
             let status = match response {
                 Some(r) => r.get_status(),
