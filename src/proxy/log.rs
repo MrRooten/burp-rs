@@ -312,6 +312,9 @@ impl LogResponse {
                 if c.contains("html") {
                     let s = tidy_html(&self.get_body_string());
                     s
+                } else if c.contains("json") {
+                    let (s,_) = prettify_js::prettyprint(&self.get_body_string());
+                    s
                 } else {
                     self.get_body_string()
                 }

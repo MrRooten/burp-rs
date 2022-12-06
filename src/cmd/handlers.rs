@@ -32,8 +32,21 @@ impl CMDProc for Helper {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
-        println!("help");
+        let mut handler = CMDHandler::new();
+        handler.init();
+        for proc in handler.get_procs() {
+            println!("{}: {}", proc.get_name().green(),proc.get_help());
+            println!("\t{}",proc.get_detail());
+        }
         Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "Show help for command".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "help ${command}".to_string()
     }
 }
 
@@ -62,6 +75,14 @@ impl CMDProc for Exit {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
         process::exit(0);
+    }
+
+    fn get_detail(&self) -> String {
+        "Exit program".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "exit".to_string()
     }
 }
 
@@ -106,6 +127,14 @@ impl CMDProc for ProxyLogInfo {
         }
         println!("Proxy Request:{}", history.get_req_num());
         Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        return "Show info of proxy".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "proxylog_info".to_string()
     }
 }
 
@@ -175,6 +204,14 @@ impl CMDProc for ListHistory {
         }
         Ok(())
     }
+
+    fn get_detail(&self) -> String {
+        "Show the proxy traffic".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "list_history".to_string()
+    }
 }
 
 pub struct DebugLog {
@@ -208,6 +245,14 @@ impl CMDProc for DebugLog {
         }
 
         Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "Show debug log".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "debug_log".to_string()
     }
 }
 
@@ -246,6 +291,14 @@ impl CMDProc for CatResponse {
         }
         Ok(())
     }
+
+    fn get_detail(&self) -> String {
+        "Show response content".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "cat_resp ${{log_id}}".to_string()
+    }
 }
 
 impl CatResponse {
@@ -273,6 +326,14 @@ impl CMDProc for ClearScreen {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "Clear the screen".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "clear".to_string()
     }
 }
 
@@ -318,6 +379,14 @@ impl CMDProc for DebugLevel {
             }
         }
         return Ok(());
+    }
+
+    fn get_detail(&self) -> String {
+        "Setting debug_level by setting level, Showing the debug_level without option".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "debug_level ${{opt:level}}".to_string()
     }
 }
 
@@ -373,6 +442,14 @@ impl CMDProc for CatRequest {
             }
         }
         Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        r#"Show log_id request"#.to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "cat_req ${{log_id}}".to_string()
     }
 }
 
@@ -447,6 +524,14 @@ impl CMDProc for GetRequest {
         println!("{:?}",req.get_object(&object_path));
         Ok(())
     }
+
+    fn get_detail(&self) -> String {
+        "Get request info by using path, example ${{logid.url}}".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "get_req ${{path}}".to_string()
+    }
 }
 
 pub struct DebugLogInfo {
@@ -493,6 +578,14 @@ impl CMDProc for DebugLogInfo {
 
         Ok(())
     }
+
+    fn get_detail(&self) -> String {
+        "Get debug log information, like take memory size".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "log_info".to_string()
+    }
 }
 
 pub struct SearchLog {
@@ -509,6 +602,14 @@ impl CMDProc for SearchLog {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        todo!()
+    }
+
+    fn get_detail(&self) -> String {
+        todo!()
+    }
+
+    fn get_help(&self) -> String {
         todo!()
     }
 }
@@ -590,6 +691,14 @@ impl CMDProc for Sitemap {
             println!("{} {} {} {}", key, url_brief, status, size);
         }
         Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "Get all host that traffic are proxied without opt, Get host traffic by using host, Example: sitemap google.com".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "sitemap ${{opt:host}}".to_string()
     }
 }
 

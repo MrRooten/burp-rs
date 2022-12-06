@@ -18,6 +18,10 @@ pub trait CMDProc {
     fn get_opts(&self) -> &CMDOptions;
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError>;
+
+    fn get_detail(&self) -> String;
+
+    fn get_help(&self) -> String;
 }
 
 impl CMDHandler {
