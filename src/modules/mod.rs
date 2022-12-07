@@ -65,6 +65,9 @@ use std::{collections::HashMap};
 
 use crate::{utils::STError, proxy::log::ReqResLog};
 
+pub struct ModuleMeta {
+
+}
 
 type Args = HashMap<String,String>;
 pub trait IActive {
@@ -73,7 +76,6 @@ pub trait IActive {
     //Use in cmd mod
     fn active_run(&self, url: &str, args: Args) -> Result<Vec<Issue>,STError>;
 
-    fn name(&self) -> String;
-
-    fn help(&self) -> Helper;
+    fn metadata(&self) -> Option<ModuleMeta>;
 }
+

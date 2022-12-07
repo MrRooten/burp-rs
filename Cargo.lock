@@ -266,6 +266,7 @@ dependencies = [
  "rustls-pemfile",
  "rustyline",
  "rustyline-derive",
+ "rutie",
  "syntect",
  "tokio",
  "tokio-rustls",
@@ -2145,6 +2146,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "rutie"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d97db4cbb9739b48364c38cc9a6ebabdc07b42bd87b60ab448e1f29eaebb2ac"
+dependencies = [
+ "lazy_static",
+ "libc",
 ]
 
 [[package]]

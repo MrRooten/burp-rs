@@ -17,11 +17,7 @@ impl IActive for TestScan {
         return Ok(result);
     }
 
-    fn name(&self) -> String {
-        "test".to_string()
-    }
-
-    fn help(&self) -> crate::modules::Helper {
-        Helper::default()
+    fn metadata(&self) -> Option<crate::modules::ModuleMeta> {
+        todo!()
     }
 }
