@@ -750,3 +750,42 @@ impl Sitemap {
         }
     }
 }
+
+pub struct Push {
+    opts: CMDOptions,
+}
+
+impl CMDProc for Push {
+    fn get_name(&self) -> &str {
+        "push"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        if line.len() <= 1 {
+            let s = format!("{} ${{num}}", self.get_name());
+            return Err(STError::new(&s));
+        }
+        let index = line[1].to_string().parse::<u32>();
+        let index = match index {
+            Ok(o) => o,
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        };
+
+        
+        Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "push the history to index".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "push ${index}".to_string()
+    }
+}

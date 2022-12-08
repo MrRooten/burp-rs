@@ -65,8 +65,10 @@ use std::{collections::HashMap};
 
 use crate::{utils::STError, proxy::log::ReqResLog};
 
+#[derive(Debug)]
 pub struct ModuleMeta {
-
+    name        : String,
+    description : String
 }
 
 type Args = HashMap<String,String>;
@@ -79,3 +81,6 @@ pub trait IActive {
     fn metadata(&self) -> Option<ModuleMeta>;
 }
 
+pub fn get_next_to_scan() -> u32 {
+    return 1;
+}

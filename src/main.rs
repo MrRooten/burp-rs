@@ -1,17 +1,23 @@
-use std::{thread, env};
+use std::{
+    env,
+    thread::{self, spawn},
+};
 
-use burp_rs::{utils::{banner, log::init}, libruby::utils::rb_init, modules::{active::ruby_scan::RBModule, IActive}, proxy::proxy::proxy, cmd::cmd::cmd};
+use burp_rs::{
+    cmd::cmd::cmd,
+    libruby::{utils::{object_to_string, rb_init}, rb_main::{self, ruby_thread}},
+    modules::{active::ruby_scan::RBModule, IActive},
+    proxy::proxy::proxy,
+    utils::{banner, log::init},
+};
 use colored::Colorize;
-use rutie::{VM, eval, rubysys::encoding::rb_locale_encindex};
+use rutie::{eval, rubysys::encoding::rb_locale_encindex, Fixnum, Object, Thread, VM};
 
-
-pub fn test()  {
-    rb_init();
-    eval!("require 'json'");
-    let a = RBModule::new("./test.rb").unwrap();
-    a.metadata();
+pub fn test() {
+    let b = ruby_thread();
+    b.join();
 }
-
+#[tokio::main]
 async fn _main(addr: &str) {
     let _ = init();
     thread::spawn(|| {
@@ -34,5 +40,4 @@ fn main() {
         println!("{} listen on: {}", args[0], args[1]);
         _main(&args[1]);
     }
-
 }

@@ -2,7 +2,7 @@ use std::{fs, any::Any};
 
 use rutie::{VM, eval, Object, Binding, RString, Class, AnyObject};
 
-use crate::{utils::STError, st_error};
+use crate::{utils::STError, st_error, modules::IActive};
 
 pub fn rb_init() -> Result<(), STError> {
     VM::init();
@@ -111,3 +111,4 @@ pub fn object_to_string(object: &AnyObject) -> Result<String, STError> {
 
     Ok(ret)
 }
+
