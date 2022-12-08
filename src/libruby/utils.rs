@@ -7,7 +7,6 @@ use crate::{utils::STError, st_error};
 pub fn rb_init() -> Result<(), STError> {
     VM::init();
     VM::init_loadpath();
-    eval!("require 'json'\nprint([1,2,3].to_json)");
     Ok(())
 }
 
@@ -53,6 +52,7 @@ pub fn call_class_object_method(script: &str, class: &str, method: &str, argumen
 }
 
 pub fn get_instance(script: &str, class: &str, arguments: &[AnyObject]) -> AnyObject {
+    eval!(&fs::read_to_string(script).unwrap());
     Class::from_existing(class).new_instance(arguments)
 }
 

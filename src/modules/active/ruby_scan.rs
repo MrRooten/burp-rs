@@ -1,12 +1,11 @@
 use std::fs;
 
 use log::error;
-use rutie::{eval, AnyObject, Object};
+use rutie::AnyObject;
 
 use crate::{
-    libruby::utils::{call_object_method, get_instance, object_to_string},
     modules::{IActive, ModuleMeta},
-    utils::STError, st_error,
+    utils::STError, st_error, libruby::utils::{get_instance, call_object_method, object_to_string},
 };
 
 pub struct RBModule {
@@ -16,18 +15,9 @@ pub struct RBModule {
 
 impl RBModule {
     pub fn new(file: &str) -> Result<Self, STError> {
-        let f = fs::read_to_string(file);
-        let s = match f {
-            Ok(o) => o,
-            Err(e) => {
-                return Err(st_error!(e));
-            }
-        };
-        let _ = eval!(&s);
-        let obj = get_instance(file, "RBModule", &[]);
         Ok(Self {
             module_script: file.to_string(),
-            object: obj,
+            object : get_instance(file, "RBModule", &[])
         })
     }
 }
@@ -46,26 +36,11 @@ impl IActive for RBModule {
     }
 
     fn metadata(&self) -> Option<ModuleMeta> {
-        let meta = self.object.protect_send("metadata", &[]);
-        let meta = match meta {
-            Ok(o) => o,
-            Err(e) => {
-                error!("{:?}", e);
-                return None;
-            }
-        };
-        let meta = call_object_method(&self.object, "metadata", &[]);
-        let meta = match meta {
-            Ok(o) => o,
-            Err(e) => return None,
-        };
-
-        let meta_json = match object_to_string(&meta) {
-            Ok(o) => o,
-            Err(e) => return None,
-        };
-
-        println!("{}", meta_json);
-        unimplemented!()
+        let result = call_object_method(&self.object, "metadata", &[]).unwrap();
+        let result = call_object_method(&result, "to_json", &[]).unwrap();
+        let result = call_object_method(&result, "to_s", &[]).unwrap();
+        let s = object_to_string(&result).unwrap();
+        println!("{}",s);
+        None
     }
 }
