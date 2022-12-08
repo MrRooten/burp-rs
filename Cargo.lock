@@ -267,6 +267,7 @@ dependencies = [
  "rustyline",
  "rustyline-derive",
  "rutie",
+ "serde_json",
  "syntect",
  "tokio",
  "tokio-rustls",
