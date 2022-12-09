@@ -61,9 +61,9 @@ pub trait IPassive {
     fn help(&self) -> Helper;
 }
 
-use std::{collections::HashMap, sync::mpsc};
+use std::{collections::HashMap};
 
-use crate::{cmd::handlers::{TO_SCAN_QUEUE, SCAN_RECEIVER}, proxy::log::ReqResLog, utils::STError};
+use crate::{cmd::handlers::{SCAN_RECEIVER}, proxy::log::ReqResLog, utils::STError};
 
 #[derive(Debug)]
 pub struct ModuleMeta {

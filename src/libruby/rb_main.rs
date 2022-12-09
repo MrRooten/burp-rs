@@ -1,7 +1,7 @@
 use std::{
     fs,
     sync::mpsc,
-    thread::{self, spawn, JoinHandle},
+    thread::{ spawn, JoinHandle},
 };
 
 use rutie::{Fixnum, Object, Thread};
@@ -9,7 +9,7 @@ use rutie::{Fixnum, Object, Thread};
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
     modules::{
-        active::{information::dirscan, ruby_scan::RBModule},
+        active::{ ruby_scan::RBModule},
         get_next_to_scan, IActive,
     },
 };
@@ -38,13 +38,13 @@ pub fn ruby_thread() -> JoinHandle<()> {
         }
     }
     let t = spawn(|| {
-        rb_init();
+        let _ = rb_init();
         let modules = get_modules("./active/");
         let index = get_next_to_scan();
         let mut s = vec![];
         for module in modules {
             let thread = Thread::new(|| {
-                module.passive_run(index);
+                let _ = module.passive_run(index);
                 Fixnum::new(0)
             });
 
@@ -52,7 +52,7 @@ pub fn ruby_thread() -> JoinHandle<()> {
         }
 
         for thread in s {
-            thread.protect_send("join", &[]);
+            let _ = thread.protect_send("join", &[]);
         }
     });
     t

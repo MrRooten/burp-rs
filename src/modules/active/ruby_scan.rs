@@ -1,12 +1,9 @@
-use std::fs;
-
-use log::error;
 use rutie::{AnyObject, RString, Object, Fixnum};
 use serde_json::Value;
 
 use crate::{
     modules::{IActive, ModuleMeta},
-    utils::STError, st_error, libruby::utils::{get_instance, call_object_method, object_to_string},
+    utils::STError, libruby::utils::{get_instance, call_object_method, object_to_string},
 };
 
 pub struct RBModule {

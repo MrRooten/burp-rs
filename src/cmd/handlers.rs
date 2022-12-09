@@ -1,5 +1,4 @@
 use std::{
-    collections::LinkedList,
     process,
     sync::mpsc::{self, Receiver, Sender},
 };
@@ -736,7 +735,7 @@ impl CMDProc for Sitemap {
     }
 
     fn get_detail(&self) -> String {
-        "Get all host that traffic are proxied without opt, Get host traffic by using host, Example: sitemap google.com".to_string()
+        "Get all hosts that traffic are proxied without opt, Get host traffic by using host, Example: sitemap google.com".to_string()
     }
 
     fn get_help(&self) -> String {
@@ -804,7 +803,7 @@ impl CMDProc for Scan {
     }
 
     fn get_help(&self) -> String {
-        "scan ${log_index}".to_string()
+        "scan".to_string()
     }
 }
 

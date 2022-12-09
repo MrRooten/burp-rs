@@ -8,5 +8,5 @@ pub fn test_ruby(f: &str) {
     VM::init();
     VM::init_loadpath();
     let f = fs::read_to_string(f).unwrap();
-    eval!(&f);
+    let _ = eval!(&f);
 }

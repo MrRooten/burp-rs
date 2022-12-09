@@ -1,4 +1,4 @@
-use crate::modules::{IActive, Helper};
+use crate::modules::{IActive};
 
 pub struct TestScan {
 

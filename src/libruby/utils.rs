@@ -1,8 +1,8 @@
-use std::{fs, any::Any};
+use std::{fs};
 
 use rutie::{VM, eval, Object, Binding, RString, Class, AnyObject};
 
-use crate::{utils::STError, st_error, modules::IActive};
+use crate::{utils::STError, st_error};
 
 use super::http::log::{get_http_req, get_http_resp};
 
@@ -60,7 +60,7 @@ pub fn call_class_object_method(script: &str, class: &str, method: &str, argumen
 }
 
 pub fn get_instance(script: &str, class: &str, arguments: &[AnyObject]) -> AnyObject {
-    eval!(&fs::read_to_string(script).unwrap());
+    let _ = eval!(&fs::read_to_string(script).unwrap());
     Class::from_existing(class).new_instance(arguments)
 }
 

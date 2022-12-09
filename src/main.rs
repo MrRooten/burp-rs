@@ -1,21 +1,15 @@
 use std::{
     env,
-    thread::{self, spawn},
+    thread::{self},
 };
 
 use burp_rs::{
     cmd::cmd::cmd,
-    libruby::{utils::{object_to_string, rb_init}, rb_main::{self, ruby_thread}},
-    modules::{active::ruby_scan::RBModule, IActive},
+    libruby::{rb_main::{ruby_thread}},
     proxy::proxy::proxy,
     utils::{banner, log::init},
 };
-use colored::Colorize;
-use rutie::{eval, rubysys::encoding::rb_locale_encindex, Fixnum, Object, Thread, VM};
 
-pub fn test() {
-    let b = ruby_thread();
-}
 #[tokio::main]
 async fn _main(addr: &str) {
     let _ = init();
@@ -25,9 +19,13 @@ async fn _main(addr: &str) {
     proxy(addr).await
 }
 
+fn test() {
+    println!("hello");
+}
+
 fn main() {
     banner();
-    test();
+    let _ = ruby_thread();
     let args: Vec<String> = env::args().collect();
     if args.len() <= 2 {
         println!("{} 127.0.0.1:3000", args[0]);

@@ -1,6 +1,4 @@
-use std::any::Any;
-
-use rutie::{class, methods, Fixnum, VM, AnyObject, NilClass, Object, Hash, RString, Array, Encoding};
+use rutie::{class, methods, Fixnum, AnyObject, NilClass, Object, Hash, RString, Array, Encoding};
 
 use crate::proxy::log::LogHistory;
 
@@ -23,7 +21,12 @@ methods!(
         };
     
         let mut req_hash = Hash::new();
-        let request = reqresp.get_request().unwrap();
+        let request = match reqresp.get_request() {
+            Some(s) => s,
+            None => {
+                return NilClass::new().try_convert_to::<AnyObject>().unwrap();
+            }
+        };
         let url = request.get_url();
         let url = RString::from(url);
         let url_key = RString::from("url");
@@ -45,7 +48,7 @@ methods!(
         }
     
         req_hash.store(RString::from("header"), ruby_headers);
-    
+        req_hash.store(RString::from("body"), RString::from_bytes(request.get_body(), &Encoding::utf8()));
         req_hash.try_convert_to::<AnyObject>().unwrap()
     }
     fn get_http_resp(i: Fixnum) -> AnyObject {
@@ -59,7 +62,12 @@ methods!(
             };
         
             let mut resp_hash = Hash::new();
-            let response = reqresp.get_response().unwrap();
+            let response = match reqresp.get_response() {
+                Some(s) => s,
+                None => {
+                    return NilClass::new().try_convert_to::<AnyObject>().unwrap();
+                }
+            };
     
             let mut ruby_headers = Hash::new();
             for kv in response.get_headers() {

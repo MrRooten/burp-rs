@@ -1,7 +1,4 @@
-use std::borrow::Cow;
 use std::default::Default;
-use std::io::BufRead;
-use std::path::Path;
 
 use html5ever::tendril::*;
 use html5ever::tokenizer::BufferQueue;
@@ -10,11 +7,6 @@ use html5ever::tokenizer::{CharacterTokens, EndTag, NullCharacterToken, StartTag
 use html5ever::tokenizer::{
     ParseError, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
 };
-use syntect::dumps::{dump_to_file, from_dump_file};
-use syntect::easy::{HighlightFile, HighlightLines};
-use syntect::highlighting::{Highlighter, Style, Theme, ThemeSet};
-use syntect::parsing::SyntaxSet;
-use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 struct TokenPrinter {
     in_char_run: bool,
@@ -183,45 +175,4 @@ pub fn tidy_html(html: &str) -> String {
     let _ = tok.feed(&mut html_buffer);
     tok.sink.result_s.push_str("\0");
     tok.sink.result_s
-}
-
-fn load_theme(tm_file: &str, enable_caching: bool) -> Theme {
-    let tm_path = Path::new(tm_file);
-
-    if enable_caching {
-        let tm_cache = tm_path.with_extension("tmdump");
-
-        if tm_cache.exists() {
-            from_dump_file(tm_cache).unwrap()
-        } else {
-            let theme = ThemeSet::get_theme(tm_path).unwrap();
-            dump_to_file(&theme, tm_cache).unwrap();
-            theme
-        }
-    } else {
-        ThemeSet::get_theme(tm_path).unwrap()
-    }
-}
-
-pub fn highlighter(js: &str) -> String{
-    let mut res = String::new();
-    let theme_file: String = "base16-ocean.dark".to_string();
-    let ts = ThemeSet::load_defaults();
-    let theme = ts
-        .themes
-        .get(&theme_file)
-        .map(Cow::Borrowed)
-        .unwrap_or_else(|| Cow::Owned(load_theme(&theme_file, false)));
-
-    let ss = SyntaxSet::load_defaults_newlines();
-    let syntax = ss.find_syntax_by_extension("html").unwrap();
-    let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
-    let s = js;
-    for line in LinesWithEndings::from(s) {
-        // LinesWithEndings enables use of newlines mode
-        let ranges: Vec<(Style, &str)> = h.highlight_line(line, &ss).unwrap();
-        let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
-        res.push_str(&escaped);
-    }
-    return res;
 }
