@@ -1,4 +1,8 @@
-use std::process;
+use std::{
+    collections::LinkedList,
+    process,
+    sync::mpsc::{self, Receiver, Sender},
+};
 
 use colored::Colorize;
 use hyper::StatusCode;
@@ -6,12 +10,13 @@ use log::Level;
 use minus::Pager;
 
 use crate::{
+    librs::object::object::IObject,
     proxy::log::{LogHistory, SiteMap},
     st_error,
     utils::{
         log::{LEVEL, LOGS},
         STError,
-    }, librs::object::object::IObject,
+    },
 };
 
 use super::{cmd_handler::*, pager::pager};
@@ -37,16 +42,16 @@ impl CMDProc for Helper {
         if line.len() == 2 {
             for proc in handler.get_procs() {
                 if line[1].eq(proc.get_name()) {
-                    println!("{}: {}", proc.get_name().green(),proc.get_help());
-                    println!("\t{}",proc.get_detail());
-                    return Ok(())
+                    println!("{}: {}", proc.get_name().green(), proc.get_help());
+                    println!("\t{}", proc.get_detail());
+                    return Ok(());
                 }
             }
             println!("Command {} not found", line[1]);
         }
         for proc in handler.get_procs() {
-            println!("{}: {}", proc.get_name().green(),proc.get_help());
-            println!("\t{}",proc.get_detail());
+            println!("{}: {}", proc.get_name().green(), proc.get_help());
+            println!("\t{}", proc.get_detail());
         }
         Ok(())
     }
@@ -140,7 +145,7 @@ impl CMDProc for ProxyLogInfo {
     }
 
     fn get_detail(&self) -> String {
-        return "Show info of proxy".to_string()
+        return "Show info of proxy".to_string();
     }
 
     fn get_help(&self) -> String {
@@ -213,13 +218,11 @@ impl CMDProc for ListHistory {
             }
 
             let c_type = match response {
-                Some(r) => {
-                    match r.get_header("content-type") {
-                        Some(v) => v,
-                        None => "".to_string()
-                    }
+                Some(r) => match r.get_header("content-type") {
+                    Some(v) => v,
+                    None => "".to_string(),
                 },
-                None => "".to_string()
+                None => "".to_string(),
             };
             let item = format!("{} {} {} {} {}\n", key, url_brief, status, size, c_type);
             output = item + &output;
@@ -544,7 +547,7 @@ impl CMDProc for GetRequest {
         if path.len() >= 2 {
             object_path = path[1..path.len()].join(".");
         }
-        
+
         let s = LogHistory::get_httplog(index);
         let s = match s {
             Some(o) => o,
@@ -555,14 +558,12 @@ impl CMDProc for GetRequest {
 
         let req = s.get_request();
         let req = match req {
-            Some(r) => {
-                r
-            },
+            Some(r) => r,
             None => {
                 return Err(STError::new("No such a request in log"));
             }
         };
-        println!("{:?}",req.get_object(&object_path));
+        println!("{:?}", req.get_object(&object_path));
         Ok(())
     }
 
@@ -751,6 +752,62 @@ impl Sitemap {
     }
 }
 
+pub static mut TO_SCAN_QUEUE: Vec<u32> = Vec::<u32>::new();
+pub static mut SCAN_SENDER: Option<std::sync::mpsc::Sender<u32>> = None::<Sender<u32>>;
+pub static mut SCAN_RECEIVER: Option<std::sync::mpsc::Receiver<u32>> = None::<Receiver<u32>>;
+pub struct Scan {
+    opts: CMDOptions,
+}
+
+impl Scan {
+    pub fn new() -> Self {
+        Self { opts: Default::default() }
+    }
+}
+impl CMDProc for Scan {
+    fn get_name(&self) -> &str {
+        "scan"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        unsafe {
+            if SCAN_SENDER.is_none() {
+                let (tx, rx) = mpsc::channel::<u32>();
+                SCAN_SENDER = Some(tx);
+                SCAN_RECEIVER = Some(rx);
+            }
+            let sender = match &SCAN_SENDER {
+                Some(o) => o,
+                None => {
+                    return Err(STError::new("SCAN_SENDER is none"));
+                }
+            };
+            while TO_SCAN_QUEUE.len() != 0 {
+                let ret = sender.send(TO_SCAN_QUEUE.remove(0));
+                match ret {
+                    Ok(o) => {},
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+            }
+            Ok(())
+        }
+    }
+
+    fn get_detail(&self) -> String {
+        "Scan the packet that have been pushed".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "scan ${log_index}".to_string()
+    }
+}
+
 pub struct Push {
     opts: CMDOptions,
 }
@@ -776,8 +833,10 @@ impl CMDProc for Push {
                 return Err(st_error!(e));
             }
         };
+        unsafe {
+            TO_SCAN_QUEUE.push(index);
+        }
 
-        
         Ok(())
     }
 
@@ -787,5 +846,13 @@ impl CMDProc for Push {
 
     fn get_help(&self) -> String {
         "push ${index}".to_string()
+    }
+}
+
+impl Push {
+    pub fn new() -> Self {
+        Self {
+            opts: Default::default(),
+        }
     }
 }

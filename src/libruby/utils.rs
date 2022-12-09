@@ -4,9 +4,17 @@ use rutie::{VM, eval, Object, Binding, RString, Class, AnyObject};
 
 use crate::{utils::STError, st_error, modules::IActive};
 
+use super::http::log::{get_http_req, get_http_resp};
+
 pub fn rb_init() -> Result<(), STError> {
     VM::init();
     VM::init_loadpath();
+    Class::new("RBHttpLog", None).define(|klass| {
+        klass.def("get_http_req", get_http_req);
+        klass.def("get_http_resp", get_http_resp);
+    });
+
+
     Ok(())
 }
 

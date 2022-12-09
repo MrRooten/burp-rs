@@ -1,7 +1,7 @@
 use std::fs;
 
 use log::error;
-use rutie::{AnyObject, RString, Object};
+use rutie::{AnyObject, RString, Object, Fixnum};
 use serde_json::Value;
 
 use crate::{
@@ -22,15 +22,25 @@ impl RBModule {
         let object = get_instance(file, "RBModule", &[]);
         let passive_str = RString::from("passive_run");
         let arg1: AnyObject = passive_str.try_convert_to::<AnyObject>().unwrap();
-        let passive_method = call_object_method(&object, "method", &[arg1]).unwrap();
+        let passive_method = match call_object_method(&object, "method", &[arg1]) {
+            Ok(o) => o,
+            Err(e) => { return Err(e) }
+        };
 
         let metadata_str = RString::from("metadata");
         let arg1: AnyObject = metadata_str.try_convert_to::<AnyObject>().unwrap();
-        let metadata_method = call_object_method(&object, "method", &[arg1]).unwrap();
+        let metadata_method = match call_object_method(&object, "method", &[arg1]) {
+            Ok(o) => o,
+            Err(e) => { return Err(e) }
+        };
 
         let active_str = RString::from("active_run");
         let arg1: AnyObject = metadata_str.try_convert_to::<AnyObject>().unwrap();
-        let active_method = call_object_method(&object, "method", &[arg1]).unwrap();
+        let active_method = match call_object_method(&object, "method", &[arg1]) {
+            Ok(o) => o,
+            Err(e) => { return Err(e) }
+        };
+
         Ok(Self {
             module_script: file.to_string(),
             object : object,
@@ -43,8 +53,8 @@ impl RBModule {
 
 impl IActive for RBModule {
     fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>, STError> {
-        
-        let result = self.passive_method.protect_send("call", &[]).unwrap();
+        let i = Fixnum::new(index.into()).try_convert_to::<AnyObject>().unwrap();
+        let result = self.passive_method.protect_send("call", &[i]).unwrap();
         Ok(vec![])
     }
 
@@ -57,7 +67,7 @@ impl IActive for RBModule {
     }
 
     fn metadata(&self) -> Option<ModuleMeta> {
-        let result = call_object_method(&self.object, "metadata", &[]).unwrap();
+        let result = self.object.protect_send("call", &[]).unwrap();
         let result = call_object_method(&result, "to_json", &[]).unwrap();
         let result = call_object_method(&result, "to_s", &[]).unwrap();
         

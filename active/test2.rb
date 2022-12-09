@@ -6,8 +6,8 @@ class RBModule
         return grades
     end
 
-    def passive_run
-        puts self.method('passive_run').object_id
-        puts "test2: " + self.method('passive_run').object_id.to_s
+    def passive_run(index)
+        puts self.metadata
+        puts "Scan payload test2"
     end
 end

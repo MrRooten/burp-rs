@@ -15,7 +15,6 @@ use rutie::{eval, rubysys::encoding::rb_locale_encindex, Fixnum, Object, Thread,
 
 pub fn test() {
     let b = ruby_thread();
-    b.join();
 }
 #[tokio::main]
 async fn _main(addr: &str) {

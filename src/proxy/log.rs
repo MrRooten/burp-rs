@@ -4,7 +4,7 @@ use colored::Colorize;
 use flate2::read::GzDecoder;
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{StatusCode, http, Version};
+use hyper::{StatusCode, http, Version, HeaderMap};
 use url::Url;
 use std::collections::HashMap;
 use std::io::Read;
@@ -181,6 +181,10 @@ impl LogRequest {
         }
     }
 
+    pub fn get_headers(&self) -> &hyper::HeaderMap {
+        self.orignal.headers()
+    }
+
     pub fn get_url(&self) -> String {
         self.orignal.uri().to_string()
     }
@@ -275,6 +279,10 @@ impl LogResponse {
         };
     }
 
+    pub fn get_headers(&self) -> &hyper::HeaderMap {
+        self.orignal.headers()
+    }
+    
     pub fn get_size(&self) -> usize {
         return self.body.len();
     }

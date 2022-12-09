@@ -1,24 +1,45 @@
-use std::thread::{self, spawn, JoinHandle};
+use std::{
+    fs,
+    sync::mpsc,
+    thread::{self, spawn, JoinHandle},
+};
 
-use rutie::{Fixnum, Thread, Object};
+use rutie::{Fixnum, Object, Thread};
 
-use crate::modules::{active::ruby_scan::RBModule, get_next_to_scan, IActive};
+use crate::{
+    cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
+    modules::{
+        active::{information::dirscan, ruby_scan::RBModule},
+        get_next_to_scan, IActive,
+    },
+};
 
 use super::utils::rb_init;
 
-fn get_modules() -> Vec<Box<dyn IActive>> {
+fn get_modules(dir: &str) -> Vec<Box<dyn IActive>> {
     let mut result: Vec<Box<dyn IActive>> = vec![];
-    result.push(Box::new(RBModule::new("./active/test1.rb").unwrap()));
-    result.push(Box::new(RBModule::new("./active/test2.rb").unwrap()));
-    result.push(Box::new(RBModule::new("./active/test3.rb").unwrap()));
-    result.push(Box::new(RBModule::new("./active/test3.rb").unwrap()));
+    let paths = fs::read_dir(dir).unwrap();
+
+    for path in paths {
+        let s = path.unwrap().path().to_str().unwrap().to_string();
+        if s.ends_with(".rb") {
+            result.push(Box::new(RBModule::new(&s).unwrap()));
+        }
+    }
     result
 }
 
 pub fn ruby_thread() -> JoinHandle<()> {
+    unsafe {
+        if SCAN_SENDER.is_none() {
+            let (tx, rx) = mpsc::channel::<u32>();
+            SCAN_SENDER = Some(tx);
+            SCAN_RECEIVER = Some(rx);
+        }
+    }
     let t = spawn(|| {
         rb_init();
-        let modules = get_modules();
+        let modules = get_modules("./active/");
         let index = get_next_to_scan();
         let mut s = vec![];
         for module in modules {
