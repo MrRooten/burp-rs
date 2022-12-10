@@ -114,12 +114,34 @@ impl ReqResLog {
     }
 }
 
+pub enum ParamType {
+    Get,
+    Header,
+    Cookie,
+    Post,
+    Json,
+    Xml
+}
+
+pub struct RequestParam {
+    param_type  : ParamType,
+    key         : String,
+    value       : String
+}
+
+impl RequestParam {
+    pub fn new(param_t: ParamType, key: &str, value: &str) -> Self {
+        Self { param_type: param_t, key: key.to_string(), value: value.to_string() }
+    }
+}
+
 #[derive(Debug)]
 pub struct LogRequest {
     orignal: Request<Body>,
     body: Bytes,
     record_t: DateTime<Utc>,
 }
+
 
 impl IObject for LogRequest {
     fn get_object(&self, path: &str) -> Option<String> {
@@ -196,6 +218,49 @@ impl LogRequest {
         self.orignal.uri().to_string()
     }
 
+    pub fn get_params(&self) -> Vec<RequestParam> {
+        let mut ret = Vec::new();
+        let url = Url::parse(&self.get_url()).unwrap();
+        let query = url.query_pairs();
+        for kv in query {
+            ret.push(RequestParam::new(ParamType::Get, kv.0.as_ref(), kv.1.as_ref()));
+        }
+
+        let cookies = self.get_header_array("cookie");
+        for cookie in cookies {
+            let sp = cookie.split("=").collect::<Vec<&str>>();
+            if sp.len() != 2 {
+                continue;
+            }
+
+            let key = sp[0];
+            let value = sp[1];
+            ret.push(RequestParam::new(ParamType::Cookie, key, value));
+        }
+
+        let con_type = self.get_header("content-type");
+        let con_type = match con_type {
+            Some(s) => s,
+            None => {
+                return ret;
+            }
+        };
+
+        if con_type.to_lowercase().contains("application/xml") {
+
+        } else if con_type.to_lowercase().contains("application/json") {
+
+        } else if con_type.to_lowercase().contains("multipart/form-data") {
+
+        } else if con_type.to_lowercase().contains("application/x-www-form-urlencoded") {
+
+        } else if con_type.to_lowercase().contains("text/plain") {
+            
+        }
+
+        ret
+    }
+
     pub fn get_host(&self) -> String {
         let s_url = self.get_url();
         let url = Url::parse(&s_url).unwrap();
@@ -221,6 +286,22 @@ impl LogRequest {
         Some(ret)
     }
 
+    pub fn get_header_array(&self, key: &str) -> Vec<String> {
+        let mut ret = Vec::default();
+        let values = self.orignal.headers().get_all(key);
+        for value in values {
+            match value.to_str() {
+                Ok(v) => {
+                    ret.push(v.to_string());
+                }
+                Err(e) => {
+                    continue;
+                }
+            }
+        }
+
+        ret
+    }
     pub fn get_cookie(&self, key: &str) -> Option<String> {
         return self.get_header(key);
     }
