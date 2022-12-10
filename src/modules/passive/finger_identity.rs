@@ -1,16 +1,77 @@
-use log::{info};
+use hyper::http::response;
 
-use crate::modules::IPassive;
+use crate::{
+    modules::{IPassive, Issue, IssueConfidence, IssueLevel},
+    proxy::log::LogHistory,
+    utils::STError,
+};
 
+pub struct CookieMatch;
 
-pub struct FingerIdentity;
+impl IPassive for CookieMatch {
+    fn run(&self, index: u32) -> Result<(), crate::utils::STError> {
+        let log = LogHistory::get_httplog(index);
+        let log = match log {
+            Some(o) => o,
+            None => {
+                return Err(STError::new("Not found history log"));
+            }
+        };
 
-impl IPassive for FingerIdentity {
-    fn run(&self, index: u32) -> Result<Vec<crate::modules::Issue>,crate::utils::STError> {
-        let s = Vec::default();
-        //println!("finger test");
-        info!("finger test");
-        return Ok(s);
+        let request = match log.get_request() {
+            Some(r) => r,
+            None => {
+                return Err(STError::new("Not found history log request"));
+            }
+        };
+
+        let header = request.get_header("cookie");
+        let header = match header {
+            Some(o) => {
+                o
+            }
+            None => {
+                "".to_string()
+            }
+        };
+        if header.to_lowercase().contains("rememberme") {
+            let issue = Issue::new(
+                "Shiro framework",
+                IssueLevel::Info,
+                "using remember-me in web",
+                IssueConfidence::Confirm,
+                log
+            );
+            Issue::add_issue(issue);
+        }
+        let response = match log.get_response() {
+            Some(r) => r,
+            None => {
+                return Err(STError::new("Not found history log request"));
+            }
+        };
+        let header = response.get_header("set-cookie");
+        let header = match header {
+            Some(o) => {
+                o
+            }
+            None => {
+                "".to_string()
+            }
+        };
+
+        if header.to_lowercase().contains("rememberme") {
+            let issue = Issue::new(
+                "Shiro framework",
+                IssueLevel::Info,
+                "using remember-me in web",
+                IssueConfidence::Confirm,
+                log
+            );
+            Issue::add_issue(issue);
+        }
+
+        Ok(())
     }
 
     fn name(&self) -> String {

@@ -4,7 +4,11 @@ pub mod passive;
 #[derive(Default)]
 pub struct Helper {}
 
-enum IssueLevel {}
+enum IssueLevel {
+    Info
+}
+
+pub static mut ALL_ISSUES: Vec<Issue> = Vec::new();
 pub struct Issue {
     name: String,
     detail: String,
@@ -13,7 +17,9 @@ pub struct Issue {
     httplog: Option<ReqResLog>,
 }
 
-enum IssueConfidence {}
+enum IssueConfidence {
+    Confirm
+}
 
 impl Issue {
     fn new(
@@ -21,22 +27,44 @@ impl Issue {
         level: IssueLevel,
         detail: &str,
         confidance: IssueConfidence,
-        httplog: &ReqResLog,
+        httplog: &ReqResLog
     ) -> Issue {
         Self {
             name: name.to_string(),
             detail: detail.to_string(),
             level,
             confidence: confidance,
-            httplog: None,
+            httplog: httplog.clone(),
         }
     }
 
-    fn get_name(&self) -> &str {
+    pub fn add_issue(issue: Issue) {
+        unsafe {
+            for iter in &ALL_ISSUES {
+                if iter.get_name().eq(issue.get_name()) {
+                    let iter_host = iter.get_httplog().unwrap().get_host();
+                    let issue_host = issue.get_httplog().unwrap().get_host();
+                    if iter_host.eq(&issue_host) {
+                        return ;
+                    }
+                }
+            }
+
+            ALL_ISSUES.push(issue);
+        }
+    }
+
+    pub fn get_issues() -> &'static Vec<Issue> {
+        unsafe {
+            &ALL_ISSUES
+        }
+    }
+
+    pub fn get_name(&self) -> &str {
         &self.name
     }
 
-    fn get_detail(&self) -> &str {
+    pub fn get_detail(&self) -> &str {
         &self.detail
     }
 
@@ -48,13 +76,13 @@ impl Issue {
         &self.confidence
     }
 
-    fn get_httplog(&self) -> Option<&ReqResLog> {
+    pub fn get_httplog(&self) -> Option<&ReqResLog> {
         None
     }
 }
 
 pub trait IPassive {
-    fn run(&self, index: u32) -> Result<Vec<Issue>, STError>;
+    fn run(&self, index: u32) -> Result<(), STError>;
 
     fn name(&self) -> String;
 

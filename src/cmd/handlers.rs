@@ -15,7 +15,7 @@ use crate::{
     utils::{
         log::{LEVEL, LOGS},
         STError,
-    },
+    }, modules::Issue,
 };
 
 use super::{cmd_handler::*, pager::pager};
@@ -853,5 +853,43 @@ impl Push {
         Self {
             opts: Default::default(),
         }
+    }
+}
+
+pub struct ListIssues {
+    opts    : CMDOptions
+}   
+
+impl ListIssues {
+    pub fn new() -> Self {
+        Self {
+            opts    : Default::default()
+        }
+    }
+}
+
+impl CMDProc for ListIssues {
+    fn get_name(&self) -> &str {
+        "list_issues"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        let issues = Issue::get_issues();
+        for issue in issues {
+            println!("{} {}", issue.get_name(), issue.get_detail());
+        }
+        Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "list the issues that been proof".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "list_issues".to_string()
     }
 }

@@ -2,7 +2,7 @@ use std::{collections::HashMap};
 
 use colored::Colorize;
 
-use crate::{utils::STError, cmd::handlers::{DebugLog, CatResponse, ClearScreen, CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Push, Scan}};
+use crate::{utils::STError, cmd::handlers::{DebugLog, CatResponse, ClearScreen, CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Push, Scan, ListIssues}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
@@ -72,6 +72,7 @@ impl CMDHandler {
         hi!(GetRequest);
         hi!(Push);
         hi!(Scan);
+        hi!(ListIssues);
     }
 
     pub fn get_opts(&self) -> &Vec<String> {

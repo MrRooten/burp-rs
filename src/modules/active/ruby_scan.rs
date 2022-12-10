@@ -51,7 +51,13 @@ impl RBModule {
 impl IActive for RBModule {
     fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>, STError> {
         let i = Fixnum::new(index.into()).try_convert_to::<AnyObject>().unwrap();
-        let result = self.passive_method.protect_send("call", &[i]).unwrap();
+        let result = match self.passive_method.protect_send("call", &[i]) {
+            Ok(o) => o,
+            Err(e) => {
+                let s = format!("{:?}",e);
+                return Err(STError::new(&s));
+            }
+        };
         Ok(vec![])
     }
 

@@ -1,25 +1,24 @@
 #![allow(dead_code)]
-use chrono::{Utc, DateTime};
+use crate::librs::http::utils::HttpResponse;
+use crate::librs::object::object::IObject;
+use crate::utils::utils::tidy_html;
+use crate::utils::STError;
+use chrono::{DateTime, Utc};
 use colored::Colorize;
 use flate2::read::GzDecoder;
+use http::Request;
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{StatusCode, http, Version};
-use url::Url;
+use hyper::{http, StatusCode, Version};
 use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Mutex;
-use http::Request;
-use crate::librs::http::utils::HttpResponse;
-use crate::librs::object::object::IObject;
-use crate::utils::STError;
-use crate::utils::utils::tidy_html;
-
+use url::Url;
 
 pub struct ReqResLog {
-    request     : Option<LogRequest>,
-    response    : Option<LogResponse>,
-    record_t    : DateTime<Utc>
+    request: Option<LogRequest>,
+    response: Option<LogResponse>,
+    record_t: DateTime<Utc>,
 }
 
 impl ReqResLog {
@@ -29,10 +28,23 @@ impl ReqResLog {
 
     pub fn new(req: LogRequest) -> Self {
         ReqResLog {
-            request  : Some(req),
-            response : None,
-            record_t : Utc::now()
+            request: Some(req),
+            response: None,
+            record_t: Utc::now(),
         }
+    }
+
+    pub fn get_host(&self) -> String {
+        let request = match &self.request {
+            Some(r) => {
+                r
+            }
+            None => {
+                return "".to_string();
+            }
+        };
+
+        request.get_host()
     }
 
     pub fn set_resp(&mut self, resp: LogResponse) {
@@ -43,7 +55,7 @@ impl ReqResLog {
         match &self.request {
             Some(r) => {
                 return Some(r);
-            },
+            }
             None => {
                 return None;
             }
@@ -74,14 +86,14 @@ impl ReqResLog {
         match &self.response {
             Some(r) => {
                 return Some(r);
-            },
+            }
             None => {
                 return None;
             }
         }
     }
 
-    pub fn clone(&self) -> Option<ReqResLog>{
+    pub fn clone(&self) -> Option<ReqResLog> {
         let s = match &self.request {
             Some(s) => s,
             None => {
@@ -99,27 +111,26 @@ impl ReqResLog {
 
         log.set_resp(s.clone());
         return Some(log);
-
     }
 }
 
 #[derive(Debug)]
 pub struct LogRequest {
-    orignal     : Request<Body>,
-    body        : Bytes,
-    record_t    : DateTime<Utc>
+    orignal: Request<Body>,
+    body: Bytes,
+    record_t: DateTime<Utc>,
 }
 
 impl IObject for LogRequest {
     fn get_object(&self, path: &str) -> Option<String> {
         let path = path.trim();
         if path.len() == 0 {
-            let s = format!("{:?}",vec!["url","headers","body","method","protocol"]);
+            let s = format!("{:?}", vec!["url", "headers", "body", "method", "protocol"]);
             return Some(s);
         }
         let spl = path.split(".").collect::<Vec<&str>>();
         if spl.len() == 0 {
-            let s = format!("{:?}",vec!["url","headers","body","method","protocol"]);
+            let s = format!("{:?}", vec!["url", "headers", "body", "method", "protocol"]);
             return Some(s);
         }
 
@@ -127,10 +138,9 @@ impl IObject for LogRequest {
         if s1.eq("uri") || s1.eq("url") {
             let s = self.orignal.uri().to_string();
             return Some(s);
-        }
-        else if s1.eq("headers") {
+        } else if s1.eq("headers") {
             if spl.len() == 1 {
-                let s = format!("{:?}",self.orignal.headers());
+                let s = format!("{:?}", self.orignal.headers());
                 return Some(s);
             }
             let s2 = spl[1];
@@ -143,16 +153,12 @@ impl IObject for LogRequest {
             };
 
             return Some(value);
-
-        }
-        else if s1.eq("body") {
+        } else if s1.eq("body") {
             return Some(String::from_utf8_lossy(&self.body).to_string());
-        }
-        else if s1.eq("method") {
-            return Some(self.orignal.method().to_string())
-        }
-        else if s1.eq("protocol") {
-            let s = format!("{:?}",self.orignal.version());
+        } else if s1.eq("method") {
+            return Some(self.orignal.method().to_string());
+        } else if s1.eq("protocol") {
+            let s = format!("{:?}", self.orignal.version());
             return Some(s);
         }
         return None;
@@ -160,11 +166,11 @@ impl IObject for LogRequest {
 }
 
 impl LogRequest {
-    pub fn from(req: Request<Body>,body: Bytes) -> LogRequest {
+    pub fn from(req: Request<Body>, body: Bytes) -> LogRequest {
         LogRequest {
-            orignal : req,
-            body    : body,
-            record_t: Utc::now()
+            orignal: req,
+            body: body,
+            record_t: Utc::now(),
         }
     }
 
@@ -178,7 +184,7 @@ impl LogRequest {
         LogRequest {
             orignal: new_req,
             body: Bytes::from(self.body.clone()),
-            record_t : self.record_t.clone()
+            record_t: self.record_t.clone(),
         }
     }
 
@@ -198,15 +204,21 @@ impl LogRequest {
     }
 
     pub fn get_header(&self, key: &str) -> Option<String> {
-        let value = self.orignal.headers().get(key);
-        match value {
-            Some(v) => {
-                return Some(String::from_utf8_lossy(v.as_bytes()).to_string());
-            },
-            None => {
-                return None;
+        let mut ret = String::new();
+        let values = self.orignal.headers().get_all(key);
+        for value in values {
+            match value.to_str() {
+                Ok(v) => {
+                    ret.push_str(v);
+                    ret.push_str(";");
+                }
+                Err(e) => {
+                    return None;
+                }
             }
-        };
+        }
+
+        Some(ret)
     }
 
     pub fn get_cookie(&self, key: &str) -> Option<String> {
@@ -225,14 +237,11 @@ impl LogRequest {
         ret.push_str(" ");
         if self.orignal.version() == Version::HTTP_09 {
             ret.push_str("HTTP/0.9");
-        }
-        else if self.orignal.version() == Version::HTTP_10 {
+        } else if self.orignal.version() == Version::HTTP_10 {
             ret.push_str("HTTP/0.9");
-        }
-        else if self.orignal.version() == Version::HTTP_2 {
+        } else if self.orignal.version() == Version::HTTP_2 {
             ret.push_str("HTTP/2");
-        }
-        else if self.orignal.version() == Version::HTTP_3 {
+        } else if self.orignal.version() == Version::HTTP_3 {
             ret.push_str("HTTP/3");
         }
 
@@ -251,9 +260,9 @@ impl LogRequest {
 
 #[derive(Debug)]
 pub struct LogResponse {
-    orignal     : Response<Body>,
-    body        : Bytes,
-    c_type      : String
+    orignal: Response<Body>,
+    body: Bytes,
+    c_type: String,
 }
 
 impl LogResponse {
@@ -262,28 +271,42 @@ impl LogResponse {
         let content_type = match content_type {
             Some(c) => c.to_str().unwrap().to_string(),
             None => {
-                return LogResponse { orignal: res ,body: body, c_type: "".to_string()};
+                return LogResponse {
+                    orignal: res,
+                    body: body,
+                    c_type: "".to_string(),
+                };
             }
         };
-        LogResponse { orignal: res ,body: body, c_type: content_type}
+        LogResponse {
+            orignal: res,
+            body: body,
+            c_type: content_type,
+        }
     }
 
     pub fn get_header(&self, key: &str) -> Option<String> {
-        let value = self.orignal.headers().get(key);
-        match value {
-            Some(v) => {
-                return Some(String::from_utf8_lossy(v.as_bytes()).to_string());
-            },
-            None => {
-                return None;
+        let mut ret = String::new();
+        let values = self.orignal.headers().get_all(key);
+        for value in values {
+            match value.to_str() {
+                Ok(v) => {
+                    ret.push_str(v);
+                    ret.push_str(";");
+                }
+                Err(e) => {
+                    return None;
+                }
             }
-        };
+        }
+
+        Some(ret)
     }
 
     pub fn get_headers(&self) -> &hyper::HeaderMap {
         self.orignal.headers()
     }
-    
+
     pub fn get_size(&self) -> usize {
         return self.body.len();
     }
@@ -321,17 +344,16 @@ impl LogResponse {
                     let s = tidy_html(&self.get_body_string());
                     s
                 } else if c.contains("json") {
-                    let (s,_) = prettify_js::prettyprint(&self.get_body_string());
+                    let (s, _) = prettify_js::prettyprint(&self.get_body_string());
                     s
                 } else if c.contains("javascript") {
-                    let (s,_) = prettify_js::prettyprint(&self.get_body_string());
+                    let (s, _) = prettify_js::prettyprint(&self.get_body_string());
                     s
-                }
-                else {
+                } else {
                     self.get_body_string()
                 }
-            },
-            None => self.get_body_string()
+            }
+            None => self.get_body_string(),
         };
         ret.push_str(&body);
         ret
@@ -354,15 +376,23 @@ impl LogResponse {
         return Self {
             orignal: new_res,
             body: self.body.clone(),
-            c_type: self.c_type.clone()
+            c_type: self.c_type.clone(),
         };
     }
     fn find_subsequence(&self, haystack: &[u8], needle: &[u8]) -> Option<usize> {
-        haystack.windows(needle.len()).position(|window| window == needle)
+        haystack
+            .windows(needle.len())
+            .position(|window| window == needle)
     }
     pub fn contains(&self, s: &str, ignore_case: bool) -> bool {
         if ignore_case {
-            if self.orignal.status().to_string().to_lowercase().contains(&s.to_lowercase()) {
+            if self
+                .orignal
+                .status()
+                .to_string()
+                .to_lowercase()
+                .contains(&s.to_lowercase())
+            {
                 return true;
             }
 
@@ -376,13 +406,11 @@ impl LogResponse {
                         if o.to_lowercase().contains(&o.to_lowercase()) {
                             return true;
                         }
-                    }, 
-                    Err(e) => {
-
                     }
+                    Err(e) => {}
                 }
             }
-            
+
             let find = self.find_subsequence(&self.body, s.as_bytes());
             if find.is_some() {
                 return true;
@@ -400,7 +428,6 @@ impl LogResponse {
             }
 
             for kv in self.orignal.headers() {
-
                 if kv.0.to_string().contains(s) {
                     return true;
                 }
@@ -410,10 +437,8 @@ impl LogResponse {
                         if o.contains(s) {
                             return true;
                         }
-                    }, 
-                    Err(e) => {
-
                     }
+                    Err(e) => {}
                 }
             }
 
@@ -431,19 +456,13 @@ impl LogResponse {
         let e_type = match e_type {
             Some(s) => {
                 let s = match s.to_str() {
-                    Ok(o) => {
-                        o
-                    },
-                    Err(e) => {
-                        ""
-                    }
+                    Ok(o) => o,
+                    Err(e) => "",
                 };
 
                 s
             }
-            None => {
-                ""
-            }
+            None => "",
         };
 
         if e_type.contains("gzip") {
@@ -453,20 +472,18 @@ impl LogResponse {
             d.read_to_string(&mut s).unwrap();
             return s;
         }
-        
+
         return String::from_utf8_lossy(&self.body).to_string();
     }
-
-
 }
 
 pub static mut HTTP_LOG: Option<LogHistory> = None;
 pub static mut SITE_MAP: Option<SiteMap> = None;
 #[derive(Default)]
 pub struct LogHistory {
-    history     : HashMap<u32,ReqResLog>,
-    last_index  : u32,
-    lock        : Mutex<i32>
+    history: HashMap<u32, ReqResLog>,
+    last_index: u32,
+    lock: Mutex<i32>,
 }
 
 impl LogHistory {
@@ -492,7 +509,7 @@ impl LogHistory {
         return ret;
     }
 
-    pub fn push_log(&mut self, log: ReqResLog) -> Result<u32,STError> {
+    pub fn push_log(&mut self, log: ReqResLog) -> Result<u32, STError> {
         let result = self.lock.lock();
         let lock = match result {
             Ok(lock) => lock,
@@ -516,18 +533,14 @@ impl LogHistory {
         self.history.remove(&index);
     }
 
-    pub fn get_log(&self,index: u32) -> Option<&ReqResLog> {
+    pub fn get_log(&self, index: u32) -> Option<&ReqResLog> {
         self.history.get(&index)
     }
 
     pub fn set_resp(&mut self, index: u32, resp: LogResponse) {
         match self.lock.lock() {
-            Ok(o) => {
-
-            },
-            Err(e) => {
-
-            }
+            Ok(o) => {}
+            Err(e) => {}
         };
         let log = self.history.get_mut(&index).unwrap();
         log.set_resp(resp);
@@ -549,19 +562,19 @@ impl LogHistory {
         return self.history.len();
     }
 
-    pub fn get_history(&self) -> &HashMap<u32,ReqResLog> {
+    pub fn get_history(&self) -> &HashMap<u32, ReqResLog> {
         &self.history
     }
 }
 
 pub struct Site {
-    logs    : Vec<u32>,
+    logs: Vec<u32>,
 }
 
 impl Site {
     pub fn new() -> Self {
         Site {
-            logs : Vec::default()
+            logs: Vec::default(),
         }
     }
 
@@ -574,20 +587,22 @@ impl Site {
     }
 }
 pub struct SiteMap {
-    map     : HashMap<String,Site>
+    map: HashMap<String, Site>,
 }
 
 impl SiteMap {
     pub fn single() -> &'static mut Option<SiteMap> {
         unsafe {
             if SITE_MAP.is_none() {
-                SITE_MAP = Some(SiteMap { map: HashMap::default() });
+                SITE_MAP = Some(SiteMap {
+                    map: HashMap::default(),
+                });
             }
             &mut SITE_MAP
         }
     }
 
-    pub fn push(&mut self, index: u32) -> Result<(),STError> {
+    pub fn push(&mut self, index: u32) -> Result<(), STError> {
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -606,7 +621,7 @@ impl SiteMap {
 
         let host = request.get_host();
         if self.map.contains_key(&host) == false {
-            self.map.insert(host.to_string(),Site::new());
+            self.map.insert(host.to_string(), Site::new());
         }
 
         let site = match self.map.get_mut(&host) {
@@ -631,7 +646,6 @@ impl SiteMap {
                 return None;
             }
         };
-
 
         Some(site.get_logs())
     }

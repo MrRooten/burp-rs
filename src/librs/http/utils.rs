@@ -6,11 +6,13 @@ extern crate hyper_native_tls;
 use hyper::{
     body::{self, Bytes},
     header::*,
-    Body, Client, Method, Request, Response, Uri,
+    Body, Client, Method, Request, Response, Uri, StatusCode,
 };
 
-
-use crate::{proxy::log::{ReqResLog, LogRequest}, utils::STError};
+use crate::{
+    proxy::log::{LogRequest, ReqResLog},
+    utils::STError, st_error,
+};
 
 pub struct HttpSession {}
 
@@ -63,7 +65,22 @@ impl HttpRequest {
         *self.request.method_mut() = method;
     }
 
-    pub async fn send(method: Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
+    pub fn send(method: Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
+        let response = HttpRequest::send_async(Method::GET, &request);
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let ret = rt.block_on(async {
+            response.await
+        });
+        ret
+    }
+
+    pub async fn send_async(
+        method: Method,
+        request: &HttpRequest,
+    ) -> Result<HttpResponse, STError> {
         let cli = Client::new();
 
         let https = hyper_rustls::HttpsConnectorBuilder::new()
@@ -84,37 +101,91 @@ impl HttpRequest {
         *req.version_mut() = request.request.version();
         req.uri_mut().clone_from(request.request.uri());
         *req.body_mut() = Body::from(request.body.clone());
-        println!("{:?}", req);
         if request.request.uri().to_string().starts_with("https") {
             if method == Method::GET {
                 *req.method_mut() = Method::GET;
-                response = Some(clis.request(req).await.unwrap());
+                let r = match clis.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+
+                response = Some(r);
             } else if method == Method::POST {
                 *req.method_mut() = Method::POST;
-                response = Some(clis.request(req).await.unwrap());
+                let r = match clis.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+
+                response = Some(r);
             } else if method == Method::PUT {
                 *req.method_mut() = Method::PUT;
-                response = Some(clis.request(req).await.unwrap());
+                let r = match clis.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+
+                response = Some(r);
             } else if method == Method::OPTIONS {
                 *req.method_mut() = Method::OPTIONS;
-                response = Some(clis.request(req).await.unwrap());
+                let r = match clis.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+
+                response = Some(r);
             }
         } else {
             if method == Method::GET {
                 *req.method_mut() = Method::GET;
-                response = Some(cli.request(req).await.unwrap());
+                let r = match clis.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+
+                response = Some(r);
             } else if method == Method::POST {
                 *req.method_mut() = Method::POST;
-                response = Some(cli.request(req).await.unwrap());
+                let r = match clis.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+
+                response = Some(r);
             } else if method == Method::PUT {
                 *req.method_mut() = Method::PUT;
-                response = Some(cli.request(req).await.unwrap());
+                let r = match clis.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+
+                response = Some(r);
             } else if method == Method::OPTIONS {
                 *req.method_mut() = Method::OPTIONS;
-                response = Some(cli.request(req).await.unwrap());
+                let r = match clis.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e))
+                    }
+                };
+
+                response = Some(r);
             }
         }
-        println!("{:?}", response);
         let mut response = match response {
             Some(res) => res,
             None => {
@@ -142,6 +213,18 @@ impl HttpResponse {
             resp: resp,
             body: body,
         }
+    }
+
+    pub fn get_status(&self) -> StatusCode {
+        self.resp.status()
+    }
+
+    pub fn get_headers(&self) -> &HeaderMap {
+        self.resp.headers()
+    }
+
+    pub fn get_body(&self) -> &Bytes {
+        &self.body
     }
 
     pub fn get_httplog(&self) -> ReqResLog {

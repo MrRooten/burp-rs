@@ -4,7 +4,7 @@ use rutie::{VM, eval, Object, Binding, RString, Class, AnyObject};
 
 use crate::{utils::STError, st_error};
 
-use super::http::log::{get_http_req, get_http_resp};
+use super::http::{log::{get_http_req, get_http_resp}, utils::send};
 
 pub fn rb_init() -> Result<(), STError> {
     VM::init();
@@ -14,6 +14,9 @@ pub fn rb_init() -> Result<(), STError> {
         klass.def("get_http_resp", get_http_resp);
     });
 
+    Class::new("RBHttpClient", None).define(|klass| {
+        klass.def("send", send);
+    });
 
     Ok(())
 }

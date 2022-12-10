@@ -1,6 +1,6 @@
 
 pub mod finger_identity;
-use self::finger_identity::FingerIdentity;
+use self::finger_identity::CookieMatch;
 
 use super::IPassive;
 
@@ -11,7 +11,7 @@ pub struct PassiveScanner {
 impl PassiveScanner {
     pub fn new() -> Self {
         let mut ret: Vec<Box<(dyn IPassive + 'static)>> = Vec::default();
-        ret.push(Box::new(FingerIdentity));
+        ret.push(Box::new(CookieMatch));
         Self {
             modules : ret
         }
