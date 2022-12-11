@@ -3,9 +3,7 @@ use hudsucker::{
     tokio_tungstenite::tungstenite::Message, *,
 };
 use rustls_pemfile as pemfile;
-use tokio::{
 
-};
 
 use crate::{
     modules::passive::PassiveScanner,
@@ -149,7 +147,12 @@ impl HttpHandler for ProxyHandler {
                 }
             };
 
-            sender.send(index);
+            match sender.send(index) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("{}",e);
+                }
+            };
         }
         res
     }
