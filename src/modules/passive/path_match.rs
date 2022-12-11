@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use hyper::Uri;
 use url::Url;
 
 use crate::{
@@ -10,7 +11,7 @@ use crate::{
 
 pub struct PathMatch;
 
-fn solr(s: &str) -> Option<Issue> {
+fn solr(s: &Uri) -> Option<Issue> {
     unimplemented!()
 }
 impl IPassive for PathMatch {
