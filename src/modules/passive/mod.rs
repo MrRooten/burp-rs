@@ -1,6 +1,7 @@
 
-pub mod finger_identity;
-use self::finger_identity::CookieMatch;
+pub mod cookie_match;
+pub mod path_match;
+use self::cookie_match::CookieMatch;
 
 use super::IPassive;
 

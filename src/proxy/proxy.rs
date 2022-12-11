@@ -1,16 +1,25 @@
 use hudsucker::{
-    async_trait::async_trait,
-    certificate_authority::RcgenAuthority,
-    tokio_tungstenite::tungstenite::Message,
-    *,
+    async_trait::async_trait, certificate_authority::RcgenAuthority,
+    tokio_tungstenite::tungstenite::Message, *,
 };
 use rustls_pemfile as pemfile;
-use tokio::spawn;
+use tokio::{
 
-use std::net::SocketAddr;
+};
+
+use crate::{
+    modules::passive::PassiveScanner,
+    proxy::{
+        filter::{is_capture_req, is_capture_res},
+        log::{LogHistory, LogRequest, LogResponse, ReqResLog, SiteMap},
+    },
+};
+use hyper::{
+    body::{self, Bytes},
+    Body, Method, Request, Response,
+};
+use std::{net::SocketAddr, sync::mpsc::{Receiver, Sender, self}, thread::spawn};
 use tracing::*;
-use crate::{proxy::{log::{LogHistory, ReqResLog, LogResponse, LogRequest, SiteMap}, filter::{is_capture_res, is_capture_req}}, modules::passive::PassiveScanner};
-use hyper::{Body, Request, Response, body::{self, Bytes}, Method};
 
 async fn shutdown_signal() {
     tokio::signal::ctrl_c()
@@ -18,9 +27,9 @@ async fn shutdown_signal() {
         .expect("Failed to install CTRL+C signal handler");
 }
 
-#[derive(Clone,Default)]
+#[derive(Clone, Default)]
 struct ProxyHandler {
-    index    : u32,
+    index: u32,
 }
 
 async fn copy_req(req: &mut Request<Body>) -> LogRequest {
@@ -33,7 +42,7 @@ async fn copy_req(req: &mut Request<Body>) -> LogRequest {
     new_req.uri_mut().clone_from(req.uri());
     new_req.version_mut().clone_from(&req.version());
     new_req.extensions().clone_from(&req.extensions());
-    return LogRequest::from(new_req,s);
+    return LogRequest::from(new_req, s);
 }
 
 async fn copy_req_header(req: &mut Request<Body>) -> LogRequest {
@@ -46,7 +55,7 @@ async fn copy_req_header(req: &mut Request<Body>) -> LogRequest {
     new_req.uri_mut().clone_from(req.uri());
     new_req.version_mut().clone_from(&req.version());
     new_req.extensions().clone_from(&req.extensions());
-    return LogRequest::from(new_req,s);
+    return LogRequest::from(new_req, s);
 }
 
 async fn copy_resp(resp: &mut Response<Body>) -> LogResponse {
@@ -58,7 +67,7 @@ async fn copy_resp(resp: &mut Response<Body>) -> LogResponse {
     new_res.headers_mut().clone_from(resp.headers());
     new_res.status_mut().clone_from(&resp.status());
     new_res.version_mut().clone_from(&resp.version());
-    return LogResponse::from(new_res,s);
+    return LogResponse::from(new_res, s);
 }
 
 async fn copy_resp_header(resp: &mut Response<Body>) -> LogResponse {
@@ -68,7 +77,7 @@ async fn copy_resp_header(resp: &mut Response<Body>) -> LogResponse {
     new_res.headers_mut().clone_from(resp.headers());
     new_res.status_mut().clone_from(&resp.status());
     new_res.version_mut().clone_from(&resp.version());
-    return LogResponse::from(new_res,Bytes::new());
+    return LogResponse::from(new_res, Bytes::new());
 }
 
 #[async_trait]
@@ -88,33 +97,32 @@ impl HttpHandler for ProxyHandler {
                 return RequestOrResponse::Request(req);
             }
         };
-        
+
         //println!("{:?}", req);
         if is_capture_req(&req) {
             let log = copy_req(&mut req).await;
             let reqres_log = ReqResLog::new(log);
             self.index = match history.push_log(reqres_log) {
                 Ok(index) => index,
-                Err(e) => {
-                    self.index
-                }
+                Err(e) => self.index,
             }
-            
         } else {
             let log = copy_req_header(&mut req).await;
             let reqres_log = ReqResLog::new(log);
             self.index = match history.push_log(reqres_log) {
                 Ok(index) => index,
-                Err(e) => {
-                    self.index
-                }
+                Err(e) => self.index,
             }
         }
         let s = SiteMap::single();
         RequestOrResponse::Request(req)
     }
 
-    async fn handle_response(&mut self, _ctx: &HttpContext, mut res: Response<Body>) -> Response<Body> {
+    async fn handle_response(
+        &mut self,
+        _ctx: &HttpContext,
+        mut res: Response<Body>,
+    ) -> Response<Body> {
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -131,10 +139,18 @@ impl HttpHandler for ProxyHandler {
             history.set_resp(self.index, res_log);
         }
         let index = self.index.clone();
-        spawn(async move {
-            let scanner = PassiveScanner::new();
-            scanner.passive_scan(index);
-        });
+        unsafe {
+            let sender = &mut PASSIVE_SCAN_SENDER;
+            let sender = match sender {
+                Some(o) => o,
+                None => {
+                    //Httplog does not have 0 index
+                    panic!("Sender Panic")
+                }
+            };
+
+            sender.send(index);
+        }
         res
     }
 }
@@ -147,8 +163,42 @@ impl WebSocketHandler for ProxyHandler {
     }
 }
 
+pub static mut PASSIVE_SCAN_SENDER: Option<std::sync::mpsc::Sender<u32>> = None::<Sender<u32>>;
+pub static mut PASSIVE_SCAN_RECEIVER: Option<std::sync::mpsc::Receiver<u32>> =
+    None::<Receiver<u32>>;
 
 pub async fn proxy(addr: &str) {
+    unsafe {
+        if PASSIVE_SCAN_SENDER.is_none() || PASSIVE_SCAN_RECEIVER.is_none() {
+            let (tx, rx) = mpsc::channel::<u32>();
+            PASSIVE_SCAN_SENDER = Some(tx);
+            PASSIVE_SCAN_RECEIVER = Some(rx);
+        }
+        //Async way to passively scan
+        spawn(|| {
+            let receiver = &mut PASSIVE_SCAN_RECEIVER;
+            let receiver = match receiver {
+                Some(o) => o,
+                None => {
+                    //Httplog does not have 0 index
+                    panic!("Receiver")
+                }
+            };
+            let scanner = PassiveScanner::new();
+            loop {
+                let index = receiver.recv();
+                let index = match index {
+                    Ok(i) => i,
+                    Err(e) => {
+                        error!("{}",e);
+                        continue;
+                    }
+                };
+                scanner.passive_scan(index);
+            }
+        });
+    }
+
     let sock: SocketAddr = addr.parse().unwrap();
     let mut private_key_bytes: &[u8] = include_bytes!("../ca/rs.key");
     let mut ca_cert_bytes: &[u8] = include_bytes!("../ca/rs.cer");

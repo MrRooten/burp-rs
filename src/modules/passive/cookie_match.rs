@@ -73,7 +73,7 @@ impl IPassive for CookieMatch {
     }
 
     fn name(&self) -> String {
-        return "FingerIdentity".to_string();
+        return "CookieMatch".to_string();
     }
 
     fn help(&self) -> crate::modules::Helper {
