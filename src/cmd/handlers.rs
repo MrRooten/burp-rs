@@ -856,6 +856,62 @@ impl Push {
     }
 }
 
+pub struct Test {
+    opts    : CMDOptions
+}   
+
+impl Test {
+    pub fn new() -> Self {
+        Self {
+            opts    : Default::default()
+        }
+    }
+}
+
+impl CMDProc for Test {
+    fn get_name(&self) -> &str {
+        "test"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        if line.len() <= 1 {
+            let s = format!("{} ${{num}}", self.get_name());
+            return Err(STError::new(&s));
+        }
+        let index = line[1].to_string().parse::<u32>();
+        let index = match index {
+            Ok(o) => o,
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        };
+
+        let s = LogHistory::get_httplog(index);
+        let s = match s {
+            Some(o) => o,
+            None => {
+                return Err(STError::new("Not such a request"));
+            }
+        };
+
+        let request = s.get_request().unwrap();
+        println!("{:?}", request.get_params());
+        Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "test some functions".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "test".to_string()
+    }
+}
+
 pub struct ListIssues {
     opts    : CMDOptions
 }   
@@ -878,9 +934,25 @@ impl CMDProc for ListIssues {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        let issues = Issue::get_issues();
-        for issue in issues {
-            println!("{} {}", issue.get_name(), issue.get_detail());
+        let map = match SiteMap::single() {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("Can not get Sitemap Single instance"));
+            }
+        };
+
+        let hosts = map.get_hosts();
+        for host in hosts {
+            let site = map.get_site(&host).unwrap();
+            println!("{}", host.blue());
+            let mut index = 1;
+            let issues = site.get_issues();
+            for issue in issues {
+                println!("\t{}: '{}'", "Name".green(), issue.get_name());
+                println!("\t{}: '{}'", "Description".green(), issue.get_detail());
+                println!("\t{}: '{}'", "Url".green(), issue.get_url());
+                index += 1;
+            }
         }
         Ok(())
     }

@@ -1,5 +1,3 @@
-use hyper::http::response;
-
 use crate::{
     modules::{IPassive, Issue, IssueConfidence, IssueLevel},
     proxy::log::LogHistory,
@@ -38,11 +36,11 @@ impl IPassive for CookieMatch {
             let issue = Issue::new(
                 "Shiro framework",
                 IssueLevel::Info,
-                "using remember-me in web",
+                "using remember-me in cookie",
                 IssueConfidence::Confirm,
-                log
+                &log.get_host()
             );
-            Issue::add_issue(issue);
+            Issue::add_issue(issue, &log);
         }
         let response = match log.get_response() {
             Some(r) => r,
@@ -64,11 +62,11 @@ impl IPassive for CookieMatch {
             let issue = Issue::new(
                 "Shiro framework",
                 IssueLevel::Info,
-                "using remember-me in web",
+                "using remember-me in set-cookie",
                 IssueConfidence::Confirm,
-                log
+                &log.get_host()
             );
-            Issue::add_issue(issue);
+            Issue::add_issue(issue, log);
         }
 
         Ok(())

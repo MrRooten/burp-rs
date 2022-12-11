@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use crate::librs::http::utils::HttpResponse;
 use crate::librs::object::object::IObject;
+use crate::modules::Issue;
 use crate::utils::utils::tidy_html;
 use crate::utils::STError;
 use chrono::{DateTime, Utc};
@@ -9,9 +10,11 @@ use flate2::read::GzDecoder;
 use http::Request;
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{http, StatusCode, Version};
+use hyper::{http, StatusCode, Version, Uri};
+use serde_json::{Value, Error};
 use std::collections::HashMap;
 use std::io::Read;
+use std::str::FromStr;
 use std::sync::Mutex;
 use url::Url;
 
@@ -114,24 +117,44 @@ impl ReqResLog {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ParamType {
     Get,
+    GetRaw,
     Header,
     Cookie,
     Post,
+    PostRaw,
     Json,
-    Xml
+    Xml,
+    
 }
 
+#[derive(Debug)]
 pub struct RequestParam {
     param_type  : ParamType,
     key         : String,
-    value       : String
+    value       : String,
+    json        : Value
 }
 
 impl RequestParam {
     pub fn new(param_t: ParamType, key: &str, value: &str) -> Self {
-        Self { param_type: param_t, key: key.to_string(), value: value.to_string() }
+        Self { param_type: param_t, key: key.to_string(), value: value.to_string(), json: Value::default() }
+    }
+
+    pub fn from_json(v: Value) -> Self {
+        Self { param_type: ParamType::Json, key: "".to_string(), value: "".to_string(), json: v }
+    }
+}
+
+pub struct MultiPart {
+
+}
+
+impl MultiPart {
+    pub fn new(body: &Bytes, boundary: String) -> Self {
+        unimplemented!()
     }
 }
 
@@ -218,6 +241,30 @@ impl LogRequest {
         self.orignal.uri().to_string()
     }
 
+    fn update_params(&mut self, params: &Vec<RequestParam>) {
+        
+    }
+
+    pub fn set_param(&mut self, param: RequestParam) {
+        let mut params = self.get_params();
+        let mut found = false;
+        for p in &mut params {
+            if p.param_type == param.param_type && (p.key.eq(&param.key) || p.param_type == ParamType::Json){
+                found = true;
+                if p.param_type == ParamType::Json {
+                    p.value = param.value.to_string();
+                }
+            }
+        }
+
+        if found == false {
+            params.push(param);
+        }
+
+        self.update_params(&params);
+        unimplemented!()
+    }
+
     pub fn get_params(&self) -> Vec<RequestParam> {
         let mut ret = Vec::new();
         let url = Url::parse(&self.get_url()).unwrap();
@@ -249,11 +296,46 @@ impl LogRequest {
         if con_type.to_lowercase().contains("application/xml") {
 
         } else if con_type.to_lowercase().contains("application/json") {
-
+            let body = String::from_utf8_lossy(&self.body).to_string();
+            let json: Result<Value,Error> = serde_json::from_str(&body);
+            let json = match json {
+                Ok(o) => o,
+                Err(e) => {
+                    return ret;
+                }
+            };
+            ret.push(RequestParam::from_json(json));
+            
         } else if con_type.to_lowercase().contains("multipart/form-data") {
+            let s = self.get_header("content-type").unwrap();
+            let ss = s.split(";").collect::<Vec<&str>>();
+            let mut boundary = String::new();
+            for t in ss {
+                let t = t.trim();
+                if t.starts_with("boundary") {
+                    let kv = t.split("=").collect::<Vec<&str>>();
+                    if kv.len() == 2 {
+                        boundary = kv[1].to_string();
+                    }
+                }
+            }
 
+            if boundary.len() == 0 {
+                return ret;
+            }
+
+            let multipart = MultiPart::new(&self.body, boundary);
         } else if con_type.to_lowercase().contains("application/x-www-form-urlencoded") {
-
+            let body = String::from_utf8_lossy(&self.body).to_string();
+            let params = body.split("&").collect::<Vec<&str>>();
+            for param in params {
+                let kv = param.split("=").collect::<Vec<&str>>();
+                if kv.len() == 2 {
+                    ret.push(RequestParam::new(ParamType::Post, kv[0], kv[1]));
+                } else if kv.len() == 1 {
+                    ret.push(RequestParam::new(ParamType::Post, "", kv[0]));
+                }
+            }
         } else if con_type.to_lowercase().contains("text/plain") {
             
         }
@@ -264,8 +346,21 @@ impl LogRequest {
     pub fn get_host(&self) -> String {
         let s_url = self.get_url();
         let url = Url::parse(&s_url).unwrap();
-        let s = url.host_str().expect("msg").to_string();
-        return s;
+        let schema = url.scheme();
+        let mut url_s = url.host_str().unwrap().to_string();
+        let mut result = String::new();
+        if url.port().is_some() {
+            let port = format!(":{}", url.port().unwrap());
+            url_s.push_str(&port);
+        }
+        if schema.eq("http") {
+            result.push_str("http://");
+            result.push_str(&url_s);
+        } else if schema.eq("https") {
+            result.push_str("https://");
+            result.push_str(&url_s);
+        }
+        return result;
     }
 
     pub fn get_header(&self, key: &str) -> Option<String> {
@@ -606,7 +701,7 @@ impl LogHistory {
                 return Err(STError::new("Error to get SiteMap single instance"));
             }
         };
-        let _ = sitemap.push(self.last_index);
+        let _ = sitemap.push_log(self.last_index);
         Ok(self.last_index)
     }
 
@@ -649,13 +744,15 @@ impl LogHistory {
 }
 
 pub struct Site {
-    logs: Vec<u32>,
+    logs    : Vec<u32>,
+    issues  : Vec<Issue>
 }
 
 impl Site {
     pub fn new() -> Self {
         Site {
             logs: Vec::default(),
+            issues : Default::default()
         }
     }
 
@@ -665,6 +762,14 @@ impl Site {
 
     pub fn get_logs(&self) -> &Vec<u32> {
         &self.logs
+    }
+
+    pub fn push_issue(&mut self, issue: Issue) {
+        self.issues.push(issue);
+    }
+
+    pub fn get_issues(&self) -> &Vec<Issue> {
+        &self.issues
     }
 }
 pub struct SiteMap {
@@ -683,7 +788,7 @@ impl SiteMap {
         }
     }
 
-    pub fn push(&mut self, index: u32) -> Result<(), STError> {
+    pub fn push_log(&mut self, index: u32) -> Result<(), STError> {
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -729,5 +834,33 @@ impl SiteMap {
         };
 
         Some(site.get_logs())
+    }
+    /** `push_issue` Push issue to Site , Don't save the same issues in one site
+
+
+    ```
+    site.push_issue(issue);
+    ```
+    */
+    pub fn push_issue(&mut self, issue: Issue) {
+        let host = issue.get_host();
+        if self.map.contains_key(host) == false {
+            self.map.insert(host.to_string(), Site::new());
+        }
+
+        let site = self.map.get_mut(host).unwrap();
+        for iter in &site.issues {
+            if iter.get_name().eq(issue.get_name()) {
+                
+                if iter.get_host().eq(issue.get_host()) {
+                    return ;
+                }
+            }
+        }
+        site.push_issue(issue);
+    }
+
+    pub fn get_site(&self, host: &str) -> Option<&Site> {
+        self.map.get(host)
     }
 }

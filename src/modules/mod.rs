@@ -5,20 +5,20 @@ pub mod passive;
 pub struct Helper {}
 
 enum IssueLevel {
-    Info
+    Info,
 }
 
-pub static mut ALL_ISSUES: Vec<Issue> = Vec::new();
 pub struct Issue {
     name: String,
     detail: String,
     level: IssueLevel,
     confidence: IssueConfidence,
     httplog: Option<ReqResLog>,
+    host: String,
 }
 
 enum IssueConfidence {
-    Confirm
+    Confirm,
 }
 
 impl Issue {
@@ -27,39 +27,75 @@ impl Issue {
         level: IssueLevel,
         detail: &str,
         confidance: IssueConfidence,
-        httplog: &ReqResLog
+        host: &str,
     ) -> Issue {
         Self {
             name: name.to_string(),
             detail: detail.to_string(),
             level,
             confidence: confidance,
-            httplog: httplog.clone(),
+            httplog: None,
+            host: host.to_string(),
         }
     }
 
-    pub fn add_issue(issue: Issue) {
+    pub fn get_host(&self) -> &str {
+        &self.host
+    }
+
+    /** `add_issue` Push issue to Site of Sitemap index by hostname
+
+
+    ```
+    Issue::add_issue(issue, httplog);
+    ```
+    */
+    pub fn add_issue(mut issue: Issue, httplog: &ReqResLog) {
         unsafe {
-            for iter in &ALL_ISSUES {
-                if iter.get_name().eq(issue.get_name()) {
-                    let iter_host = iter.get_httplog().unwrap().get_host();
-                    let issue_host = issue.get_httplog().unwrap().get_host();
-                    if iter_host.eq(&issue_host) {
-                        return ;
-                    }
+            issue.set_httplog(httplog);
+            let sitemap = SiteMap::single();
+            let sitemap = match sitemap {
+                Some(s) => s,
+                None => {
+                    return;
                 }
+            };
+
+            sitemap.push_issue(issue);
+        }
+    }
+
+    pub fn get_issues() -> Vec<&'static Issue> {
+        let mut ret = Vec::default();
+        let sitemap = SiteMap::single();
+        let sitemap = match sitemap {
+            Some(s) => s,
+            None => {
+                return Default::default();
             }
+        };
 
-            ALL_ISSUES.push(issue);
+        let hosts = sitemap.get_hosts();
+        for host in hosts {
+            let site = sitemap.get_site(&host);
+            let site = match site {
+                Some(s) => s,
+                None => {
+                    continue;
+                }
+            };
+
+            let issues = site.get_issues();
+            for issue in issues {
+                ret.push(issue);
+            }
         }
+        ret
     }
 
-    pub fn get_issues() -> &'static Vec<Issue> {
-        unsafe {
-            &ALL_ISSUES
-        }
+    pub fn set_httplog(&mut self, httplog: &ReqResLog) {
+        self.httplog = httplog.clone();
     }
-
     pub fn get_name(&self) -> &str {
         &self.name
     }
@@ -79,6 +115,26 @@ impl Issue {
     pub fn get_httplog(&self) -> Option<&ReqResLog> {
         None
     }
+
+    pub fn get_url(&self) -> String {
+        let httplog = match &self.httplog {
+            Some(s) => s,
+            None => {
+                return "".to_string();
+            }
+        };
+
+        let request = match httplog.get_request() {
+            Some(s) => s,
+            None => {
+                return "".to_string();
+            }
+        };
+
+        return request.get_url();
+
+
+    }
 }
 
 pub trait IPassive {
@@ -89,9 +145,13 @@ pub trait IPassive {
     fn help(&self) -> Helper;
 }
 
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
-use crate::{cmd::handlers::{SCAN_RECEIVER}, proxy::log::ReqResLog, utils::STError};
+use crate::{
+    cmd::handlers::SCAN_RECEIVER,
+    proxy::log::{ReqResLog, SiteMap},
+    utils::STError,
+};
 
 #[derive(Debug)]
 pub struct ModuleMeta {
@@ -113,15 +173,12 @@ pub fn get_next_to_scan() -> u32 {
     unsafe {
         let receiver = &mut SCAN_RECEIVER;
         let receiver = match receiver {
-            Some(o) => {
-                o
-            },
+            Some(o) => o,
             None => {
                 //Httplog does not have 0 index
                 panic!("Receiver")
-            },
+            }
         };
-
 
         return receiver.recv().unwrap();
     }

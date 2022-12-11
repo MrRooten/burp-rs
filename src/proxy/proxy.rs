@@ -24,14 +24,16 @@ struct ProxyHandler {
 }
 
 async fn copy_req(req: &mut Request<Body>) -> LogRequest {
-    
+    let body = req.body_mut();
+    let s = body::to_bytes(body).await.unwrap();
     let mut new_req = Request::new(Body::from(""));
+    *req.body_mut() = Body::from(s.clone());
     new_req.headers_mut().clone_from(req.headers());
     new_req.method_mut().clone_from(req.method());
     new_req.uri_mut().clone_from(req.uri());
     new_req.version_mut().clone_from(&req.version());
     new_req.extensions().clone_from(&req.extensions());
-    return LogRequest::from(new_req,Bytes::new());
+    return LogRequest::from(new_req,s);
 }
 
 async fn copy_req_header(req: &mut Request<Body>) -> LogRequest {
@@ -113,9 +115,6 @@ impl HttpHandler for ProxyHandler {
     }
 
     async fn handle_response(&mut self, _ctx: &HttpContext, mut res: Response<Body>) -> Response<Body> {
-        
-        
-        
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
