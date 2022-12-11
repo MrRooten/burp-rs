@@ -10,11 +10,10 @@ use flate2::read::GzDecoder;
 use http::Request;
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{http, StatusCode, Version, Uri};
+use hyper::{http, StatusCode, Version};
 use serde_json::{Value, Error};
 use std::collections::HashMap;
 use std::io::Read;
-use std::str::FromStr;
 use std::sync::Mutex;
 use url::Url;
 

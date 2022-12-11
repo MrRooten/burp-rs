@@ -51,18 +51,16 @@ impl Issue {
     ```
     */
     pub fn add_issue(mut issue: Issue, httplog: &ReqResLog) {
-        unsafe {
-            issue.set_httplog(httplog);
-            let sitemap = SiteMap::single();
-            let sitemap = match sitemap {
-                Some(s) => s,
-                None => {
-                    return;
-                }
-            };
+        issue.set_httplog(httplog);
+        let sitemap = SiteMap::single();
+        let sitemap = match sitemap {
+            Some(s) => s,
+            None => {
+                return;
+            }
+        };
 
-            sitemap.push_issue(issue);
-        }
+        sitemap.push_issue(issue);
     }
 
     pub fn get_issues() -> Vec<&'static Issue> {
@@ -132,8 +130,6 @@ impl Issue {
         };
 
         return request.get_url();
-
-
     }
 }
 
