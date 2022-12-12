@@ -505,7 +505,7 @@ impl LogResponse {
         ret.push_str(&self.orignal.status().to_string().green());
         ret.push_str("\n");
         for kv in self.orignal.headers() {
-            let key = kv.0.as_str().blue();
+            let key = kv.0.as_str();
             ret.push_str(&key.blue());
             ret.push_str(": ");
             ret.push_str(&kv.1.to_str().unwrap().red());

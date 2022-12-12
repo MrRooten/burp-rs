@@ -15,7 +15,7 @@ use crate::{
     utils::{
         log::{LEVEL, LOGS},
         STError,
-    }, modules::Issue,
+    }
 };
 
 use super::{cmd_handler::*, pager::pager};
@@ -245,21 +245,21 @@ impl CMDProc for ListHistory {
     }
 }
 
-pub struct DebugLog {
+pub struct Log {
     name: String,
     opts: CMDOptions,
 }
 
-impl DebugLog {
+impl Log {
     pub fn new() -> Self {
         Self {
-            name: "debug_log".to_string(),
+            name: "log".to_string(),
             opts: Default::default(),
         }
     }
 }
 
-impl CMDProc for DebugLog {
+impl CMDProc for Log {
     fn get_name(&self) -> &str {
         &self.name
     }
