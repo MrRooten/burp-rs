@@ -358,8 +358,15 @@ impl LogRequest {
 
         ret
     }
+    
+    /** `get_http_domain` Get log domain with http: http://baidu.com
 
-    pub fn get_host(&self) -> String {
+
+    ```
+    log.get_http_domain();
+    ```
+    */
+    pub fn get_http_domain(&self) -> String {
         let s_url = self.get_url();
         let url = Url::parse(&s_url).unwrap();
         let schema = url.scheme();
@@ -377,6 +384,26 @@ impl LogRequest {
             result.push_str(&url_s);
         }
         return result;
+    }
+    /** `get_host` Return url's host ,append port to the end
+
+
+    ```
+    let host = request.get_host()
+    assert_eq!("google.com:443",host)
+    ```
+    */
+    pub fn get_host(&self) -> String {
+        let s_url = self.get_url();
+        let url = Url::parse(&s_url).unwrap();
+        let schema = url.scheme();
+        let mut url_s = url.host_str().unwrap().to_string();
+        if url.port().is_some() {
+            let port = format!(":{}", url.port().unwrap());
+            url_s.push_str(&port);
+        }
+
+        url_s
     }
 
     pub fn get_header(&self, key: &str) -> Option<String> {

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::Utc;
-use hyper::{body::Bytes, Method, Request, Body, Uri, Response};
+use hyper::{body::Bytes, Method, Request, Body, Uri, Response, HeaderMap, header::{HOST, HeaderName}};
 use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception};
 
 use crate::{librs::http::utils::{HttpRequest, HttpResponse}, proxy::log::{ReqResLog, LogRequest, LogResponse}};
@@ -100,7 +100,7 @@ methods!(
             }
         }
 
-        ret.store(RString::from("header"), ruby_headers);
+        ret.store(RString::from("headers"), ruby_headers);
         ret.store(
             RString::from("body"),
             RString::from_bytes(&response.get_body(), &Encoding::utf8()),
@@ -117,6 +117,20 @@ fn inner_request_to_ruby_hash(request: &HttpRequest) -> Hash {
 
 pub fn ruby_resp_hash_to_reqresplog(resp: &Hash) -> ReqResLog {
     let request = resp.at(&RString::from("request")).try_convert_to::<Hash>().unwrap();
+    let headers = request.at(&RString::from("headers")).try_convert_to::<Hash>();
+    let mut ori_headers = HeaderMap::new();
+    match headers {
+        Ok(o) => {
+            let keys = o.each(|_key, _value| {
+                let key = _key.try_convert_to::<RString>().unwrap().to_string();
+                let value = _value.try_convert_to::<RString>().unwrap().to_string();
+                let key = HeaderName::from_str(&key);
+                ori_headers.insert(key.unwrap(), value.parse().unwrap());
+            });
+        },
+        Err(e) => {
+        }
+    };
     let url = request.at(&RString::from("url")).try_convert_to::<RString>().unwrap().to_string();
     let body = request.at(&RString::from("body")).try_convert_to::<RString>();
     let body = match body {
@@ -127,10 +141,26 @@ pub fn ruby_resp_hash_to_reqresplog(resp: &Hash) -> ReqResLog {
     };
     let mut original = Request::new(Body::from(""));
     *original.uri_mut() = Uri::from_str(&url).unwrap();
+    *original.headers_mut() = ori_headers;
     let req = LogRequest::from(original, Bytes::from(body));
 
     let body = resp.at(&RString::from("body")).try_convert_to::<RString>().unwrap().to_string();
     let mut original = Response::new(Body::from(""));
+    let headers = resp.at(&RString::from("headers")).try_convert_to::<Hash>();
+    let mut ori_headers = HeaderMap::new();
+    match headers {
+        Ok(o) => {
+            let keys = o.each(|_key, _value| {
+                let key = _key.try_convert_to::<RString>().unwrap().to_string();
+                let value = _value.try_convert_to::<RString>().unwrap().to_string();
+                let key = HeaderName::from_str(&key);
+                ori_headers.insert(key.unwrap(), value.parse().unwrap());
+            });
+        },
+        Err(e) => {
+        }
+    };
+    *original.headers_mut() = ori_headers;
     let resp = LogResponse::from(original, Bytes::from(body));
 
     let mut log = ReqResLog::new(req);

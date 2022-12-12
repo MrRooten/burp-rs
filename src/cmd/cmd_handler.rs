@@ -2,7 +2,9 @@ use std::{collections::HashMap};
 
 use colored::Colorize;
 
-use crate::{utils::STError, cmd::handlers::{Log, CatResponse, ClearScreen, CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Push, Scan, Test, ListIssues, PushPoc, ListPocs, RunPocs}};
+use crate::{utils::STError, cmd::{handlers::{Log, CatResponse, ClearScreen
+    , CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Push, Scan, Test}, 
+    issue_handler::{InfoIssue, ListIssues}, poc_handler::{PushPoc, ListPocs, RunPocs}}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
@@ -44,6 +46,14 @@ impl CMDHandler {
         for _proc in &self.procs {
             if _proc.get_name().eq(proc_name) {
                 let res = _proc.process(&opts);
+                match res {
+                    Ok(o) => {
+
+                    },
+                    Err(e) => {
+                        println!("[{}]:{}","Error".red(), e);
+                    }
+                }
                 return;
             }
         }
@@ -77,6 +87,7 @@ impl CMDHandler {
         hi!(PushPoc);
         hi!(ListPocs);
         hi!(RunPocs);
+        hi!(InfoIssue);
     }
 
     pub fn get_opts(&self) -> &Vec<String> {

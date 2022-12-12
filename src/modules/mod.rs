@@ -114,8 +114,8 @@ impl Issue {
         &self.confidence
     }
 
-    pub fn get_httplog(&self) -> Option<&ReqResLog> {
-        None
+    pub fn get_httplog(&self) -> &Option<ReqResLog> {
+        &self.httplog
     }
 
     pub fn get_url(&self) -> String {

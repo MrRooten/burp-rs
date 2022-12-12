@@ -10,13 +10,14 @@ class RBModule
 
     def scan(url)
         client = HttpClient.new
-        resp = client.get(url)
+        resp = client.get(url, headers={"host"=>"bing.com"})
+        puts resp
         issue = {
             "name"=> "test_req",
             "level" => "info",
             "confidence" => "confirm",
             "detail" => "this is a detail",
-            "host" => "http://test.com",
+            "host" => "https://baidu.com",
             "response" => resp
         }
 
@@ -25,12 +26,8 @@ class RBModule
     end
 
     def passive_run(index)
-        
+        scan("https://baidu.com")
     end
 
 end
 
-if caller.length == 0
-    mod = RBModule.new
-    mod.scan("https://baidu.com")
-end

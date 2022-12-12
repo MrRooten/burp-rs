@@ -15,7 +15,7 @@ use crate::{
     utils::{
         log::{LEVEL, LOGS},
         STError,
-    }, modules::{get_modules, get_will_run_pocs, push_will_run_poc}
+    },
 };
 
 use super::{cmd_handler::*, pager::pager};
@@ -760,7 +760,9 @@ pub struct Scan {
 
 impl Scan {
     pub fn new() -> Self {
-        Self { opts: Default::default() }
+        Self {
+            opts: Default::default(),
+        }
     }
 }
 impl CMDProc for Scan {
@@ -788,10 +790,8 @@ impl CMDProc for Scan {
             while TO_SCAN_QUEUE.len() != 0 {
                 let ret = sender.send(TO_SCAN_QUEUE.remove(0));
                 match ret {
-                    Ok(o) => {},
-                    Err(e) => {
-                        return Err(st_error!(e))
-                    }
+                    Ok(o) => {}
+                    Err(e) => return Err(st_error!(e)),
                 };
             }
             Ok(())
@@ -825,15 +825,40 @@ impl CMDProc for Push {
             let s = format!("{} ${{num}}", self.get_name());
             return Err(STError::new(&s));
         }
-        let index = line[1].to_string().parse::<u32>();
-        let index = match index {
-            Ok(o) => o,
-            Err(e) => {
-                return Err(st_error!(e));
+        if line[1].starts_with("host:") {
+            let host = line[1][5..].to_string();
+            let map = match SiteMap::single() {
+                Some(s) => s,
+                None => {
+                    return Err(STError::new("Can not get Sitemap Single instance"));
+                }
+            };
+
+            let s = map.get_site(&host);
+            let site = match s {
+                Some(o) => o,
+                None => {
+                    return Err(STError::new("Doesn't match site"));
+                }
+            };
+
+            let logs = site.get_logs();
+            for log in logs {
+                unsafe {
+                    TO_SCAN_QUEUE.push(log.clone());
+                }
             }
-        };
-        unsafe {
-            TO_SCAN_QUEUE.push(index);
+        } else if line[1].to_string().parse::<u32>().is_ok() {
+            let index = line[1].to_string().parse::<u32>();
+            let index = match index {
+                Ok(o) => o,
+                Err(e) => {
+                    return Err(st_error!(e));
+                }
+            };
+            unsafe {
+                TO_SCAN_QUEUE.push(index);
+            }
         }
 
         Ok(())
@@ -857,13 +882,13 @@ impl Push {
 }
 
 pub struct Test {
-    opts    : CMDOptions
-}   
+    opts: CMDOptions,
+}
 
 impl Test {
     pub fn new() -> Self {
         Self {
-            opts    : Default::default()
+            opts: Default::default(),
         }
     }
 }
@@ -911,169 +936,3 @@ impl CMDProc for Test {
         "test".to_string()
     }
 }
-
-pub struct ListIssues {
-    opts    : CMDOptions
-}   
-
-impl ListIssues {
-    pub fn new() -> Self {
-        Self {
-            opts    : Default::default()
-        }
-    }
-}
-
-impl CMDProc for ListIssues {
-    fn get_name(&self) -> &str {
-        "list_issues"
-    }
-
-    fn get_opts(&self) -> &CMDOptions {
-        &self.opts
-    }
-
-    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        let map = match SiteMap::single() {
-            Some(s) => s,
-            None => {
-                return Err(STError::new("Can not get Sitemap Single instance"));
-            }
-        };
-
-        let hosts = map.get_hosts();
-        for host in hosts {
-            let site = map.get_site(&host).unwrap();
-            println!("{}", host.blue());
-            let mut index = 1;
-            let issues = site.get_issues();
-            for issue in issues {
-                println!("\t{}: '{}'", "Name".green(), issue.get_name());
-                println!("\t{}: '{}'", "Description".green(), issue.get_detail());
-                println!("\t{}: '{}'", "Url".green(), issue.get_url());
-                index += 1;
-            }
-        }
-        Ok(())
-    }
-
-    fn get_detail(&self) -> String {
-        "list the issues that been proof".to_string()
-    }
-
-    fn get_help(&self) -> String {
-        "list_issues".to_string()
-    }
-}
-
-
-
-pub struct PushPoc {
-    opts    : CMDOptions
-}
-
-impl PushPoc {
-    pub fn new() -> Self {
-        PushPoc { opts: Default::default() }
-    }
-}
-
-impl CMDProc for PushPoc {
-    fn get_name(&self) -> &str {
-        "push_poc"
-    }
-
-    fn get_opts(&self) -> &CMDOptions {
-        &self.opts
-    }
-
-    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        let pocs = &line[1..];
-        for poc in pocs {
-            push_will_run_poc(poc);
-        }
-        Ok(())
-    }
-
-    fn get_detail(&self) -> String {
-        "Push pocs".to_string()
-    }
-
-    fn get_help(&self) -> String {
-        "push_poc ${poc_name}".to_string()
-    }
-}
-
-pub struct ListPocs {
-    opts    : CMDOptions
-}
-
-impl ListPocs {
-    pub fn new() -> Self {
-        ListPocs { opts: Default::default() }
-    }
-}
-
-impl CMDProc for ListPocs {
-    fn get_name(&self) -> &str {
-        "list_pocs"
-    }
-
-    fn get_opts(&self) -> &CMDOptions {
-        &self.opts
-    }
-
-    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        let modules = get_modules();
-        for module in modules {
-            println!("{}",module.get_name());
-        }
-        Ok(())
-    }
-
-    fn get_detail(&self) -> String {
-        "list pocs".to_string()
-    }
-
-    fn get_help(&self) -> String {
-        "list_pocs".to_string()
-    }
-}
-
-pub struct RunPocs {
-    opts    : CMDOptions
-}
-
-impl RunPocs {
-    pub fn new() -> Self {
-        Self { opts: Default::default() }
-    }
-}
-
-impl CMDProc for RunPocs {
-    fn get_name(&self) -> &str {
-        "run_pocs"
-    }
-
-    fn get_opts(&self) -> &CMDOptions {
-        &self.opts
-    }
-
-    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        let pocs = get_will_run_pocs();
-        for poc in pocs {
-            println!("{}",poc);
-        }
-
-        Ok(())
-    }
-
-    fn get_detail(&self) -> String {
-        "List running pocs".to_string()
-    }
-
-    fn get_help(&self) -> String {
-        "run_pocs".to_string()
-    }
-}
-
