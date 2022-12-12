@@ -4,11 +4,12 @@ use rutie::{VM, eval, Object, Binding, RString, Class, AnyObject};
 
 use crate::{utils::STError, st_error};
 
-use super::http::{log::{get_http_req, get_http_resp}, utils::send};
+use super::{http::{log::{get_http_req, get_http_resp}, utils::send}, log::{error, debug, info, warn}, issue::push_issue};
 
 pub fn rb_init() -> Result<(), STError> {
     VM::init();
     VM::init_loadpath();
+    VM::require("json");
     Class::new("RBHttpLog", None).define(|klass| {
         klass.def("get_http_req", get_http_req);
         klass.def("get_http_resp", get_http_resp);
@@ -18,6 +19,16 @@ pub fn rb_init() -> Result<(), STError> {
         klass.def("send", send);
     });
 
+    Class::new("RBLogger", None).define(|klass| {
+        klass.def("error",error);
+        klass.def("debug",debug);
+        klass.def("info",info);
+        klass.def("warn",warn);
+    });
+
+    Class::new("RBIssue", None).define(|klass| {
+        klass.def("push_issue", push_issue);
+    });
     Ok(())
 }
 
@@ -63,7 +74,9 @@ pub fn call_class_object_method(script: &str, class: &str, method: &str, argumen
 }
 
 pub fn get_instance(script: &str, class: &str, arguments: &[AnyObject]) -> AnyObject {
-    let _ = eval!(&fs::read_to_string(script).unwrap());
+    //let _ = eval!(&fs::read_to_string(script).unwrap());
+    let path = format!("./{}",script);
+    VM::require(&path);
     Class::from_existing(class).new_instance(arguments)
 }
 

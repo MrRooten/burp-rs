@@ -1,3 +1,4 @@
+
 class RBModule
     def initialize
     end
@@ -7,24 +8,29 @@ class RBModule
         return grades
     end
 
-    def passive_run(index)
-        client = RBHttpClient.new
-        request = {
-            "method" => "get",
-            "url" => "https://cn.baidu.com"
+    def scan(url)
+        client = HttpClient.new
+        resp = client.get(url)
+        issue = {
+            "name"=> "test_req",
+            "level" => "info",
+            "confidence" => "confirm",
+            "detail" => "this is a detail",
+            "host" => "http://test.com",
+            "response" => resp
         }
-        print("hello123: ")
-            #... process, may raise an exception
-        
-        begin
-            puts client.send(request)
-        rescue Exception => e
-            puts "#{e}"
-            raise e
-        end
-        
-        puts "after client"
+
+        issuer = RBIssue.new
+        issuer.push_issue(issue)
+    end
+
+    def passive_run(index)
         
     end
 
+end
+
+if caller.length == 0
+    mod = RBModule.new
+    mod.scan("https://baidu.com")
 end

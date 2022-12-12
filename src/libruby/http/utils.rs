@@ -1,7 +1,10 @@
-use hyper::{body::Bytes, Method};
+use std::str::FromStr;
+
+use chrono::Utc;
+use hyper::{body::Bytes, Method, Request, Body, Uri, Response};
 use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception};
 
-use crate::librs::http::utils::{HttpRequest, HttpResponse};
+use crate::{librs::http::utils::{HttpRequest, HttpResponse}, proxy::log::{ReqResLog, LogRequest, LogResponse}};
 
 class!(RBHttpClient);
 
@@ -25,10 +28,10 @@ methods!(
             .try_convert_to::<RString>()
             .unwrap()
             .to_string();
-        let request = ruby_hash_to_inner_request(request);
+        let send_request = ruby_hash_to_inner_request(&request);
         let mut response = None::<HttpResponse>;
         if method.eq_ignore_ascii_case("get") {
-            let ret = HttpRequest::send(Method::GET, &request);
+            let ret = HttpRequest::send(Method::GET, &send_request);
             let ret = match ret {
                 Ok(o) => o,
                 Err(e) => {
@@ -40,7 +43,7 @@ methods!(
 
             response = Some(ret);
         } else if method.eq_ignore_ascii_case("post") {
-            let ret = HttpRequest::send(Method::POST, &request);
+            let ret = HttpRequest::send(Method::POST, &send_request);
             let ret = match ret {
                 Ok(o) => o,
                 Err(e) => {
@@ -52,7 +55,7 @@ methods!(
 
             response = Some(ret);
         } else if method.eq_ignore_ascii_case("options") {
-            let ret = HttpRequest::send(Method::OPTIONS, &request);
+            let ret = HttpRequest::send(Method::OPTIONS, &send_request);
             let ret = match ret {
                 Ok(o) => o,
                 Err(e) => {
@@ -102,15 +105,40 @@ methods!(
             RString::from("body"),
             RString::from_bytes(&response.get_body(), &Encoding::utf8()),
         );
+        ret.store(RString::from("request"), request.clone());
         return ret.try_convert_to::<AnyObject>().unwrap();
-    }
+    },
+    
 );
 
 fn inner_request_to_ruby_hash(request: &HttpRequest) -> Hash {
     unimplemented!()
 }
 
-fn ruby_hash_to_inner_request(hash: Hash) -> HttpRequest {
+pub fn ruby_resp_hash_to_reqresplog(resp: &Hash) -> ReqResLog {
+    let request = resp.at(&RString::from("request")).try_convert_to::<Hash>().unwrap();
+    let url = request.at(&RString::from("url")).try_convert_to::<RString>().unwrap().to_string();
+    let body = request.at(&RString::from("body")).try_convert_to::<RString>();
+    let body = match body {
+        Ok(o) => o.to_string(),
+        Err(e) => {
+            "".to_string()
+        }
+    };
+    let mut original = Request::new(Body::from(""));
+    *original.uri_mut() = Uri::from_str(&url).unwrap();
+    let req = LogRequest::from(original, Bytes::from(body));
+
+    let body = resp.at(&RString::from("body")).try_convert_to::<RString>().unwrap().to_string();
+    let mut original = Response::new(Body::from(""));
+    let resp = LogResponse::from(original, Bytes::from(body));
+
+    let mut log = ReqResLog::new(req);
+    log.set_resp(resp);
+    log
+}
+
+fn ruby_hash_to_inner_request(hash: &Hash) -> HttpRequest {
     let url_key = RString::from("url").try_convert_to::<AnyObject>().unwrap();
     let url = hash.at(&url_key).try_convert_to::<RString>().unwrap();
     let url = url.to_string();

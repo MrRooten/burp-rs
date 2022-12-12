@@ -17,7 +17,7 @@ impl IActive for TestScan {
         return Ok(result);
     }
 
-    fn metadata(&self) -> Option<crate::modules::ModuleMeta> {
+    fn metadata(&self) -> &Option<crate::modules::ModuleMeta> {
         todo!()
     }
 }

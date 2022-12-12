@@ -50,7 +50,7 @@ methods!(
         req_hash.store(RString::from("header"), ruby_headers);
         req_hash.store(RString::from("body"), RString::from_bytes(request.get_body(), &Encoding::utf8()));
         req_hash.try_convert_to::<AnyObject>().unwrap()
-    }
+    },
     fn get_http_resp(i: Fixnum) -> AnyObject {
         let index = i.unwrap().to_u32();
             let reqresp = LogHistory::get_httplog(index);
@@ -88,7 +88,8 @@ methods!(
             resp_hash.store(RString::from("header"), ruby_headers);
             resp_hash.store(RString::from("body"), RString::from_bytes(response.get_body(),&Encoding::utf8()));
             resp_hash.try_convert_to::<AnyObject>().unwrap()
-    }
+    },
+    
 );
 
 

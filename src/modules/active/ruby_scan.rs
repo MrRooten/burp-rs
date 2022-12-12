@@ -1,4 +1,4 @@
-use rutie::{AnyObject, RString, Object, Fixnum};
+use rutie::{AnyObject, RString, Object, Fixnum, Exception, Integer};
 use serde_json::Value;
 
 use crate::{
@@ -11,7 +11,8 @@ pub struct RBModule {
     object: AnyObject,
     passive_method  : AnyObject,
     meta_method     : AnyObject,
-    active_method   : AnyObject
+    active_method   : AnyObject,
+    meta            : Option<ModuleMeta>
 }
 
 impl RBModule {
@@ -38,24 +39,38 @@ impl RBModule {
             Err(e) => { return Err(e) }
         };
 
+        let result = metadata_method.protect_send("call", &[]).unwrap();
+        let result = call_object_method(&result, "to_json", &[]).unwrap();
+        let result = call_object_method(&result, "to_s", &[]).unwrap();
+        
+        let s = object_to_string(&result).unwrap();
+        let ret: Value = serde_json::from_str(&s).unwrap();
+        let name = ret.get("name").unwrap().as_str().unwrap();
+        let description = ret.get("description").unwrap().as_str().unwrap();
+        let meta = ModuleMeta {
+            name: name.to_string(),
+            description: description.to_string(),
+        };
+        //println!("{:?}",meta);
         Ok(Self {
             module_script: file.to_string(),
             object : object,
             passive_method : passive_method,
             meta_method    : metadata_method,
-            active_method   : active_method
+            active_method   : active_method,
+            meta        : Some(meta)
         })
     }
 }
 
 impl IActive for RBModule {
     fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>, STError> {
-        let i = Fixnum::new(index.into()).try_convert_to::<AnyObject>().unwrap();
+        let i = Integer::new(index.into()).try_convert_to::<AnyObject>().unwrap();
         let result = match self.passive_method.protect_send("call", &[i]) {
             Ok(o) => o,
             Err(e) => {
-                let s = format!("{:?}",e);
-                return Err(STError::new(&s));
+                let msg = format!("passive_run:{}",e.message());
+                return Err(STError::new(&msg));
             }
         };
         Ok(vec![])
@@ -69,20 +84,7 @@ impl IActive for RBModule {
         todo!()
     }
 
-    fn metadata(&self) -> Option<ModuleMeta> {
-        let result = self.object.protect_send("call", &[]).unwrap();
-        let result = call_object_method(&result, "to_json", &[]).unwrap();
-        let result = call_object_method(&result, "to_s", &[]).unwrap();
-        
-        let s = object_to_string(&result).unwrap();
-        let ret: Value = serde_json::from_str(&s).unwrap();
-        let name = ret.get("name").unwrap().as_str().unwrap();
-        let description = ret.get("description").unwrap().as_str().unwrap();
-        let meta = ModuleMeta {
-            name: name.to_string(),
-            description: description.to_string(),
-        };
-        println!("{:?}",meta);
-        None
+    fn metadata(&self) -> &Option<ModuleMeta> {
+        return &self.meta;
     }
 }

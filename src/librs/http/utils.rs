@@ -33,6 +33,13 @@ impl HttpRequest {
         unimplemented!()
     }
 
+    pub fn clone(&self) -> HttpRequest {
+        let mut request = Request::new(Body::from("")); 
+        *request.uri_mut() = self.request.uri().clone();
+        *request.headers_mut() = self.request.headers().clone();
+        HttpRequest { request: request, body: self.body.clone() }
+    }
+
     pub fn to_bytes(&self) -> Bytes {
         unimplemented!()
     }
@@ -46,6 +53,17 @@ impl HttpRequest {
         }
     }
 
+    pub fn clone_origial(&self) -> Request<Body> {
+        let mut request = Request::new(Body::from("")); 
+        *request.uri_mut() = self.request.uri().clone();
+        *request.headers_mut() = self.request.headers().clone();
+        request
+    }
+
+    pub fn get_body(&self) -> &Bytes {
+        &self.body
+    }
+    
     pub fn from_log_request(request: &LogRequest) -> HttpRequest {
         unimplemented!()
     }
@@ -197,19 +215,21 @@ impl HttpRequest {
             Err(e) => Bytes::new(),
         };
 
-        Ok(HttpResponse::from(response, body))
+        Ok(HttpResponse::from(request,response, body))
     }
 }
 
 #[derive(Debug)]
 pub struct HttpResponse {
+    req : HttpRequest,
     resp: Response<Body>,
     body: Bytes,
 }
 
 impl HttpResponse {
-    pub fn from(resp: Response<Body>, body: Bytes) -> Self {
+    pub fn from(req: &HttpRequest, resp: Response<Body>, body: Bytes) -> Self {
         Self {
+            req : req.clone(),
             resp: resp,
             body: body,
         }
@@ -217,6 +237,18 @@ impl HttpResponse {
 
     pub fn get_status(&self) -> StatusCode {
         self.resp.status()
+    }
+
+    pub fn get_header(&self, key: &str) -> String {
+        let c_type = self.resp.headers().get(key);
+        match c_type {
+            Some(s) => {
+                return s.to_str().unwrap().to_string();
+            },
+            None => {
+                return "".to_string();
+            }
+        }
     }
 
     pub fn get_headers(&self) -> &HeaderMap {
@@ -231,7 +263,15 @@ impl HttpResponse {
         unimplemented!()
     }
 
-    pub fn get_request(&self) -> HttpRequest {
-        unimplemented!()
+    pub fn get_request(&self) -> &HttpRequest {
+        &self.req
     }
+
+    pub fn clone_original(&self) -> Response<Body> {
+        let mut response = Response::new(Body::from(""));
+        *response.headers_mut() = self.resp.headers().clone();
+        *response.status_mut() = self.resp.status().clone();
+        response
+    }
+
 }

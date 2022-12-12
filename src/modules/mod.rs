@@ -4,8 +4,11 @@ pub mod passive;
 #[derive(Default)]
 pub struct Helper {}
 
-enum IssueLevel {
+pub enum IssueLevel {
     Info,
+    Medium,
+    HighRisk,
+    Critical,
 }
 
 pub struct Issue {
@@ -17,12 +20,13 @@ pub struct Issue {
     host: String,
 }
 
-enum IssueConfidence {
+pub enum IssueConfidence {
+    Suspicious,
     Confirm,
 }
 
 impl Issue {
-    fn new(
+    pub fn new(
         name: &str,
         level: IssueLevel,
         detail: &str,
@@ -141,7 +145,7 @@ pub trait IPassive {
     fn help(&self) -> Helper;
 }
 
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Index};
 
 use crate::{
     cmd::handlers::SCAN_RECEIVER,
@@ -149,12 +153,23 @@ use crate::{
     utils::STError,
 };
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct ModuleMeta {
     name: String,
     description: String,
 }
 
+
+
+impl ModuleMeta {
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn get_description(&self) -> &str {
+        &self.description
+    }
+}
 type Args = HashMap<String, String>;
 pub trait IActive {
     //Use in proxy mod
@@ -162,9 +177,42 @@ pub trait IActive {
     //Use in cmd mod
     fn active_run(&self, url: &str, args: Args) -> Result<Vec<Issue>, STError>;
 
-    fn metadata(&self) -> Option<ModuleMeta>;
+    fn metadata(&self) -> &Option<ModuleMeta>;
 }
 
+pub static mut GLOB_POCS: Vec<ModuleMeta> = Vec::<ModuleMeta>::new();
+pub static mut WILL_RUN_POCS: Vec<String> = Vec::<String>::new();
+pub fn get_modules() -> &'static Vec<ModuleMeta> {
+    unsafe {
+        &GLOB_POCS
+    }
+}
+
+pub fn get_will_run_pocs() -> &'static Vec<String> {
+    unsafe {
+        &WILL_RUN_POCS
+    }
+}
+
+pub fn push_will_run_poc(name: &str) {
+    unsafe {
+        WILL_RUN_POCS.push(name.to_string());
+    }
+}
+
+pub fn remove_will_run_poc(name: &str) {
+    unsafe {
+        let index = WILL_RUN_POCS.iter().position(|r| r.eq(name));
+        let index = match index {
+            Some(i) => i,
+            None => {
+                return ;
+            }
+        };
+
+        WILL_RUN_POCS.remove(index);
+    }
+}
 pub fn get_next_to_scan() -> u32 {
     unsafe {
         let receiver = &mut SCAN_RECEIVER;
@@ -179,3 +227,4 @@ pub fn get_next_to_scan() -> u32 {
         return receiver.recv().unwrap();
     }
 }
+

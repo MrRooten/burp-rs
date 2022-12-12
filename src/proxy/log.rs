@@ -17,6 +17,7 @@ use std::io::Read;
 use std::sync::Mutex;
 use url::Url;
 
+#[derive(Debug)]
 pub struct ReqResLog {
     request: Option<LogRequest>,
     response: Option<LogResponse>,
@@ -25,7 +26,23 @@ pub struct ReqResLog {
 
 impl ReqResLog {
     pub fn from_http_response(response: &HttpResponse) -> ReqResLog {
-        unimplemented!()
+        let request = response.get_request();
+        let request = LogRequest {
+            orignal: request.clone_origial(),
+            body: request.get_body().clone(),
+            record_t: Utc::now(),
+        };
+        
+        let resp = LogResponse {
+            orignal: response.clone_original(),
+            body: response.get_body().clone(),
+            c_type: response.get_header("content-type"),
+        };
+        ReqResLog {
+            request: Some(request),
+            response: Some(resp),
+            record_t: Utc::now(),
+        }
     }
 
     pub fn new(req: LogRequest) -> Self {

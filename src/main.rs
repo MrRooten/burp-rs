@@ -6,11 +6,11 @@ use std::{
 use burp_rs::{
     cmd::cmd::cmd,
     libruby::{rb_main::{ruby_thread}, utils::rb_init},
-    proxy::proxy::proxy,
+    proxy::{proxy::proxy, log::ReqResLog},
     utils::{banner, log::init}, librs::http::utils::HttpRequest,
 };
 use hyper::Method;
-use rutie::eval;
+use rutie::{eval, VM};
 
 #[tokio::main]
 async fn _main(addr: &str) {
@@ -23,8 +23,9 @@ async fn _main(addr: &str) {
 
 fn test() {
     let request = HttpRequest::from_url("https://cn.bing.com");
-    let _ = HttpRequest::send(Method::GET, &request);
-    
+    let resp = HttpRequest::send(Method::GET, &request);
+    let log = ReqResLog::from_http_response(&resp.unwrap());
+    println!("{:?}",log);
 }
 
 fn main() {
@@ -40,8 +41,8 @@ fn main() {
         test();
     } else if args[1].starts_with("r_test") {
         let _ = rb_init();
-        let s = fs::read_to_string(args[2].to_string()).unwrap();
-        let _ = eval!(&s);
+        //let s = fs::read_to_string(args[2].to_string()).unwrap();
+        //let _ = VM::require(&s);
     }
     else {
         println!("{} listen on: {}", args[0], args[1]);

@@ -5,6 +5,8 @@ pub mod utils;
 pub mod rb_main;
 pub mod http;
 pub mod exception;
+pub mod log;
+pub mod issue;
 pub fn test_ruby(f: &str) {
     VM::init();
     VM::init_loadpath();
