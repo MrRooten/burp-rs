@@ -16,7 +16,7 @@ use hyper::{
     body::{self, Bytes},
     Body, Method, Request, Response,
 };
-use std::{net::SocketAddr, sync::mpsc::{Receiver, Sender, self, SyncSender}, thread::spawn};
+use std::{net::SocketAddr, sync::mpsc::{Receiver, self, SyncSender}, thread::spawn};
 use tracing::*;
 
 async fn shutdown_signal() {
@@ -32,7 +32,12 @@ struct ProxyHandler {
 
 async fn copy_req(req: &mut Request<Body>) -> LogRequest {
     let body = req.body_mut();
-    let s = body::to_bytes(body).await.unwrap();
+    let s = match body::to_bytes(body).await {
+        Ok(o) => o,
+        Err(e) => {
+            Bytes::new()
+        }
+    };
     let mut new_req = Request::new(Body::from(""));
     *req.body_mut() = Body::from(s.clone());
     new_req.headers_mut().clone_from(req.headers());

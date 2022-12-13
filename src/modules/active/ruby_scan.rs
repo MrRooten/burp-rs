@@ -39,7 +39,7 @@ impl RBModule {
             Ok(o) => o,
             Err(e) => { return Err(e) }
         };
-
+        GC::register_mark(&active_method);
         let result = metadata_method.protect_send("call", &[]).unwrap();
         let result = call_object_method(&result, "to_json", &[]).unwrap();
         let result = call_object_method(&result, "to_s", &[]).unwrap();

@@ -4,7 +4,7 @@ use hyper::Uri;
 use url::Url;
 
 use crate::{
-    modules::{IPassive, Issue},
+    modules::{IPassive, Issue, IssueLevel},
     proxy::log::LogHistory,
     utils::STError,
 };
@@ -12,8 +12,22 @@ use crate::{
 pub struct PathMatch;
 
 fn solr(s: &Uri) -> Option<Issue> {
-    unimplemented!()
+    if s.path().contains("/solr/") {
+        let issue = Issue::new(
+            "Solr path match",
+            IssueLevel::Info,
+            "path contains /solr/",
+            crate::modules::IssueConfidence::Confirm,
+            ""
+        );
+
+        return Some(issue);
+    }
+
+    return None;
 }
+
+
 impl IPassive for PathMatch {
     fn run(&self, index: u32) -> Result<(), crate::utils::STError> {
         let log = LogHistory::get_httplog(index);

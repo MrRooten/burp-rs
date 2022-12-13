@@ -1,3 +1,6 @@
+# encoding: utf-8
+require 'uri'
+require "unicode_normalize/normalize.rb"
 class RBModule
     def initialize
     end
@@ -16,7 +19,7 @@ class RBModule
             "level" => "info",
             "confidence" => "confirm",
             "detail" => "this is a detail",
-            "host" => "https://baidu.com",
+            "host" => url,
             "response" => resp
         }
 
@@ -25,7 +28,14 @@ class RBModule
     end
 
     def passive_run(index)
-        scan("https://baidu.com")
+        puts $LOADED_FEATURES.select { |feature| feature.include? 'gems' }.map { |feature| File.dirname(feature) }.map { |feature| feature.split('/').last }.uniq.sort
+        log = HistoryLog.get_req index
+        url = log['url']
+        debug("Test u好rl: #{url}")
+        uri = URI::parse(url)
+        debug("Test url: #{uri}")
+
+        #scan("http://127.0.0.1:8009")
     end
 
 end

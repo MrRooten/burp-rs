@@ -29,8 +29,12 @@ pub fn rb_init() -> Result<(), STError> {
         klass.def("push_issue", push_issue);
     });
     VM::require("json");
+    VM::require("enc/encdb");
+    VM::require("enc/trans/transdb");
     VM::require("./active/http/http");
+    VM::require("./active/http/log");
     VM::require("./active/logger/logger");
+    
     Ok(())
 }
 
