@@ -4,3 +4,4 @@ pub mod handlers;
 pub mod pager;
 pub mod issue_handler;
 pub mod poc_handler;
+pub mod target_handler;

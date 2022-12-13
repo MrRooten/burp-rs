@@ -1,5 +1,5 @@
 use log::*;
-use rutie::{class, methods, RString, AnyObject, NilClass, Object, eval, Binding};
+use rutie::{class, methods, RString, AnyObject, NilClass, Object};
 class!(RBLogger);
 
 methods!(

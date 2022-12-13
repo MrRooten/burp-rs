@@ -1,4 +1,4 @@
-use rutie::{AnyObject, RString, Object, Fixnum, Exception, Integer};
+use rutie::{AnyObject, RString, Object, Exception, Integer};
 use serde_json::Value;
 
 use crate::{

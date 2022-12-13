@@ -1,19 +1,15 @@
-require_relative "logger/logger"
-require_relative "http/http"
 class RBModule
     def initialize
     end
     def metadata
-        grades = { "name" => "asdf", 
+        grades = { "name" => "test2", 
             "description" => "" }
         return grades
     end
 
     def passive_run(index)
-        logger = Logger.new
-        logger.info("hello")
+        #scan("http://127.0.0.1:8009")
+        puts "test2 index: #{index}"
     end
 
 end
-
-

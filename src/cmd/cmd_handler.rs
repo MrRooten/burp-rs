@@ -3,8 +3,8 @@ use std::{collections::HashMap};
 use colored::Colorize;
 
 use crate::{utils::STError, cmd::{handlers::{Log, CatResponse, ClearScreen
-    , CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Push, Scan, Test}, 
-    issue_handler::{InfoIssue, ListIssues}, poc_handler::{PushPoc, ListPocs, RunPocs}}};
+    , CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Scan, Test}, 
+    issue_handler::{InfoIssue, ListIssues}, poc_handler::{PushPoc, ListPocs, RunPocs}, target_handler::{Push, ListTarget}}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
@@ -88,6 +88,7 @@ impl CMDHandler {
         hi!(ListPocs);
         hi!(RunPocs);
         hi!(InfoIssue);
+        hi!(ListTarget);
     }
 
     pub fn get_opts(&self) -> &Vec<String> {

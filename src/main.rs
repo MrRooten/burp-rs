@@ -1,6 +1,6 @@
 use std::{
     env,
-    thread::{self}, fs,
+    thread::{self}, 
 };
 
 use burp_rs::{
@@ -10,7 +10,6 @@ use burp_rs::{
     utils::{banner, log::init}, librs::http::utils::HttpRequest,
 };
 use hyper::Method;
-use rutie::{eval, VM};
 
 #[tokio::main]
 async fn _main(addr: &str) {
@@ -22,7 +21,7 @@ async fn _main(addr: &str) {
 }
 
 fn test() {
-    let request = HttpRequest::from_url("https://cn.bing.com");
+    let request = HttpRequest::from_url("http://cn.bing.com");
     let resp = HttpRequest::send(Method::GET, &request);
     let log = ReqResLog::from_http_response(&resp.unwrap());
     println!("{:?}",log);
@@ -36,7 +35,7 @@ fn main() {
     if args.len() < 2 {
         println!("{} 127.0.0.1:3000", args[0]);
         println!("{} default listen on: 127.0.0.1:3000", args[0]);
-        _main("127.0.0.1:3000");
+        _main("0.0.0.0:3000");
     } else if args[1].starts_with("test") {
         test();
     } else if args[1].starts_with("r_test") {

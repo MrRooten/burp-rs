@@ -9,7 +9,6 @@ use super::{http::{log::{get_http_req, get_http_resp}, utils::send}, log::{error
 pub fn rb_init() -> Result<(), STError> {
     VM::init();
     VM::init_loadpath();
-    VM::require("json");
     Class::new("RBHttpLog", None).define(|klass| {
         klass.def("get_http_req", get_http_req);
         klass.def("get_http_resp", get_http_resp);
@@ -29,6 +28,9 @@ pub fn rb_init() -> Result<(), STError> {
     Class::new("RBIssue", None).define(|klass| {
         klass.def("push_issue", push_issue);
     });
+    VM::require("json");
+    VM::require("./active/http/http");
+    VM::require("./active/logger/logger");
     Ok(())
 }
 

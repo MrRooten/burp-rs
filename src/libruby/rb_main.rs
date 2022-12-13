@@ -9,7 +9,7 @@ use rutie::{Fixnum, Object, Thread};
 
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
-    modules::{active::ruby_scan::RBModule, get_next_to_scan, IActive, ModuleMeta, GLOB_POCS, get_will_run_pocs},
+    modules::{active::ruby_scan::RBModule, get_next_to_scan, IActive, GLOB_POCS, get_will_run_pocs},
 };
 
 use super::utils::rb_init;
@@ -49,21 +49,22 @@ pub fn ruby_thread() -> JoinHandle<()> {
     }
     let t = spawn(|| {
         let _ = rb_init();
+        let modules = get_ruby_modules("./active/");
         loop {
-            let modules = get_ruby_modules("./active/");
             let will_run_modules = get_will_run_pocs();
             let index = get_next_to_scan();
+            
             let mut s = vec![];
-            for module in modules {
+            for module in &modules {
                 let meta = match module.metadata() {
                     Some(o) => o,
                     None => {
                         continue;
                     }
                 };
-                if will_run_modules.contains(&meta.get_name().to_string()) == false{
-                    continue;
-                }
+                //if will_run_modules.contains(&meta.get_name().to_string()) == false{
+                //    continue;
+                //}
                 let thread = Thread::new(|| {
                     let v = module.passive_run(index);
                     match v {

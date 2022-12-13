@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
-use chrono::Utc;
-use hyper::{body::Bytes, Method, Request, Body, Uri, Response, HeaderMap, header::{HOST, HeaderName}};
+use hyper::{body::Bytes, Method, Request, Body, Uri, Response, HeaderMap, header::{HeaderName}};
 use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception};
 
 use crate::{librs::http::utils::{HttpRequest, HttpResponse}, proxy::log::{ReqResLog, LogRequest, LogResponse}};
@@ -152,9 +151,12 @@ pub fn ruby_resp_hash_to_reqresplog(resp: &Hash) -> ReqResLog {
         Ok(o) => {
             let keys = o.each(|_key, _value| {
                 let key = _key.try_convert_to::<RString>().unwrap().to_string();
-                let value = _value.try_convert_to::<RString>().unwrap().to_string();
-                let key = HeaderName::from_str(&key);
-                ori_headers.insert(key.unwrap(), value.parse().unwrap());
+                let value = _value.try_convert_to::<Array>().unwrap();
+                for v in value {
+                    let key = HeaderName::from_str(&key);
+                    ori_headers.append(key.unwrap(), v.try_convert_to::<RString>().unwrap().to_string().parse().unwrap());
+                }
+                
             });
         },
         Err(e) => {

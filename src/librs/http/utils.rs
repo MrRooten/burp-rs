@@ -162,6 +162,7 @@ impl HttpRequest {
                 response = Some(r);
             }
         } else {
+            let clis = Client::builder().build_http();
             if method == Method::GET {
                 *req.method_mut() = Method::GET;
                 let r = match clis.request(req).await {

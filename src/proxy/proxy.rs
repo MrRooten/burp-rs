@@ -16,7 +16,7 @@ use hyper::{
     body::{self, Bytes},
     Body, Method, Request, Response,
 };
-use std::{net::SocketAddr, sync::mpsc::{Receiver, Sender, self}, thread::spawn};
+use std::{net::SocketAddr, sync::mpsc::{Receiver, Sender, self, SyncSender}, thread::spawn};
 use tracing::*;
 
 async fn shutdown_signal() {
@@ -166,14 +166,14 @@ impl WebSocketHandler for ProxyHandler {
     }
 }
 
-pub static mut PASSIVE_SCAN_SENDER: Option<std::sync::mpsc::Sender<u32>> = None::<Sender<u32>>;
+pub static mut PASSIVE_SCAN_SENDER: Option<std::sync::mpsc::SyncSender<u32>> = None::<SyncSender<u32>>;
 pub static mut PASSIVE_SCAN_RECEIVER: Option<std::sync::mpsc::Receiver<u32>> =
     None::<Receiver<u32>>;
 
 pub async fn proxy(addr: &str) {
     unsafe {
         if PASSIVE_SCAN_SENDER.is_none() || PASSIVE_SCAN_RECEIVER.is_none() {
-            let (tx, rx) = mpsc::channel::<u32>();
+            let (tx, rx) = mpsc::sync_channel(0);
             PASSIVE_SCAN_SENDER = Some(tx);
             PASSIVE_SCAN_RECEIVER = Some(rx);
         }

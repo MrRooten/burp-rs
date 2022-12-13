@@ -663,6 +663,18 @@ impl SearchLog {
     }
 }
 
+fn size_to_human_readable(size: usize) -> String{
+    let mut ret = String::new();
+    if size < 1024 {
+        ret = format!("{} byte", size);
+    } else if size > 1024 && size < 1024 * 1024 {
+        ret = format!("{} KB", size / 1024);
+    } else if size > 1024 * 1024 {
+        let s = (size / (1024 * 1024)) as f32;
+        ret = format!("{} MB", s);
+    }
+    ret
+}
 pub struct Sitemap {
     opts: CMDOptions,
 }
@@ -700,14 +712,25 @@ impl CMDProc for Sitemap {
 
             return Ok(());
         }
+        let site = map.get_site(line[1]);
+        let site = match site {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("Not exist in logs"));
+            }
+        };
 
+        
         let httplog = match map.get_httplogs_by_host(line[1]) {
             Some(log) => log,
             None => {
                 return Err(STError::new("Not exist in logs"));
             }
         };
-
+        let mut request_num = 0;
+        let mut response_num = 0;
+        let mut request_size = 0;
+        let mut response_size = 0;
         for key in httplog {
             let request = LogHistory::get_httplog(*key)
                 .unwrap()
@@ -715,7 +738,10 @@ impl CMDProc for Sitemap {
                 .unwrap();
             let response = LogHistory::get_httplog(*key).unwrap().get_response();
             let status = match response {
-                Some(r) => r.get_status(),
+                Some(r) => {
+                    response_size += r.get_body().len();
+                    r.get_status()
+                },
                 None => StatusCode::GONE,
             };
             let size = match response {
@@ -728,9 +754,16 @@ impl CMDProc for Sitemap {
                 url_brief = url_brief[0..60].to_string();
                 url_brief.push_str("...");
             }
-
-            println!("{} {} {} {}", key, url_brief, status, size);
+            request_num += 1;
+            response_num += 1;
+            request_size += request.get_body().len();
+            
         }
+
+        println!("Request num:{}", request_num);
+        println!("Response num:{}", response_num);
+        println!("Request size:{}", size_to_human_readable(request_size));
+        println!("Response size:{}", size_to_human_readable(response_size));
         Ok(())
     }
 
@@ -807,79 +840,7 @@ impl CMDProc for Scan {
     }
 }
 
-pub struct Push {
-    opts: CMDOptions,
-}
 
-impl CMDProc for Push {
-    fn get_name(&self) -> &str {
-        "push"
-    }
-
-    fn get_opts(&self) -> &CMDOptions {
-        &self.opts
-    }
-
-    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        if line.len() <= 1 {
-            let s = format!("{} ${{num}}", self.get_name());
-            return Err(STError::new(&s));
-        }
-        if line[1].starts_with("host:") {
-            let host = line[1][5..].to_string();
-            let map = match SiteMap::single() {
-                Some(s) => s,
-                None => {
-                    return Err(STError::new("Can not get Sitemap Single instance"));
-                }
-            };
-
-            let s = map.get_site(&host);
-            let site = match s {
-                Some(o) => o,
-                None => {
-                    return Err(STError::new("Doesn't match site"));
-                }
-            };
-
-            let logs = site.get_logs();
-            for log in logs {
-                unsafe {
-                    TO_SCAN_QUEUE.push(log.clone());
-                }
-            }
-        } else if line[1].to_string().parse::<u32>().is_ok() {
-            let index = line[1].to_string().parse::<u32>();
-            let index = match index {
-                Ok(o) => o,
-                Err(e) => {
-                    return Err(st_error!(e));
-                }
-            };
-            unsafe {
-                TO_SCAN_QUEUE.push(index);
-            }
-        }
-
-        Ok(())
-    }
-
-    fn get_detail(&self) -> String {
-        "push the history to index".to_string()
-    }
-
-    fn get_help(&self) -> String {
-        "push ${index}".to_string()
-    }
-}
-
-impl Push {
-    pub fn new() -> Self {
-        Self {
-            opts: Default::default(),
-        }
-    }
-}
 
 pub struct Test {
     opts: CMDOptions,

@@ -1,4 +1,3 @@
-
 class RBModule
     def initialize
     end

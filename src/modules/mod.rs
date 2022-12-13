@@ -145,7 +145,7 @@ pub trait IPassive {
     fn help(&self) -> Helper;
 }
 
-use std::{collections::HashMap, ops::Index};
+use std::{collections::HashMap};
 
 use crate::{
     cmd::handlers::SCAN_RECEIVER,
