@@ -1,4 +1,4 @@
-use rutie::{AnyObject, RString, Object, Exception, Integer};
+use rutie::{AnyObject, RString, Object, Exception, Integer, GC};
 use serde_json::Value;
 
 use crate::{
@@ -18,13 +18,14 @@ pub struct RBModule {
 impl RBModule {
     pub fn new(file: &str) -> Result<Self, STError> {
         let object = get_instance(file, "RBModule", &[]);
+        GC::register_mark(&object);
         let passive_str = RString::from("passive_run");
         let arg1: AnyObject = passive_str.try_convert_to::<AnyObject>().unwrap();
         let passive_method = match call_object_method(&object, "method", &[arg1]) {
             Ok(o) => o,
             Err(e) => { return Err(e) }
         };
-
+        GC::register_mark(&passive_method);
         let metadata_str = RString::from("metadata");
         let arg1: AnyObject = metadata_str.try_convert_to::<AnyObject>().unwrap();
         let metadata_method = match call_object_method(&object, "method", &[arg1]) {
