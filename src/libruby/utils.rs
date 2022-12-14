@@ -4,7 +4,7 @@ use rutie::{VM, eval, Object, Binding, RString, Class, AnyObject};
 
 use crate::{utils::STError, st_error};
 
-use super::{http::{log::{get_http_req, get_http_resp}, utils::send}, log::{error, debug, info, warn}, issue::push_issue};
+use super::{http::{log::{get_http_req, get_http_resp}, utils::send, uri::parse}, log::{error, debug, info, warn}, issue::push_issue};
 
 pub fn rb_init() -> Result<(), STError> {
     VM::init();
@@ -28,12 +28,17 @@ pub fn rb_init() -> Result<(), STError> {
     Class::new("RBIssue", None).define(|klass| {
         klass.def("push_issue", push_issue);
     });
+
+    Class::new("RBUriParser", None).define(|klass| {
+        klass.def("parse", parse);
+    });
     VM::require("json");
     VM::require("enc/encdb");
     VM::require("enc/trans/transdb");
-    VM::require("./active/http/http");
-    VM::require("./active/http/log");
-    VM::require("./active/logger/logger");
+    VM::require("./active/http/http.rb");
+    VM::require("./active/http/log.rb");
+    VM::require("./active/logger/logger.rb");
+    VM::require("./active/http/utils.rb");
     
     Ok(())
 }
@@ -80,9 +85,10 @@ pub fn call_class_object_method(script: &str, class: &str, method: &str, argumen
 }
 
 pub fn get_instance(script: &str, class: &str, arguments: &[AnyObject]) -> AnyObject {
-    //let _ = eval!(&fs::read_to_string(script).unwrap());
-    let path = format!("./{}",script);
-    VM::require(&path);
+    let s = format!("load '{}'",script);
+    let _ = eval!(&s);
+    //let path = format!("{}",script);
+    //VM::require(&path);
     Class::from_existing(class).new_instance(arguments)
 }
 

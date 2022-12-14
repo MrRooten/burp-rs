@@ -7,26 +7,22 @@ methods!(
     _rtself,
     fn debug(s: RString) -> AnyObject {
         let s = s.unwrap().to_string();
-        let filename = "";
-        debug!("{}:{}",filename, s);
+        debug!("{}", s);
         NilClass::new().try_convert_to::<AnyObject>().unwrap()
     },
     fn error(s: RString) -> AnyObject {
         let s = s.unwrap().to_string();
-        let filename = "";
-        error!("{}:{}", filename, s);
+        error!("{}", s);
         NilClass::new().try_convert_to::<AnyObject>().unwrap()
     },
     fn info(s: RString) -> AnyObject {
         let s = s.unwrap().to_string();
-        let filename = "";
-        info!("{}:{}", filename, s);
+        info!("{}", s);
         NilClass::new().try_convert_to::<AnyObject>().unwrap()
     },
     fn warn(s: RString) -> AnyObject {
         let s = s.unwrap().to_string();
-        let filename = "";
-        warn!("{}:{}", filename, s);
+        warn!("{}", s);
         NilClass::new().try_convert_to::<AnyObject>().unwrap()
     },
 );

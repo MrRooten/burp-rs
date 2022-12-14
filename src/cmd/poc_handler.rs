@@ -1,4 +1,4 @@
-use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError};
+use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError, libruby::rb_main::{update_and_get_modules, send_command}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
@@ -113,3 +113,36 @@ impl CMDProc for RunPocs {
     }
 }
 
+pub struct Reload {
+    opts    : CMDOptions
+}
+
+impl Reload {
+    pub fn new() -> Self { 
+        Reload { opts: Default::default() }
+    }
+}
+
+impl CMDProc for Reload {
+    fn get_name(&self) -> &str {
+        "reload"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        let _ = send_command("reload");
+        Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "Reload all modules".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "reload".to_string()
+    }
+    
+}

@@ -11,8 +11,7 @@ class RBModule
 
     def passive_run(index)
         #scan("http://127.0.0.1:8009")
-        puts "test3 index: #{index}"
-        puts $LOADED_FEATURES
+        puts "sfdsdfsdfsdfsdf index: #{index}"
     end
 
 end

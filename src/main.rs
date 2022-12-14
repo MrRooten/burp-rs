@@ -37,9 +37,10 @@ fn main() {
         println!("{} default listen on: 127.0.0.1:3000", args[0]);
         _main("0.0.0.0:3000");
     } else if args[1].starts_with("test") {
-        test();
+        
     } else if args[1].starts_with("r_test") {
         let _ = rb_init();
+        test();
         //let s = fs::read_to_string(args[2].to_string()).unwrap();
         //let _ = VM::require(&s);
     }
