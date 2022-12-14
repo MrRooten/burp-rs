@@ -39,7 +39,8 @@ pub fn rb_init() -> Result<(), STError> {
     VM::require("./active/http/log.rb");
     VM::require("./active/logger/logger.rb");
     VM::require("./active/http/utils.rb");
-    
+    VM::require("./active/issue/issue.rb");
+    VM::require("./active/utils/font.rb");
     Ok(())
 }
 

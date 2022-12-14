@@ -14,7 +14,10 @@ pub struct CMDHandler {
     procs: Vec<Box<dyn CMDProc>>,
 }
 
-pub type CMDOptions = HashMap<String, Option<String>>;
+#[derive(Default)]
+pub struct  CMDOptions {
+    auto_complete   : Vec<String>
+}
 
 pub trait CMDProc {
     fn get_name(&self) -> &str;

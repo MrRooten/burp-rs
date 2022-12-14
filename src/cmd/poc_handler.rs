@@ -1,4 +1,4 @@
-use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError, libruby::rb_main::{update_and_get_modules, send_command}};
+use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError, libruby::rb_main::{update_and_get_modules, send_command, set_reload}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
@@ -133,7 +133,7 @@ impl CMDProc for Reload {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        let _ = send_command("reload");
+        set_reload();
         Ok(())
     }
 

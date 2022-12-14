@@ -147,6 +147,8 @@ pub trait IPassive {
 
 use std::{collections::HashMap};
 
+use wildmatch::WildMatch;
+
 use crate::{
     cmd::handlers::SCAN_RECEIVER,
     proxy::log::{ReqResLog, SiteMap},
@@ -194,23 +196,26 @@ pub fn get_will_run_pocs() -> &'static Vec<String> {
     }
 }
 
+/** `push_will_run_poc` Push poc you want to run, Support wildcard match
+
+
+```
+push_will_run_poc("crlf*")
+```
+*/
 pub fn push_will_run_poc(name: &str) {
     unsafe {
-        WILL_RUN_POCS.push(name.to_string());
+        for poc in &GLOB_POCS {
+            if WildMatch::new(name).matches(poc.get_name()) {
+                WILL_RUN_POCS.push(poc.get_name().to_string());
+            }
+        }
     }
 }
 
 pub fn remove_will_run_poc(name: &str) {
     unsafe {
-        let index = WILL_RUN_POCS.iter().position(|r| r.eq(name));
-        let index = match index {
-            Some(i) => i,
-            None => {
-                return ;
-            }
-        };
-
-        WILL_RUN_POCS.remove(index);
+        WILL_RUN_POCS.retain(|x| !WildMatch::new(name).matches(x));
     }
 }
 pub fn get_next_to_scan() -> u32 {

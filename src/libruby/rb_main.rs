@@ -1,11 +1,12 @@
 use std::{
+    collections::HashMap,
     fs,
     sync::mpsc::{self, Sender},
-    thread::{spawn, JoinHandle}, collections::HashMap,
+    thread::{spawn, JoinHandle},
 };
 
 use log::{error, info};
-use rutie::{Fixnum, Object, Thread, Hash};
+use rutie::{Fixnum, Hash, Object, Thread};
 
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
@@ -19,13 +20,26 @@ use crate::{
 use super::utils::rb_init;
 pub static mut MODULE_INDEX: usize = 0;
 pub static mut RUBY_MODULES: Vec<RBModule> = Vec::new();
+static mut WILL_RELOAD: bool = false;
+
+pub fn set_reload() {
+    unsafe {
+        WILL_RELOAD = true;
+    }
+}
+
+pub fn unset_reload() {
+    unsafe {
+        WILL_RELOAD = false;
+    }
+}
 
 pub fn update_modules() {
     unsafe {
         let len = RUBY_MODULES.len();
         for i in 0..len {
             if RUBY_MODULES[i].is_change() {
-                info!("{:?} file has changed",RUBY_MODULES[i].metadata());
+                info!("{:?} file has changed", RUBY_MODULES[i].metadata());
                 let _ = RUBY_MODULES[i].update();
             }
         }
@@ -63,7 +77,6 @@ pub static mut RUBY_COMMAND_SENDER: Option<std::sync::mpsc::Sender<String>> = No
 pub static mut RUBY_COMMAND_RECEIVER: Option<std::sync::mpsc::Receiver<String>> = None;
 pub fn get_command() -> String {
     unsafe {
-
         let receiver = match &RUBY_COMMAND_RECEIVER {
             Some(s) => s,
             None => return "error".to_string(),
@@ -128,7 +141,12 @@ pub fn ruby_thread() -> JoinHandle<()> {
         loop {
             let will_run_modules = get_will_run_pocs();
             let index = get_next_to_scan();
-            update_modules();
+            unsafe {
+                if WILL_RELOAD == true {
+                    update_modules();
+                    unset_reload();
+                }
+            }
             let mut s = vec![];
             for module in modules {
                 let meta = match module.metadata() {
@@ -137,9 +155,9 @@ pub fn ruby_thread() -> JoinHandle<()> {
                         continue;
                     }
                 };
-                //if will_run_modules.contains(&meta.get_name().to_string()) == false{
-                //    continue;
-                //}
+                if will_run_modules.contains(&meta.get_name().to_string()) == false{
+                   continue;
+                }
                 let thread = Thread::new(|| {
                     let v = module.passive_run(index);
                     match v {
@@ -153,7 +171,6 @@ pub fn ruby_thread() -> JoinHandle<()> {
 
                 s.push(thread);
             }
-
 
             for thread in s {
                 let _ = thread.protect_send("join", &[]);
