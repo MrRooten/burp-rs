@@ -32,7 +32,7 @@ impl CMDProc for PushPoc {
     }
 
     fn get_detail(&self) -> String {
-        "Push pocs".to_string()
+        "Push pocs, support wildcard pattern".to_string()
     }
 
     fn get_help(&self) -> String {
