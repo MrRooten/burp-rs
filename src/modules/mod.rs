@@ -16,7 +16,7 @@ pub struct Issue {
     detail: String,
     level: IssueLevel,
     confidence: IssueConfidence,
-    httplog: Option<ReqResLog>,
+    httplog: Option<Arc<ReqResLog>>,
     host: String,
 }
 
@@ -54,7 +54,7 @@ impl Issue {
     Issue::add_issue(issue, httplog);
     ```
     */
-    pub fn add_issue(mut issue: Issue, httplog: &ReqResLog) {
+    pub fn add_issue(mut issue: Issue, httplog: &Arc<ReqResLog>) {
         issue.set_httplog(httplog);
         let sitemap = SiteMap::single();
         let sitemap = match sitemap {
@@ -95,8 +95,8 @@ impl Issue {
         ret
     }
 
-    pub fn set_httplog(&mut self, httplog: &ReqResLog) {
-        self.httplog = httplog.clone();
+    pub fn set_httplog(&mut self, httplog: &Arc<ReqResLog>) {
+        self.httplog = Some(Arc::clone(httplog));
     }
     pub fn get_name(&self) -> &str {
         &self.name
@@ -114,7 +114,7 @@ impl Issue {
         &self.confidence
     }
 
-    pub fn get_httplog(&self) -> &Option<ReqResLog> {
+    pub fn get_httplog(&self) -> &Option<Arc<ReqResLog>> {
         &self.httplog
     }
 
@@ -145,7 +145,7 @@ pub trait IPassive {
     fn help(&self) -> Helper;
 }
 
-use std::{collections::HashMap};
+use std::{collections::HashMap, sync::Arc};
 
 use wildmatch::WildMatch;
 

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rutie::{class, methods, RString, AnyObject, NilClass, Object, Hash, Integer};
 
 use crate::{modules::{Issue, IssueLevel, IssueConfidence}, proxy::log::LogHistory};
@@ -23,7 +25,7 @@ fn _push_issue(issue: Hash) -> AnyObject {
     let _confidence = issue.at(&RString::from("confidence")).try_convert_to::<RString>().unwrap().to_string();
     let host = issue.at(&RString::from("host")).try_convert_to::<RString>().unwrap().to_string();
     let response = issue.at(&RString::from("response")).try_convert_to::<Hash>().unwrap();
-    let reqreslog = ruby_resp_hash_to_reqresplog(&response);
+    let reqreslog = Arc::new(ruby_resp_hash_to_reqresplog(&response));
     let mut level = IssueLevel::Info;
     if _level.eq_ignore_ascii_case("info") {
         level = IssueLevel::Info;

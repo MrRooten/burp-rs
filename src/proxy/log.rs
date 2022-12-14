@@ -14,7 +14,7 @@ use hyper::{http, StatusCode, Version};
 use serde_json::{Value, Error};
 use std::collections::HashMap;
 use std::io::Read;
-use std::sync::Mutex;
+use std::sync::{Mutex, Arc};
 use url::Url;
 
 #[derive(Debug)]
@@ -66,8 +66,8 @@ impl ReqResLog {
         request.get_host()
     }
 
-    pub fn set_resp(&mut self, resp: LogResponse) {
-        self.response = Some(resp);
+    pub fn set_resp(&self, resp: LogResponse) {
+        i_to_m(self).response = Some(resp);
     }
 
     pub fn get_request(&self) -> Option<&LogRequest> {
@@ -696,15 +696,23 @@ impl LogResponse {
     }
 }
 
+
 pub static mut HTTP_LOG: Option<LogHistory> = None;
 pub static mut SITE_MAP: Option<SiteMap> = None;
 #[derive(Default)]
 pub struct LogHistory {
-    history: HashMap<u32, ReqResLog>,
+    history: HashMap<u32, Arc<ReqResLog>>,
     last_index: u32,
     lock: Mutex<i32>,
 }
 
+fn i_to_m<T>(reference: &T) -> &mut T {
+    unsafe {
+        let const_ptr = reference as *const T;
+        let mut_ptr = const_ptr as *mut T;
+        &mut *mut_ptr
+    }
+}
 impl LogHistory {
     fn new() -> Self {
         LogHistory::default()
@@ -737,7 +745,7 @@ impl LogHistory {
             }
         };
         self.last_index += 1;
-        self.history.insert(self.last_index, log);
+        self.history.insert(self.last_index, Arc::new(log));
         let sitemap = match SiteMap::single() {
             Some(s) => s,
             None => {
@@ -752,20 +760,20 @@ impl LogHistory {
         self.history.remove(&index);
     }
 
-    pub fn get_log(&self, index: u32) -> Option<&ReqResLog> {
+    pub fn get_log(&self, index: u32) -> Option<&Arc<ReqResLog>> {
         self.history.get(&index)
     }
-
+    
     pub fn set_resp(&mut self, index: u32, resp: LogResponse) {
         match self.lock.lock() {
             Ok(o) => {}
             Err(e) => {}
         };
-        let log = self.history.get_mut(&index).unwrap();
-        log.set_resp(resp);
+        let log = self.history.get(&index).unwrap();
+        log.set_resp(resp)
     }
 
-    pub fn get_httplog(index: u32) -> Option<&'static ReqResLog> {
+    pub fn get_httplog(index: u32) -> Option<&'static Arc<ReqResLog>> {
         let history = LogHistory::single();
         let history = match history {
             Some(h) => h,
@@ -781,7 +789,7 @@ impl LogHistory {
         return self.history.len();
     }
 
-    pub fn get_history(&self) -> &HashMap<u32, ReqResLog> {
+    pub fn get_history(&self) -> &HashMap<u32, Arc<ReqResLog>> {
         &self.history
     }
 }
