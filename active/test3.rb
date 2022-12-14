@@ -1,5 +1,3 @@
-
-
 class RBModule
     def initialize
     end
@@ -10,8 +8,7 @@ class RBModule
     end
 
     def passive_run(index)
-        #scan("http://127.0.0.1:8009")
-        puts "sfdsdfsdfsdfsdf index: #{index}"
+        puts Similary.match("abcdefg","bbcdefg")
     end
 
 end

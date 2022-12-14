@@ -205,3 +205,11 @@ fn inner_response_to_ruby_hash(response: &HttpResponse) -> Hash {
 fn ruby_hash_to_inner_response(hash: Hash) -> HttpResponse {
     unimplemented!()
 }
+
+fn update_request_by_params(request: Hash, params: Array) -> AnyObject {
+    let url = request.at(&RString::from("url"));
+    let url = url.try_convert_to::<RString>().unwrap().to_string();
+    let uri = Uri::from_str(&url).unwrap();
+    let query = uri.query();
+    unimplemented!()
+}

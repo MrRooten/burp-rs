@@ -40,20 +40,6 @@ class RBModule
             end
         end
 
-
-        if headers.each_value()
-            issue = {
-                "name"=> "test_req",
-                "level" => "info",
-                "confidence" => "confirm",
-                "detail" => "this is a detail",
-                "host" => url,
-                "response" => resp
-            }
-        
-            issuer = RBIssue.new
-            issuer.push_issue(issue)
-        end
         
     end
 

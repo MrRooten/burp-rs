@@ -10,7 +10,7 @@ use flate2::read::GzDecoder;
 use http::Request;
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{http, StatusCode, Version};
+use hyper::{http, StatusCode, Version, Method};
 use serde_json::{Value, Error};
 use std::collections::HashMap;
 use std::io::Read;
@@ -162,6 +162,22 @@ impl RequestParam {
     pub fn from_json(v: Value) -> Self {
         Self { param_type: ParamType::Json, key: "".to_string(), value: "".to_string(), json: v }
     }
+
+    pub fn get_param_type(&self) -> &ParamType {
+        &self.param_type
+    }
+
+    pub fn get_key(&self) -> &String {
+        &self.key
+    }
+
+    pub fn get_json(&self) -> String {
+        self.json.to_string()
+    }
+
+    pub fn get_value(&self) -> &String {
+        &self.value
+    }
 }
 
 pub struct MultiPart {
@@ -235,6 +251,7 @@ impl LogRequest {
         }
     }
 
+
     pub fn clone(&self) -> LogRequest {
         let mut new_req = Request::new(Body::from(""));
         new_req.headers_mut().clone_from(self.orignal.headers());
@@ -257,6 +274,23 @@ impl LogRequest {
         self.orignal.uri().to_string()
     }
 
+    pub fn get_method(&self) -> String {
+        if self.orignal.method().eq(&Method::GET) {
+            return "get".to_string();
+        } else if self.orignal.method().eq(&Method::POST) {
+            return "post".to_string();
+        } else if self.orignal.method().eq(&Method::PATCH) {
+            return "patch".to_string();
+        } else if self.orignal.method().eq(&Method::PUT) {
+            return "put".to_string();
+        } else if self.orignal.method().eq(&Method::DELETE) {
+            return "delete".to_string();
+        } else if self.orignal.method().eq(&Method::OPTIONS) {
+            return "options".to_string();
+        }
+
+        return "get".to_string();
+    }
     fn update_params(&mut self, params: &Vec<RequestParam>) {
         
     }

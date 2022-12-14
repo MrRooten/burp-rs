@@ -4,7 +4,7 @@ use rutie::{VM, eval, Object, Binding, RString, Class, AnyObject};
 
 use crate::{utils::STError, st_error};
 
-use super::{http::{log::{get_http_req, get_http_resp}, utils::send, uri::parse}, log::{error, debug, info, warn}, issue::push_issue};
+use super::{http::{log::{get_http_req, get_http_resp}, utils::send, uri::parse}, log::{error, debug, info, warn}, issue::push_issue, helper::similarity::sim_calculate};
 
 pub fn rb_init() -> Result<(), STError> {
     VM::init();
@@ -32,6 +32,10 @@ pub fn rb_init() -> Result<(), STError> {
     Class::new("RBUriParser", None).define(|klass| {
         klass.def("parse", parse);
     });
+
+    Class::new("RBSimilary", None).define(|klass| {
+        klass.def("sim_calculate", sim_calculate);
+    });
     VM::require("json");
     VM::require("enc/encdb");
     VM::require("enc/trans/transdb");
@@ -41,6 +45,7 @@ pub fn rb_init() -> Result<(), STError> {
     VM::require("./active/http/utils.rb");
     VM::require("./active/issue/issue.rb");
     VM::require("./active/utils/font.rb");
+    VM::require("./active/utils/similary.rb");
     Ok(())
 }
 

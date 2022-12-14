@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, collections::HashMap};
 
 extern crate hyper;
 extern crate hyper_native_tls;
@@ -10,7 +10,7 @@ use hyper::{
 };
 
 use crate::{
-    proxy::log::{LogRequest, ReqResLog},
+    proxy::log::{LogRequest, ReqResLog, RequestParam, ParamType},
     utils::STError, st_error,
 };
 
@@ -65,6 +65,37 @@ impl HttpRequest {
     }
     
     pub fn from_log_request(request: &LogRequest) -> HttpRequest {
+        unimplemented!()
+    }
+
+    pub fn update_with_params(&self, params: &Vec<RequestParam>) -> Result<(), STError> {
+        let mut get_map: HashMap<String,Option<String>> = HashMap::new();
+        let uri = self.request.uri();
+        let original = uri.query().unwrap();
+        let querys = original.split("&").collect::<Vec<&str>>();
+        for query in querys {
+            let kv = query.split("=").collect::<Vec<&str>>();
+            if kv.len() == 2 {
+                get_map.insert(kv[0].to_string(), Some(kv[1].to_string()));
+            }
+
+            if kv.len() == 1 {
+                get_map.insert(kv[0].to_string(), None);
+            }
+        }
+
+        let mut query = Vec::<String>::default();
+        for kv in get_map {
+            if kv.1.is_none() {
+                query.push(kv.0.to_string());
+            }
+
+            if kv.1.is_some() {
+                query.push(format!("{}={}",kv.0, kv.1.unwrap().to_string()));
+            }
+        }
+
+        let query = query.join("&");
         unimplemented!()
     }
 
