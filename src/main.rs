@@ -35,7 +35,7 @@ fn main() {
     if args.len() < 2 {
         println!("{} 127.0.0.1:3000", args[0]);
         println!("{} default listen on: 127.0.0.1:3000", args[0]);
-        _main("0.0.0.0:3000");
+        _main("127.0.0.1:3000");
     } else if args[1].starts_with("test") {
         
     } else if args[1].starts_with("r_test") {
