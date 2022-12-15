@@ -60,7 +60,7 @@ class RBModule_unauth_bypass
     end
 
     def scan(method, uri, headers, body)
-        headers.delete_if {|key,value| (key.downcase.contains("cookie") or key.downcase.contains("token"))}
+        headers.delete_if {|key,value| (key.downcase.include?("cookie") or key.downcase.include?("token"))}
         scheme = uri["scheme"]
         if scheme == nil 
             error("Scheme is none #{uri}")
