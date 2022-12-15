@@ -6,11 +6,11 @@ extern crate hyper_native_tls;
 use hyper::{
     body::{self, Bytes},
     header::*,
-    Body, Client, Method, Request, Response, Uri, StatusCode,
+    Body, Client, Method, Request, Response, Uri, StatusCode, Version,
 };
 
 use crate::{
-    proxy::log::{LogRequest, ReqResLog, RequestParam, ParamType},
+    proxy::log::{LogRequest, ReqResLog, RequestParam},
     utils::STError, st_error,
 };
 
@@ -42,6 +42,10 @@ impl HttpRequest {
 
     pub fn to_bytes(&self) -> Bytes {
         unimplemented!()
+    }
+
+    pub fn set_version(&mut self, v: &Version) {
+        *self.request.version_mut() = v.clone();
     }
 
     pub fn from_url(url: &str) -> HttpRequest {

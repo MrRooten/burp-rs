@@ -1,12 +1,12 @@
 use std::{
-    collections::HashMap,
+    collections::{HashSet},
     fs,
-    sync::mpsc::{self, Sender},
+    sync::mpsc::{self},
     thread::{spawn, JoinHandle},
 };
 
 use log::{error, info};
-use rutie::{Fixnum, Hash, Object, Thread};
+use rutie::{Fixnum, Object, Thread};
 
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
@@ -20,6 +20,7 @@ use crate::{
 use super::utils::rb_init;
 pub static mut MODULE_INDEX: usize = 0;
 pub static mut RUBY_MODULES: Vec<RBModule> = Vec::new();
+static mut RUNING_MODULES: Option<HashSet<String>> = None;
 static mut WILL_RELOAD: bool = false;
 
 pub fn set_reload() {
@@ -34,6 +35,35 @@ pub fn unset_reload() {
     }
 }
 
+fn add_running_modules(name: &str) {
+    unsafe {
+        let v = match &mut RUNING_MODULES {
+            Some(s) => s,
+            None => {
+                return ;
+            }
+        };
+        v.insert(name.to_string());
+    }
+}
+
+fn remove_running_modules(name: &str) {
+    unsafe {
+        let v = match &mut RUNING_MODULES {
+            Some(s) => s,
+            None => {
+                return ;
+            }
+        };
+        v.remove(name);
+    }
+}
+
+pub fn get_running_modules() -> &'static Option<HashSet<String>> {
+    unsafe {
+        &RUNING_MODULES
+    }
+}
 pub fn update_modules() {
     unsafe {
         let len = RUBY_MODULES.len();
@@ -138,7 +168,13 @@ pub fn ruby_thread() -> JoinHandle<()> {
         //     }
         //     Fixnum::new(0)
         // });
+        unsafe {
+            if RUNING_MODULES.is_none() {
+                RUNING_MODULES = Some(HashSet::new());
+            }
+        }
         loop {
+            
             let will_run_modules = get_will_run_pocs();
             let index = get_next_to_scan();
             unsafe {
@@ -159,7 +195,9 @@ pub fn ruby_thread() -> JoinHandle<()> {
                    continue;
                 }
                 let thread = Thread::new(|| {
+                    add_running_modules(meta.get_name());
                     let v = module.passive_run(index);
+                    remove_running_modules(meta.get_name());
                     match v {
                         Ok(o) => {}
                         Err(e) => {

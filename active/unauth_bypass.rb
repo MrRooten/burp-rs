@@ -33,14 +33,10 @@ class RBModule_unauth_bypass
         if not_found == nil 
             return 
         end
-        resp = nil
-        if method.equal?("get")
-            resp = Request.get(url, headers, body)
-        elsif method.equal?("post")
-            resp = Request.post(url, headers, body)
-        end
-
+        resp = Request.get(url, headers, body)
+        
         if resp == nil 
+            debug("#{url} response is nil")
             return 
         end
         if Similary.match(resp.body, not_found) < 0.9 

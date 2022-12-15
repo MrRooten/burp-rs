@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use hyper::{body::Bytes, Method, Request, Body, Uri, Response, HeaderMap, header::{HeaderName}};
+use hyper::{body::Bytes, Method, Request, Body, Uri, Response, HeaderMap, header::{HeaderName}, Version};
 use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception};
 
 use crate::{librs::http::utils::{HttpRequest, HttpResponse}, proxy::log::{ReqResLog, LogRequest, LogResponse}};
@@ -27,7 +27,12 @@ methods!(
             .try_convert_to::<RString>()
             .unwrap()
             .to_string();
-        let send_request = ruby_hash_to_inner_request(&request);
+        let send_request = match ruby_hash_to_inner_request(&request) {
+            Some(s) => s,
+            None => {
+                return NilClass::new().try_convert_to::<AnyObject>().unwrap();
+            }
+        };
         let mut response = None::<HttpResponse>;
         if method.eq_ignore_ascii_case("get") {
             let ret = HttpRequest::send(Method::GET, &send_request);
@@ -165,16 +170,46 @@ pub fn ruby_resp_hash_to_reqresplog(resp: &Hash) -> ReqResLog {
     *original.headers_mut() = ori_headers;
     let resp = LogResponse::from(original, Bytes::from(body));
 
-    let mut log = ReqResLog::new(req);
+    let log = ReqResLog::new(req);
     log.set_resp(resp);
     log
 }
 
-fn ruby_hash_to_inner_request(hash: &Hash) -> HttpRequest {
+fn ruby_hash_to_inner_request(hash: &Hash) -> Option<HttpRequest> {
     let url_key = RString::from("url").try_convert_to::<AnyObject>().unwrap();
-    let url = hash.at(&url_key).try_convert_to::<RString>().unwrap();
+    let url = match hash.at(&url_key).try_convert_to::<RString>() {
+        Ok(s) => s,
+        Err(e) => {
+            VM::raise_ex(AnyException::new("StandardError", Some("Url parse error")));
+            return None;
+        }
+    };
     let url = url.to_string();
+    let version_key = RString::from("version").try_convert_to::<AnyObject>().unwrap();
+    let version = hash.at(&version_key).try_convert_to::<RString>();
+    let version = match version {
+        Ok(o) => {
+            let v = o.to_str();
+            if v.eq("http_09") {
+                Version::HTTP_09
+            } else if v.eq("http_10") {
+                Version::HTTP_10
+            } else if v.eq("http_11") {
+                Version::HTTP_11
+            } else if v.eq("http_2") {
+                Version::HTTP_2
+            } else if v.eq("http_3") {
+                Version::HTTP_3
+            } else {
+                Version::HTTP_11
+            }
+        },
+        Err(e) => {
+            Version::HTTP_11
+        }
+    };
     let mut req = HttpRequest::from_url(&url);
+    req.set_version(&version);
     let headers_key = RString::from("headers")
         .try_convert_to::<AnyObject>()
         .unwrap();
@@ -195,7 +230,7 @@ fn ruby_hash_to_inner_request(hash: &Hash) -> HttpRequest {
         req.set_body(s);
     }
 
-    return req;
+    return Some(req);
 }
 
 fn inner_response_to_ruby_hash(response: &HttpResponse) -> Hash {

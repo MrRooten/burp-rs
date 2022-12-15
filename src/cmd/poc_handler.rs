@@ -1,4 +1,4 @@
-use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError, libruby::rb_main::{update_and_get_modules, send_command, set_reload}};
+use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError, libruby::rb_main::{set_reload, get_running_modules}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
@@ -76,19 +76,19 @@ impl CMDProc for ListPocs {
     }
 }
 
-pub struct RunPocs {
+pub struct LoadedPocs {
     opts    : CMDOptions
 }
 
-impl RunPocs {
+impl LoadedPocs {
     pub fn new() -> Self {
         Self { opts: Default::default() }
     }
 }
 
-impl CMDProc for RunPocs {
+impl CMDProc for LoadedPocs {
     fn get_name(&self) -> &str {
-        "run_pocs"
+        "loaded_pocs"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -139,6 +139,50 @@ impl CMDProc for Reload {
 
     fn get_detail(&self) -> String {
         "Reload all modules".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "reload".to_string()
+    }
+    
+}
+
+pub struct RunningPocs {
+    opts    : CMDOptions
+}
+
+impl RunningPocs {
+    pub fn new() -> Self { 
+        RunningPocs { opts: Default::default() }
+    }
+}
+
+impl CMDProc for RunningPocs {
+    fn get_name(&self) -> &str {
+        "running_pocs"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        let modules = get_running_modules();
+        let modules = match modules {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("RUNNING_MODULES does not initialize..."));
+            }
+        };
+        for module in modules {
+            println!("{}", module);
+        }
+
+        Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "List Running modules".to_string()
     }
 
     fn get_help(&self) -> String {

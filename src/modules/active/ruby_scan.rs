@@ -2,7 +2,7 @@ use std::{fs, io};
 
 use rutie::{AnyObject, Exception, Integer, Object, RString, GC};
 use serde_json::Value;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest, Sha256};
 
 use crate::{
     libruby::utils::{call_object_method, get_instance, object_to_string},

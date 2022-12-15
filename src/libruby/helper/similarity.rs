@@ -1,5 +1,5 @@
 use rutie::{RString, AnyObject, Float, Object, class, methods};
-use strsim::{levenshtein, normalized_levenshtein};
+use strsim::{normalized_levenshtein};
 
 class!(RBSimilary);
 

@@ -120,7 +120,7 @@ impl ReqResLog {
             }
         };
 
-        let mut log = ReqResLog::new(s.clone());
+        let log = ReqResLog::new(s.clone());
         let s = match &self.response {
             Some(s) => s,
             None => {
@@ -272,6 +272,10 @@ impl LogRequest {
 
     pub fn get_url(&self) -> String {
         self.orignal.uri().to_string()
+    }
+
+    pub fn get_proto(&self) -> Version {
+        self.orignal.version()
     }
 
     pub fn get_method(&self) -> String {
