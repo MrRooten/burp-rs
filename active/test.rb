@@ -1,10 +1,10 @@
-class RBModule_test3
+class RBModule_test
     def initialize
     end
     def metadata
-        grades = { "name" => "test3", 
+        info = { "name" => "test", 
             "description" => "" }
-        return grades
+        return info
     end
 
     def passive_run(index)

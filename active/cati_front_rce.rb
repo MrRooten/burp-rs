@@ -5,9 +5,9 @@ class RBModule_cati_front_rce
     def initialize
     end
     def metadata
-        grades = { "name" => "cacti_front_rce", 
+        info = { "name" => "cacti_front_rce", 
             "description" => "" }
-        return grades
+        return info
     end
 
     def scan(uri)
@@ -18,22 +18,7 @@ class RBModule_cati_front_rce
         end
 
         url = scheme + "://" + uri["host"] + uri["path"] + "?lang="
-        client = Request.new
-        resp = client.get(url, headers={"host"=>uri["host"]})
-        #puts resp
-        if false 
-            issue = {
-                "name"=> "test_req",
-                "level" => "info",
-                "confidence" => "confirm",
-                "detail" => "this is a detail",
-                "host" => url,
-                "response" => resp
-            }
         
-            issuer = RBIssue.new
-            issuer.push_issue(issue)
-        end
         
     end
 

@@ -2,9 +2,9 @@ class RBModule_crlf_inject
     def initialize
     end
     def metadata
-        grades = { "name" => "crlf_inject", 
+        info = { "name" => "crlf_inject", 
             "description" => "" }
-        return grades
+        return info
     end
 
     def scan(uri)

@@ -19,9 +19,9 @@ class RBModule_unauth_bypass
     def initialize
     end
     def metadata
-        grades = { "name" => "unauth_bypass", 
+        info = { "name" => "unauth_bypass", 
             "description" => "" }
-        return grades
+        return info
     end
 
     def get_notfound_page(url) 
@@ -39,14 +39,18 @@ class RBModule_unauth_bypass
             debug("#{url} response is nil")
             return 
         end
-        if Similary.match(resp.body, not_found) < 0.9 
-            if resp.status != 403 or resp.status != 404 
+        if resp.status != 403 or resp.status != 404 
+            if Similary.match(resp.body, not_found) < 0.9 
+                host = UriParser.parse(url)['host']
+                if host == nil 
+                    host = url
+                end
                 issue = {
                     "name"=> "403 bypass",
                     "level" => "critical",
                     "confidence" => "suspicious",
                     "detail" => "payload #{url} can be used to bypass 403",
-                    "host" => url,
+                    "host" => host,
                     "response" => resp.orig_resp
                 }
 
@@ -56,6 +60,7 @@ class RBModule_unauth_bypass
     end
 
     def scan(method, uri, headers, body)
+        headers.delete_if {|key,value| (key.downcase.contains("cookie") or key.downcase.contains("token"))}
         scheme = uri["scheme"]
         if scheme == nil 
             error("Scheme is none #{uri}")
@@ -86,7 +91,6 @@ class RBModule_unauth_bypass
 
     def passive_run(index)
         log = HistoryLog.get_req index
-        puts "log: #{log}"
         url = log.url
         uri = UriParser.parse(url)
         info("Test url: #{uri}")
