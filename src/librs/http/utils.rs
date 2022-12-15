@@ -6,7 +6,7 @@ extern crate hyper_native_tls;
 use hyper::{
     body::{self, Bytes},
     header::*,
-    Body, Client, Method, Request, Response, Uri, StatusCode, Version,
+    Body, Client, Method, Request, Response, Uri, StatusCode, Version, ext::Protocol, http::uri::Scheme,
 };
 
 use crate::{
@@ -255,6 +255,8 @@ impl HttpRequest {
     }
 }
 
+
+
 #[derive(Debug)]
 pub struct HttpResponse {
     req : HttpRequest,
@@ -311,3 +313,116 @@ impl HttpResponse {
     }
 
 }
+
+
+impl HttpRequest {
+    pub fn from_burp(burp: &BurpRequest) -> Result<Self, STError> {
+        let domain_with_scheme: String;
+        if burp.ssl {
+            domain_with_scheme = format!("https://{}/", burp.host);
+        } else {
+            domain_with_scheme = format!("http://{}/", burp.host);
+        }
+
+        let headers = burp.headers.split("\n").collect::<Vec<&str>>();
+        let method: String;
+        let path: String;
+        let proto: String;
+        let first = headers[0].trim();
+        let first = first.split(" ").collect::<Vec<&str>>();
+        if first.len() != 3 {
+            return Err(STError::new("first line does not match pattern"));
+        }
+
+        method = first[0].to_string();
+        path = first[1].to_string();
+        proto = first[2].to_string();
+        let headers = headers[1..].to_vec();
+        let mut header_map: HeaderMap = HeaderMap::new();
+        for header in headers {
+            let header = header.trim();
+            let index = header.find(":");
+            let index = match index {
+                Some(s) => s,
+                None => {
+                    let msg = format!("header '{}' does not match", header);
+                    return Err(STError::new(&msg));
+                }
+            };
+
+            let key = &header[0..index];
+            let value = &header[index+1..];
+            header_map.append(HeaderName::from_str(key).unwrap(), HeaderValue::from_str(value).unwrap());
+        }
+        let mut request = Request::new(Body::from(""));
+        *request.headers_mut() = header_map;
+        let m: Method;
+        if method.eq_ignore_ascii_case("GET") {
+            m = Method::GET;
+        } else if method.eq_ignore_ascii_case("POST") {
+            m = Method::POST;
+        } else if method.eq_ignore_ascii_case("OPTIONS") {
+            m = Method::OPTIONS;
+        } else if method.eq_ignore_ascii_case("PUT") {
+            m = Method::PUT;
+        } else if method.eq_ignore_ascii_case("DELETE") {
+            m = Method::DELETE;
+        } else if method.eq_ignore_ascii_case("HEAD") {
+            m = Method::HEAD;
+        } else if method.eq_ignore_ascii_case("PATCH") {
+            m = Method::PATCH;
+        } else if method.eq_ignore_ascii_case("TRACE") {
+            m = Method::TRACE;
+        } else {
+            m = Method::DELETE;
+        }
+        let uri = Uri::from_str(&format!("{}{}",domain_with_scheme, path)).unwrap();
+        *request.method_mut() = m;
+        *request.uri_mut() = uri;
+        let p: Version;
+        if proto.eq("HTTP/0.9") {
+            p = Version::HTTP_09;
+        } else if proto.eq("HTTP/1.0") {
+            p = Version::HTTP_10;
+        } else if proto.eq("HTTP/1.1") {
+            p = Version::HTTP_11;
+        } else if proto.eq("HTTP/2") {
+            p = Version::HTTP_2;
+        } else if proto.eq("HTTP/3") {
+            p = Version::HTTP_3;
+        } else {
+            p = Version::HTTP_11;
+        }
+
+        *request.version_mut() = p;
+        Ok(Self {
+            request: request,
+            body: burp.body.clone(),
+        })
+    }
+
+    pub fn to_burp(&self) -> BurpRequest {
+        unimplemented!()
+    }
+}
+pub struct BurpRequest {
+    headers     : String,
+    body        : Bytes,
+    ssl         : bool,
+    host        : String
+}
+
+impl BurpRequest {
+    pub fn from_log_request(request: &LogRequest) -> Self {
+        unimplemented!()
+    }
+
+    pub fn from_http_request(request: &HttpRequest) -> Self {
+        unimplemented!()
+    }
+
+    pub fn to_http_request(&self) -> HttpRequest {
+        unimplemented!()
+    }
+}
+
