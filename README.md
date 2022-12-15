@@ -20,3 +20,5 @@ burpsuite-like tools. Because the burp extension is hard to debug, so I write a 
 
 ![image](https://user-images.githubusercontent.com/25635931/207817203-c283640c-40df-45d1-a403-0b54e05abba9.png)  
   #### Extensions or Poc(Proof of Concept) is writting in ruby or rust, placed in ./active/ directory
+ ### Commands
+ #### list_history
