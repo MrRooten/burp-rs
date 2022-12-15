@@ -163,7 +163,7 @@ pub fn ruby_thread() -> JoinHandle<()> {
                     match v {
                         Ok(o) => {}
                         Err(e) => {
-                            error!("{:?}", e);
+                            error!("{}", e);
                         }
                     }
                     Fixnum::new(0)

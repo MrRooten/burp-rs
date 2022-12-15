@@ -1,7 +1,7 @@
 # encoding: utf-8
 require 'uri'
 require "unicode_normalize/normalize.rb"
-class RBModule
+class RBModule_cati_front_rce
     def initialize
     end
     def metadata
@@ -18,7 +18,7 @@ class RBModule
         end
 
         url = scheme + "://" + uri["host"] + uri["path"] + "?lang="
-        client = HttpClient.new
+        client = Request.new
         resp = client.get(url, headers={"host"=>uri["host"]})
         #puts resp
         if false 

@@ -1,4 +1,4 @@
-class RBModule
+class RBModule_test3
     def initialize
     end
     def metadata

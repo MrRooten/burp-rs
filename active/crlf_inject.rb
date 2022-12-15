@@ -1,4 +1,4 @@
-class RBModule
+class RBModule_crlf_inject
     def initialize
     end
     def metadata
@@ -15,7 +15,7 @@ class RBModule
         end
         #simeple test
         url = scheme + "://" + uri["host"] + uri["path"] + "%0D%0ASet-Cookie:testkey=testvalue"
-        client = HttpClient.new
+        client = Request.new
         resp = client.get(url, headers={"host"=>uri["host"]})
         headers = resp["headers"]
         if headers == nil 

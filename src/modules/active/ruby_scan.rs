@@ -139,7 +139,18 @@ impl IActive for RBModule {
         let result = match self.passive_method.protect_send("call", &[i]) {
             Ok(o) => o,
             Err(e) => {
-                let msg = format!("passive_run:{}", e.message());
+                let v = match e.backtrace() {
+                    Some(a) => {
+                        a
+                    },
+                    None => {
+                        let msg = format!("passive_run:{}", e);
+                        return Err(STError::new(&msg));
+                    }
+                };
+
+                let v = object_to_string(&v.try_convert_to::<AnyObject>().unwrap()).unwrap();
+                let msg = format!("passive_run:{} {}", v,e.message());
                 return Err(STError::new(&msg));
             }
         };

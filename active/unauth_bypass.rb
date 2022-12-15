@@ -1,4 +1,4 @@
-class RBModule
+class RBModule_unauth_bypass
     @@payloads = [
         "%09",
         "%20" ,
@@ -24,18 +24,41 @@ class RBModule
         return grades
     end
 
-    def check(method, url, headers, body)
-        client = RBHttpClient.new
-        req = {
-            "method" => method,
-            "url" => url,
-            "headers" => headers,
-            "body" => body
-        }
-        puts "request: #{req}"
-        resp = client.send(req)
-        puts resp
+    def get_notfound_page(url) 
+        resp = Request.get(url)
+        return resp.body
     end
+
+    def check(method, url, headers, body, not_found)
+        if not_found == nil 
+            return 
+        end
+        resp = nil
+        if method.equal?("get")
+            resp = Request.get(url, headers, body)
+        elsif method.equal?("post")
+            resp = Request.post(url, headers, body)
+        end
+
+        if resp == nil 
+            return 
+        end
+        if Similary.match(resp.body, not_found) < 0.9 
+            if resp.status != 403 or resp.status != 404 
+                issue = {
+                    "name"=> "403 bypass",
+                    "level" => "critical",
+                    "confidence" => "suspicious",
+                    "detail" => "payload #{url} can be used to bypass 403",
+                    "host" => url,
+                    "response" => resp.orig_resp
+                }
+
+                IssueReporter.add_issue(issue)
+            end
+        end
+    end
+
     def scan(method, uri, headers, body)
         scheme = uri["scheme"]
         if scheme == nil 
@@ -44,7 +67,8 @@ class RBModule
         end
         #simeple test
         path = uri["path"]
-        
+        notfound_url = scheme + "://" + uri["host"] + ":" + uri["port"].to_s + "/sdklfjsklcbnskdjfsdf"
+        notfound = get_notfound_page(notfound_url)
         nodes = path.split("/")
         i = 0
         save = nil
@@ -55,7 +79,8 @@ class RBModule
                 nodes[i] = out
                 target_path = nodes.join("/")
                 url = scheme + "://" + uri["host"] + ":" + uri["port"].to_s + target_path + "?" + uri["query"]
-                check(method, url, headers, body)
+                
+                check(method, url, headers, body, notfound)
             end
             nodes[i] = node
             i += 1
@@ -66,10 +91,10 @@ class RBModule
     def passive_run(index)
         log = HistoryLog.get_req index
         puts "log: #{log}"
-        url = log['url']
+        url = log.url
         uri = UriParser.parse(url)
         info("Test url: #{uri}")
-        scan(log['method'], uri, log['headers'], log['body'])
+        scan(log.method, uri, log.headers, log.body)
         #scan("http://127.0.0.1:8009")
     end
 

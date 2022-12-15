@@ -1,4 +1,4 @@
-class HttpClient
+class Request
     def get(url, headers={}, body=[])
         request = {}
         request["method"] = "get"

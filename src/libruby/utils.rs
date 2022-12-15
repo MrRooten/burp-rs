@@ -1,4 +1,4 @@
-use std::{fs};
+use std::{fs, path::Path};
 
 use rutie::{VM, eval, Object, Binding, RString, Class, AnyObject};
 
@@ -93,9 +93,12 @@ pub fn call_class_object_method(script: &str, class: &str, method: &str, argumen
 pub fn get_instance(script: &str, class: &str, arguments: &[AnyObject]) -> AnyObject {
     let s = format!("load '{}'",script);
     let _ = eval!(&s);
+    let path = Path::new(script);
+    let stem = Path::file_stem(&path).unwrap();
+    let class = format!("{}_{}", class, stem.to_str().unwrap());
     //let path = format!("{}",script);
     //VM::require(&path);
-    Class::from_existing(class).new_instance(arguments)
+    Class::from_existing(&class).new_instance(arguments)
 }
 
 pub fn call_object_method(object: &AnyObject, method: &str, arguments: &[AnyObject]) -> Result<AnyObject, STError> {

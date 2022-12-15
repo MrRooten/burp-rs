@@ -1,9 +1,9 @@
 require 'json'
-class RBModule
+class RBModule_test_issue
     def initialize
     end
     def metadata
-        grades = { "name" => "test2", 
+        grades = { "name" => "test_issue", 
             "description" => "" }
         return grades
     end
