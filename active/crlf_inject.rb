@@ -7,7 +7,20 @@ class RBModule_crlf_inject
         return info
     end
 
-    def scan(uri)
+    def match_headers?(value, headers)
+    end
+    def scan(uri, headers)
+        query = uri['query']
+        if query == nil 
+            return
+        end
+        
+        kvs = query.split("&")
+        items = []
+        kvs.each do |_kv|
+            
+
+        end
         scheme = uri["scheme"]
         if scheme == nil 
             error("Scheme is none #{uri}")
@@ -45,10 +58,17 @@ class RBModule_crlf_inject
 
     def passive_run(index)
         log = HistoryLog.get_req index
+        resp = HistoryLog.get_resp index
+        headers = nil
+        if resp == nil 
+            headers = nil
+        else
+            headers = resp['headers']
+        end
         url = log['url']
         uri = UriParser.parse(url)
         info("Test url: #{uri}")
-        scan(uri)
+        scan(uri, headers)
         #scan("http://127.0.0.1:8009")
     end
 
