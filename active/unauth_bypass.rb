@@ -60,6 +60,8 @@ class RBModule_unauth_bypass
     end
 
     def scan(method, uri, headers, body)
+        notfound_url = scheme + "://" + uri["host"] + ":" + uri["port"].to_s + "/sdklfjsklcbnskdjfsdf"
+        notfound = get_notfound_page(notfound_url)
         headers.delete_if {|key,value| (key.downcase.include?("cookie") or key.downcase.include?("token"))}
         scheme = uri["scheme"]
         if scheme == nil 
@@ -68,8 +70,8 @@ class RBModule_unauth_bypass
         end
         #simeple test
         path = uri["path"]
-        notfound_url = scheme + "://" + uri["host"] + ":" + uri["port"].to_s + "/sdklfjsklcbnskdjfsdf"
-        notfound = get_notfound_page(notfound_url)
+        
+        
         nodes = path.split("/")
         i = 0
         save = nil

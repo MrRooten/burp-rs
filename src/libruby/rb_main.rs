@@ -2,9 +2,10 @@ use std::{
     collections::{HashSet},
     fs,
     sync::mpsc::{self},
-    thread::{spawn, JoinHandle},
+    thread::{spawn, JoinHandle}, time::{Instant, UNIX_EPOCH, SystemTime},
 };
 
+use chrono::Utc;
 use log::{error, info};
 use rutie::{Fixnum, Object, Thread};
 
@@ -196,7 +197,18 @@ pub fn ruby_thread() -> JoinHandle<()> {
                 }
                 let thread = Thread::new(|| {
                     add_running_modules(meta.get_name());
+                    let start = SystemTime::now();
+                    let since_the_epoch = start
+                        .duration_since(UNIX_EPOCH)
+                        .expect("Time went backwards");
+                    let t1 = since_the_epoch.as_millis();
                     let v = module.passive_run(index);
+                    let start = SystemTime::now();
+                    let since_the_epoch = start
+                        .duration_since(UNIX_EPOCH)
+                        .expect("Time went backwards");
+                    let t2 = since_the_epoch.as_millis();
+                    info!("{} cost time: {} ms", meta.get_name(), t2 - t1);
                     remove_running_modules(meta.get_name());
                     match v {
                         Ok(o) => {}

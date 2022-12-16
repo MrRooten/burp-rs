@@ -10,7 +10,7 @@ use hyper::{
 };
 
 use crate::{
-    proxy::log::{LogRequest, ReqResLog, RequestParam},
+    proxy::log::{LogRequest, ReqResLog, RequestParam, ParamType},
     utils::STError, st_error,
 };
 
@@ -478,7 +478,21 @@ pub struct BurpRequest {
     host        : String
 }
 
+
+pub struct BurpStruct<'a> {
+    name_start  : usize,
+    name_end    : usize,
+    value_start : usize,
+    value_end   : usize,
+    param_type  : ParamType,
+    request     : &'a BurpRequest
+}
+
 impl BurpRequest {
-    
+    pub fn get_params(&self) -> Vec<BurpRequest> {
+        let result = vec![];
+        
+        result
+    }
 }
 

@@ -195,6 +195,9 @@ impl CMDProc for ListHistory {
 
         let history = history.get_history();
         let mut keys = history.keys().collect::<Vec<&u32>>();
+        if keys.len() == 0 {
+            return Err(STError::new("No log"));
+        }
         keys.sort();
         let p = Pager::new();
         let mut output = String::new();

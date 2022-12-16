@@ -5,7 +5,7 @@ class Request
         request["url"] = url
         headers_req = {}
         headers.each do |key, value|
-            headers_req[key] = value.join(";")
+            headers_req[key] = value
         end
         request["headers"] = headers_req
         request["body"] = body 

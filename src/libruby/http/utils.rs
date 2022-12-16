@@ -11,10 +11,30 @@ methods!(
     RBHttpClient,
     _rtself,
     fn send(request: Hash) -> AnyObject {
-        let method_key = RString::from("method")
-            .try_convert_to::<AnyObject>()
-            .unwrap();
-        let request = match request {
+        _send(request.unwrap())
+    },
+    
+);
+
+fn _send(request: Hash) -> AnyObject {
+    let method_key = RString::from("method")
+        .try_convert_to::<AnyObject>()
+        .unwrap();
+    let method = request
+        .at(&method_key)
+        .try_convert_to::<RString>()
+        .unwrap()
+        .to_string();
+    let send_request = match ruby_hash_to_inner_request(&request) {
+        Some(s) => s,
+        None => {
+            return NilClass::new().try_convert_to::<AnyObject>().unwrap();
+        }
+    };
+    let mut response = None::<HttpResponse>;
+    if method.eq_ignore_ascii_case("get") {
+        let ret = HttpRequest::send(Method::GET, &send_request);
+        let ret = match ret {
             Ok(o) => o,
             Err(e) => {
                 let s = format!("{:?}",e);
@@ -22,98 +42,74 @@ methods!(
                 return NilClass::new().try_convert_to::<AnyObject>().unwrap();
             }
         };
-        let method = request
-            .at(&method_key)
-            .try_convert_to::<RString>()
-            .unwrap()
-            .to_string();
-        let send_request = match ruby_hash_to_inner_request(&request) {
-            Some(s) => s,
-            None => {
-                return NilClass::new().try_convert_to::<AnyObject>().unwrap();
-            }
-        };
-        let mut response = None::<HttpResponse>;
-        if method.eq_ignore_ascii_case("get") {
-            let ret = HttpRequest::send(Method::GET, &send_request);
-            let ret = match ret {
-                Ok(o) => o,
-                Err(e) => {
-                    let s = format!("{:?}",e);
-                    VM::raise_ex(AnyException::new("StandardError", Some(&s)));
-                    return NilClass::new().try_convert_to::<AnyObject>().unwrap();
-                }
-            };
 
-            response = Some(ret);
-        } else if method.eq_ignore_ascii_case("post") {
-            let ret = HttpRequest::send(Method::POST, &send_request);
-            let ret = match ret {
-                Ok(o) => o,
-                Err(e) => {
-                    let s = format!("{:?}",e);
-                    VM::raise_ex(AnyException::new("StandardError", Some(&s)));
-                    return NilClass::new().try_convert_to::<AnyObject>().unwrap();
-                }
-            };
-
-            response = Some(ret);
-        } else if method.eq_ignore_ascii_case("options") {
-            let ret = HttpRequest::send(Method::OPTIONS, &send_request);
-            let ret = match ret {
-                Ok(o) => o,
-                Err(e) => {
-                    let s = format!("{:?}",e);
-                    VM::raise_ex(AnyException::new("StandardError", Some(&s)));
-                    return NilClass::new().try_convert_to::<AnyObject>().unwrap();
-                }
-            };
-
-            response = Some(ret);
-        }
-        let response = match response {
-            Some(o) => o,
-            None => {
-                VM::raise_ex(AnyException::new("StandardError", Some("Doesn't match response")));
+        response = Some(ret);
+    } else if method.eq_ignore_ascii_case("post") {
+        let ret = HttpRequest::send(Method::POST, &send_request);
+        let ret = match ret {
+            Ok(o) => o,
+            Err(e) => {
+                let s = format!("{:?}",e);
+                VM::raise_ex(AnyException::new("StandardError", Some(&s)));
                 return NilClass::new().try_convert_to::<AnyObject>().unwrap();
             }
         };
 
-        let mut ret = Hash::new();
-        ret.store(
-            RString::from("status_code"),
-            Integer::from(response.get_status().as_u16() as u32),
-        );
-        let mut ruby_headers = Hash::new();
-        let headers = response.get_headers();
-        for kv in headers {
-            let key_name = kv.0.as_str().to_string();
-            let ruby_keyname = RString::from(key_name);
-            if ruby_headers.at(&ruby_keyname).is_nil() {
-                let mut ruby_value = Array::new();
-                let value = kv.1.to_str().unwrap().to_string();
-                ruby_value.push(RString::from(value));
-                ruby_headers.store(ruby_keyname, ruby_value);
-            } else {
-                let mut ruby_value = ruby_headers
-                    .at(&ruby_keyname)
-                    .try_convert_to::<Array>()
-                    .unwrap();
-                let value = kv.1.to_str().unwrap().to_string();
-                ruby_value.push(RString::from(value));
+        response = Some(ret);
+    } else if method.eq_ignore_ascii_case("options") {
+        let ret = HttpRequest::send(Method::OPTIONS, &send_request);
+        let ret = match ret {
+            Ok(o) => o,
+            Err(e) => {
+                let s = format!("{:?}",e);
+                VM::raise_ex(AnyException::new("StandardError", Some(&s)));
+                return NilClass::new().try_convert_to::<AnyObject>().unwrap();
             }
-        }
+        };
 
-        ret.store(RString::from("headers"), ruby_headers);
-        ret.store(
-            RString::from("body"),
-            RString::from_bytes(&response.get_body(), &Encoding::utf8()),
-        );
-        ret.store(RString::from("request"), request.clone());
-        return ret.try_convert_to::<AnyObject>().unwrap();
-    },
-    
-);
+        response = Some(ret);
+    }
+    let response = match response {
+        Some(o) => o,
+        None => {
+            VM::raise_ex(AnyException::new("StandardError", Some("Doesn't match response")));
+            return NilClass::new().try_convert_to::<AnyObject>().unwrap();
+        }
+    };
+
+    let mut ret = Hash::new();
+    ret.store(
+        RString::from("status_code"),
+        Integer::from(response.get_status().as_u16() as u32),
+    );
+    let mut ruby_headers = Hash::new();
+    let headers = response.get_headers();
+    for kv in headers {
+        let key_name = kv.0.as_str().to_string();
+        let ruby_keyname = RString::from(key_name);
+        if ruby_headers.at(&ruby_keyname).is_nil() {
+            let mut ruby_value = Array::new();
+            let value = kv.1.to_str().unwrap().to_string();
+            ruby_value.push(RString::from(value));
+            ruby_headers.store(ruby_keyname, ruby_value);
+        } else {
+            let mut ruby_value = ruby_headers
+                .at(&ruby_keyname)
+                .try_convert_to::<Array>()
+                .unwrap();
+            let value = kv.1.to_str().unwrap().to_string();
+            ruby_value.push(RString::from(value));
+        }
+    }
+
+    ret.store(RString::from("headers"), ruby_headers);
+    ret.store(
+        RString::from("body"),
+        RString::from_bytes(&response.get_body(), &Encoding::utf8()),
+    );
+    ret.store(RString::from("request"), request.clone());
+    return ret.try_convert_to::<AnyObject>().unwrap();
+}
 
 fn inner_request_to_ruby_hash(request: &HttpRequest) -> Hash {
     unimplemented!()

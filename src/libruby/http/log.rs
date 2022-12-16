@@ -4,7 +4,7 @@ use rutie::{
 };
 use serde_json::Value;
 
-use crate::proxy::log::{LogHistory, ParamType, RequestParam};
+use crate::{proxy::log::{LogHistory, ParamType, RequestParam}, libruby::log::error};
 
 class!(RBReqResLog);
 
@@ -191,7 +191,13 @@ fn _get_http_req(i: Fixnum) -> AnyObject {
         let ruby_keyname = RString::from(key_name);
         if ruby_headers.at(&ruby_keyname).is_nil() {
             let mut ruby_value = Array::new();
-            let value = kv.1.to_str().unwrap();
+            let value = match kv.1.to_str() {
+                Ok(o) => o,
+                Err(e) => {
+                    log::error!("{}",e);
+                    continue;
+                }
+            };
             ruby_value.push(RString::from(value));
             ruby_headers.store(ruby_keyname, ruby_value);
         } else {

