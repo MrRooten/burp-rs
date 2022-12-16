@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use hyper::{body::Bytes, Method, Request, Body, Uri, Response, HeaderMap, header::{HeaderName}, Version};
 use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception};
@@ -226,7 +226,7 @@ fn ruby_hash_to_inner_request(hash: &Hash) -> Option<HttpRequest> {
     let body = hash.at(&body_key).try_convert_to::<RString>();
     if body.is_ok() {
         let s = body.unwrap().to_bytes_unchecked().to_vec();
-        let s = Bytes::from(s);
+        let s = Arc::new(Bytes::from(s));
         req.set_body(s);
     }
 

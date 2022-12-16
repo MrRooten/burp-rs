@@ -1,4 +1,4 @@
-use std::{str::FromStr, collections::HashMap};
+use std::{str::FromStr, collections::HashMap, sync::Arc};
 
 extern crate hyper;
 extern crate hyper_native_tls;
@@ -6,7 +6,7 @@ extern crate hyper_native_tls;
 use hyper::{
     body::{self, Bytes},
     header::*,
-    Body, Client, Method, Request, Response, Uri, StatusCode, Version, ext::Protocol, http::uri::Scheme,
+    Body, Client, Method, Request, Response, Uri, StatusCode, Version, http::uri::Scheme,
 };
 
 use crate::{
@@ -14,18 +14,11 @@ use crate::{
     utils::STError, st_error,
 };
 
-pub struct HttpSession {}
-
-impl HttpRequest {
-    pub fn post(request: &HttpRequest) {}
-
-    pub fn get(request: &HttpRequest) {}
-}
 
 #[derive(Debug)]
 pub struct HttpRequest {
     request: Request<Body>,
-    body: Bytes,
+    body: Arc<Bytes>,
 }
 
 impl HttpRequest {
@@ -53,7 +46,7 @@ impl HttpRequest {
         *request.uri_mut() = Uri::from_str(url).unwrap();
         HttpRequest {
             request: request,
-            body: Bytes::new(),
+            body: Arc::new(Bytes::new()),
         }
     }
 
@@ -110,7 +103,7 @@ impl HttpRequest {
         );
     }
 
-    pub fn set_body(&mut self, body: Bytes) {
+    pub fn set_body(&mut self, body: Arc<Bytes>) {
         self.body = body.clone();
     }
 
@@ -153,7 +146,7 @@ impl HttpRequest {
         *req.headers_mut() = request.request.headers().clone();
         *req.version_mut() = request.request.version();
         req.uri_mut().clone_from(request.request.uri());
-        *req.body_mut() = Body::from(request.body.clone());
+        *req.body_mut() = Body::from((*request.body).clone());
         if request.request.uri().to_string().starts_with("https") {
             if method == Method::GET {
                 *req.method_mut() = Method::GET;
@@ -402,27 +395,90 @@ impl HttpRequest {
     }
 
     pub fn to_burp(&self) -> BurpRequest {
-        unimplemented!()
+        let mut result: String = String::new();
+        let ssl: bool;
+        let _ssl = self.request.uri().scheme().unwrap();
+        if _ssl.eq(&Scheme::HTTP) {
+            ssl = false;
+        } else {
+            ssl = true;
+        }
+
+        let path = self.request.uri().path_and_query().unwrap().to_string();
+        let version = self.request.version();
+        let v: &str;
+        if version.eq(&Version::HTTP_09) {
+            v = "HTTP/0.9"
+        } else if version.eq(&Version::HTTP_10) {
+            v = "HTTP/0.9"
+        } else if version.eq(&Version::HTTP_11) {
+            v = "HTTP/0.9"
+        } else if version.eq(&Version::HTTP_2) {
+            v = "HTTP/0.9"
+        } else if version.eq(&Version::HTTP_3) {
+            v = "HTTP/0.9"
+        } else {
+            v = "HTTP/1.1"
+        }
+        let m: &str;
+        let method = self.request.method();
+        if method.eq(&Method::GET) {
+            m = "GET";
+        } else if method.eq(&Method::POST) {
+            m = "POST";
+        } else if method.eq(&Method::PATCH) {
+            m = "PATCH";
+        } else if method.eq(&Method::DELETE) {
+            m = "DELETE";
+        } else if method.eq(&Method::PUT) {
+            m = "PUT";
+        } else if method.eq(&Method::TRACE) {
+            m = "TRACE";
+        } else if method.eq(&Method::OPTIONS) {
+            m = "OPTIONS";
+        } else if method.eq(&Method::HEAD) {
+            m = "HEAD";
+        } else {
+            m = "CONNECT";
+        }
+
+        result.push_str(&format!("{} {} {}\r\n", m, path, v));
+        let _host = self.request.uri().host().unwrap();
+        let host: String;
+        match self.request.uri().port_u16() {
+            Some(s) => {
+                host = format!("{}:{}", _host, s);
+            },
+            None => {
+                if ssl {
+                    host = format!("{}:443", _host);
+                } else {
+                    host = format!("{}:80", _host);
+                }
+            }
+        }
+
+        let headers = self.request.headers();
+        for key in headers.keys() {
+            let values = headers.get_all(key).iter().map(|v| v.to_str().unwrap()).collect::<Vec<&str>>().join(";");
+            result.push_str(&format!("{}: {}\r\n", key.as_str(), values));
+        }
+        BurpRequest { 
+            headers: result, 
+            body: self.body.clone(), 
+            ssl: ssl, 
+            host: host
+        }
     }
 }
 pub struct BurpRequest {
     headers     : String,
-    body        : Bytes,
+    body        : Arc<Bytes>,
     ssl         : bool,
     host        : String
 }
 
 impl BurpRequest {
-    pub fn from_log_request(request: &LogRequest) -> Self {
-        unimplemented!()
-    }
-
-    pub fn from_http_request(request: &HttpRequest) -> Self {
-        unimplemented!()
-    }
-
-    pub fn to_http_request(&self) -> HttpRequest {
-        unimplemented!()
-    }
+    
 }
 
