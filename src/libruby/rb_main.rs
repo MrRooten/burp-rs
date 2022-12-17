@@ -18,7 +18,7 @@ use crate::{
     utils::STError,
 };
 
-use super::utils::rb_init;
+use super::{utils::rb_init, http::thread::rb_http_thread};
 pub static mut MODULE_INDEX: usize = 0;
 pub static mut RUBY_MODULES: Vec<RBModule> = Vec::new();
 static mut RUNING_MODULES: Option<HashSet<String>> = None;
@@ -143,6 +143,7 @@ pub fn send_command(command: &str) -> Result<(), STError> {
     }
 }
 
+
 pub fn ruby_thread() -> JoinHandle<()> {
     unsafe {
         if SCAN_SENDER.is_none() {
@@ -157,6 +158,7 @@ pub fn ruby_thread() -> JoinHandle<()> {
             RUBY_COMMAND_RECEIVER = Some(receiver);
         }
     }
+    rb_http_thread();
     let t = spawn(|| {
         let _ = rb_init();
         let modules = update_and_get_modules("./active/");

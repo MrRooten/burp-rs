@@ -245,6 +245,7 @@ dependencies = [
  "chrono",
  "colored",
  "flate2",
+ "futures",
  "html5ever",
  "hudsucker",
  "hyper 0.14.23",

@@ -14,6 +14,7 @@ pub struct STError {
     err     : Option<Box<dyn Error>>
 }
 
+
 pub fn banner() {
     let ptr = Box::into_raw(Box::new(123));
     let rand = ptr as usize;

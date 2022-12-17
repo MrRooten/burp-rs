@@ -8,6 +8,7 @@ use hyper::{
     header::*,
     Body, Client, Method, Request, Response, Uri, StatusCode, Version, http::uri::Scheme,
 };
+use tokio::runtime::Runtime;
 
 use crate::{
     proxy::log::{LogRequest, ReqResLog, RequestParam, ParamType},
@@ -113,10 +114,7 @@ impl HttpRequest {
 
     pub fn send(method: Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
         let response = HttpRequest::send_async(Method::GET, &request);
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
+        let rt = Runtime::new().unwrap();
         let ret = rt.block_on(async {
             response.await
         });

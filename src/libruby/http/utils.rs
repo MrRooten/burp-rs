@@ -1,9 +1,12 @@
-use std::{str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc, thread::spawn};
 
 use hyper::{body::Bytes, Method, Request, Body, Uri, Response, HeaderMap, header::{HeaderName}, Version};
-use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception};
+use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception, Thread, Fixnum};
 
 use crate::{librs::http::utils::{HttpRequest, HttpResponse}, proxy::log::{ReqResLog, LogRequest, LogResponse}};
+
+use super::thread::send_request;
+
 
 class!(RBHttpClient);
 
@@ -13,7 +16,6 @@ methods!(
     fn send(request: Hash) -> AnyObject {
         _send(request.unwrap())
     },
-    
 );
 
 fn _send(request: Hash) -> AnyObject {
@@ -25,15 +27,16 @@ fn _send(request: Hash) -> AnyObject {
         .try_convert_to::<RString>()
         .unwrap()
         .to_string();
-    let send_request = match ruby_hash_to_inner_request(&request) {
+    let _request = match ruby_hash_to_inner_request(&request) {
         Some(s) => s,
         None => {
             return NilClass::new().try_convert_to::<AnyObject>().unwrap();
         }
     };
     let mut response = None::<HttpResponse>;
+    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
     if method.eq_ignore_ascii_case("get") {
-        let ret = HttpRequest::send(Method::GET, &send_request);
+        let ret = send_request(&Method::GET, &_request);
         let ret = match ret {
             Ok(o) => o,
             Err(e) => {
@@ -45,7 +48,7 @@ fn _send(request: Hash) -> AnyObject {
 
         response = Some(ret);
     } else if method.eq_ignore_ascii_case("post") {
-        let ret = HttpRequest::send(Method::POST, &send_request);
+        let ret = send_request(&Method::POST, &_request);
         let ret = match ret {
             Ok(o) => o,
             Err(e) => {
@@ -57,7 +60,7 @@ fn _send(request: Hash) -> AnyObject {
 
         response = Some(ret);
     } else if method.eq_ignore_ascii_case("options") {
-        let ret = HttpRequest::send(Method::OPTIONS, &send_request);
+        let ret = send_request(&Method::OPTIONS, &_request);
         let ret = match ret {
             Ok(o) => o,
             Err(e) => {
@@ -109,6 +112,11 @@ fn _send(request: Hash) -> AnyObject {
     );
     ret.store(RString::from("request"), request.clone());
     return ret.try_convert_to::<AnyObject>().unwrap();
+}
+
+fn _send_nonblock(request: Hash) -> AnyObject {
+
+    unimplemented!()
 }
 
 fn inner_request_to_ruby_hash(request: &HttpRequest) -> Hash {
