@@ -6,7 +6,7 @@ use std::{
         prelude::{AsRawFd, FromRawFd},
     },
     sync::mpsc::{Receiver, Sender, self},
-    thread::spawn,
+    thread::spawn, net::Shutdown,
 };
 
 use hyper::Method;
@@ -35,6 +35,7 @@ fn get_response(fd: i32) -> Result<HttpResponse, STError> {
                 return Err(STError::new("Request Sender is not initialize"));
             }
         };
+
         let resp = match map.remove(&fd) {
             Some(s) => {
                 match s  {
@@ -94,6 +95,8 @@ pub fn send_request(method: &Method, request: &HttpRequest) -> Result<HttpRespon
     
     
     let resp = get_response(fd);
+    //let _ = unix_socket.shutdown(Shutdown::Both);
+    //let _ = unix_socket2.shutdown(Shutdown::Both);
     resp
 }
 

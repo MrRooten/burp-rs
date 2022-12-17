@@ -220,13 +220,14 @@ pub fn ruby_thread() -> JoinHandle<()> {
                     }
                     Fixnum::new(0)
                 });
+                thread.protect_send("run", &[]);
 
                 s.push(thread);
             }
 
-            for thread in s {
-                let _ = thread.protect_send("join", &[]);
-            }
+            // for thread in s {
+            //     let _ = thread.protect_send("join", &[]);
+            // }
         }
     });
     t
