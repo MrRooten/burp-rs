@@ -1,4 +1,6 @@
-use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError, libruby::rb_main::{set_reload, get_running_modules}};
+use colored::Colorize;
+
+use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError, libruby::rb_main::{set_reload, get_running_modules, remove_dead_modules}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
@@ -167,6 +169,11 @@ impl CMDProc for RunningPocs {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        if line.len() >= 2 {
+            if line[1].eq("--remove-dead") || line[1].eq("-rd") {
+                remove_dead_modules();
+            }
+        }
         let modules = get_running_modules();
         let modules = match modules {
             Some(s) => s,
@@ -174,8 +181,19 @@ impl CMDProc for RunningPocs {
                 return Err(STError::new("RUNNING_MODULES does not initialize..."));
             }
         };
-        for module in modules {
-            println!("{}", module);
+
+        let mut keys = modules.keys().cloned().collect::<Vec<u32>>();
+        keys.sort();
+        for i in keys {
+            println!("{: >3} {: <20} {} {: >3} {: <10} {: >7}{}" , 
+            i,
+            modules.get(&i).unwrap().get_name().blue(), 
+            modules.get(&i).unwrap().get_starttime().to_rfc2822(), 
+            modules.get(&i).unwrap().get_args().to_string().yellow(), 
+            modules.get(&i).unwrap().get_state_colored(),
+            modules.get(&i).unwrap().get_cost(),
+            "ms".green()
+        );
         }
 
         Ok(())

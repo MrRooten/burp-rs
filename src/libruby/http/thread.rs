@@ -6,10 +6,11 @@ use std::{
         prelude::{AsRawFd, FromRawFd},
     },
     sync::mpsc::{Receiver, Sender, self},
-    thread::spawn, net::Shutdown,
+    thread::spawn,
 };
 
 use hyper::Method;
+use log::error;
 use rutie::{types::RawFd, Thread};
 
 use crate::{librs::http::utils::{HttpRequest, HttpResponse}, utils::STError};
@@ -87,7 +88,12 @@ pub fn send_request(method: &Method, request: &HttpRequest) -> Result<HttpRespon
         request: request.clone(),
     }; 
     //println!("Send request");
-    sender.send(request);
+    match sender.send(request) {
+        Ok(o) => {},
+        Err(e) => {
+            error!("{}", e);
+        }
+    };
     //println!("wait fd");
     
     Thread::wait_fd(fd);

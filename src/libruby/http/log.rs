@@ -4,7 +4,7 @@ use rutie::{
 };
 use serde_json::Value;
 
-use crate::{proxy::log::{LogHistory, ParamType, RequestParam}, libruby::log::error};
+use crate::{proxy::log::{LogHistory, ParamType, RequestParam}};
 
 class!(RBReqResLog);
 

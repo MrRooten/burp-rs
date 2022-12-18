@@ -1,11 +1,12 @@
 use std::{
-    collections::{HashSet},
+    collections::{HashMap},
     fs,
     sync::mpsc::{self},
-    thread::{spawn, JoinHandle}, time::{Instant, UNIX_EPOCH, SystemTime},
+    thread::{spawn, JoinHandle}, time::{UNIX_EPOCH, SystemTime},
 };
 
-use chrono::Utc;
+use chrono::{Local, DateTime};
+use colored::{ColoredString, Colorize};
 use log::{error, info};
 use rutie::{Fixnum, Object, Thread, eval};
 
@@ -21,7 +22,7 @@ use crate::{
 use super::{utils::rb_init, http::thread::rb_http_thread};
 pub static mut MODULE_INDEX: usize = 0;
 pub static mut RUBY_MODULES: Vec<RBModule> = Vec::new();
-static mut RUNING_MODULES: Option<HashSet<String>> = None;
+static mut RUNING_MODULES: Option<HashMap<u32,RunningModuleWrapper>> = None;
 static mut WILL_RELOAD: bool = false;
 
 pub fn set_reload() {
@@ -36,7 +37,66 @@ pub fn unset_reload() {
     }
 }
 
-fn add_running_modules(name: &str) {
+#[derive(Clone, PartialEq)]
+pub enum RunningState {
+    RUNNING,
+    DEAD,
+    EXCEPTION
+}
+
+#[derive(Clone)]
+pub struct RunningModuleWrapper {
+    name        : String,
+    date        : DateTime<Local>,
+    index       : u32,
+    state       : RunningState,
+    args        : u32,
+    cost        : u128
+}
+
+impl RunningModuleWrapper {
+    pub fn new(name: &str, index: u32, args: u32) -> Self {
+        RunningModuleWrapper { name: name.to_string(), date: Local::now(), index: index, state: RunningState::RUNNING, args: args, cost: 0 }
+    }
+
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn get_starttime(&self) -> &DateTime<Local> {
+        &self.date
+    }
+
+    pub fn get_state(&self) -> &RunningState {
+        &self.state
+    }
+
+    pub fn get_state_colored(&self) -> ColoredString {
+        if self.state.eq(&RunningState::RUNNING) {
+            return "RUNNING".to_string().green();
+        } else if self.state.eq(&RunningState::DEAD) {
+            return "DEAD".to_string().red();
+        } else if self.state.eq(&RunningState::EXCEPTION) {
+            return "EXCEPTION".to_string().yellow();
+        }
+
+        return "".to_string().red();
+    }
+
+    pub fn get_args(&self) -> u32 {
+        self.args
+    }
+
+    pub fn set_cost(&mut self, cost: u128) {
+        self.cost = cost;
+    }
+
+    pub fn get_cost(&self) -> u128 {
+        self.cost
+    }
+}
+fn add_running_modules(module: &RunningModuleWrapper) {
     unsafe {
         let v = match &mut RUNING_MODULES {
             Some(s) => s,
@@ -44,11 +104,11 @@ fn add_running_modules(name: &str) {
                 return ;
             }
         };
-        v.insert(name.to_string());
+        v.insert(module.index, module.clone());
     }
 }
 
-fn remove_running_modules(name: &str) {
+fn remove_running_modules(module: &RunningModuleWrapper, cost: u128, state: RunningState) {
     unsafe {
         let v = match &mut RUNING_MODULES {
             Some(s) => s,
@@ -56,11 +116,45 @@ fn remove_running_modules(name: &str) {
                 return ;
             }
         };
-        v.remove(name);
+
+
+        match v.get_mut(&module.index) {
+            Some(s) => {
+                s.state = state;
+                s.cost = cost;
+            },
+            None => {
+                return ;
+            }
+        }
     }
 }
 
-pub fn get_running_modules() -> &'static Option<HashSet<String>> {
+pub fn remove_dead_modules() {
+    unsafe {
+        let v = match &mut RUNING_MODULES {
+            Some(s) => s,
+            None => {
+                return ;
+            }
+        };
+
+        let v2 = match &mut RUNING_MODULES {
+            Some(s) => s,
+            None => {
+                return ;
+            }
+        };
+        for i in v {
+            if i.1.get_state().eq(&RunningState::DEAD) {
+                let i = i.0.clone();
+                v2.remove(&i);
+            }
+        }
+
+    }
+}
+pub fn get_running_modules() -> &'static Option<HashMap<u32,RunningModuleWrapper>> {
     unsafe {
         &RUNING_MODULES
     }
@@ -173,16 +267,17 @@ pub fn ruby_thread() -> JoinHandle<()> {
         // });
         unsafe {
             if RUNING_MODULES.is_none() {
-                RUNING_MODULES = Some(HashSet::new());
+                RUNING_MODULES = Some(HashMap::new());
             }
         }
+        let mut i = 0;
         loop {
             
             let will_run_modules = get_will_run_pocs();
             let index = match get_next_to_scan() {
                 Some(s) => s,
                 None => {
-                    eval!("sleep(1)");
+                    let _ = eval!("sleep(1)");
                     continue;
                 }
             };
@@ -204,7 +299,9 @@ pub fn ruby_thread() -> JoinHandle<()> {
                    continue;
                 }
                 let thread = Thread::new(|| {
-                    add_running_modules(meta.get_name());
+                    let running_module = RunningModuleWrapper::new(&meta.get_name(), i, index);
+                    i += 1;
+                    add_running_modules(&running_module);
                     let start = SystemTime::now();
                     let since_the_epoch = start
                         .duration_since(UNIX_EPOCH)
@@ -216,8 +313,17 @@ pub fn ruby_thread() -> JoinHandle<()> {
                         .duration_since(UNIX_EPOCH)
                         .expect("Time went backwards");
                     let t2 = since_the_epoch.as_millis();
-                    info!("{} cost time: {} ms", meta.get_name(), t2 - t1);
-                    remove_running_modules(meta.get_name());
+                    let t = t2 - t1;
+                    info!("{} cost time: {} ms", meta.get_name(), t);
+                    let state = match &v {
+                        Ok(o) => {
+                            RunningState::DEAD
+                        },
+                        Err(e) => {
+                            RunningState::EXCEPTION
+                        }
+                    };
+                    remove_running_modules(&running_module, t, state);
                     match v {
                         Ok(o) => {}
                         Err(e) => {
@@ -226,7 +332,12 @@ pub fn ruby_thread() -> JoinHandle<()> {
                     }
                     Fixnum::new(0)
                 });
-                thread.protect_send("run", &[]);
+                match thread.protect_send("run", &[]) {
+                    Ok(o) => {},
+                    Err(e) => {
+                        error!("{}", e);
+                    }
+                }
 
                 s.push(thread);
             }

@@ -1,19 +1,15 @@
 use std::{
     env,
-    thread::{self, spawn},
-    time::Duration,
+    thread::{self},
 };
 
 use burp_rs::{
     cmd::cmd::cmd,
-    librs::http::utils::HttpRequest,
     libruby::{rb_main::ruby_thread, utils::rb_init},
-    proxy::{log::ReqResLog, proxy::proxy},
+    proxy::{proxy::proxy},
     utils::{banner, log::init},
 };
-use hyper::{Client, Method, Uri};
-use rutie::rubysys::vm::ruby_init;
-use tokio::runtime::Runtime;
+
 
 #[tokio::main]
 async fn _main(addr: &str) {
@@ -26,23 +22,7 @@ async fn _main(addr: &str) {
 
 #[tokio::main]
 async fn test() {
-    let client = Client::new();
-
-    let ip_fut = async {
-        let resp = client
-            .get(Uri::from_static("http://127.0.0.1:8009/"))
-            .await?;
-        hyper::body::to_bytes(resp.into_body()).await
-    };
-    let headers_fut = async {
-        let resp = client
-            .get(Uri::from_static("http://127.0.0.1:8009/"))
-            .await?;
-        hyper::body::to_bytes(resp.into_body()).await
-    };
-
-    // Wait on both them at the same time:
-    let (ip, headers) = futures::try_join!(ip_fut, headers_fut).unwrap();
+    
 }
 
 fn main() {

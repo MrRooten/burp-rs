@@ -1,7 +1,7 @@
-use std::{str::FromStr, sync::Arc, thread::spawn};
+use std::{str::FromStr, sync::Arc};
 
 use hyper::{body::Bytes, Method, Request, Body, Uri, Response, HeaderMap, header::{HeaderName}, Version};
-use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception, Thread, Fixnum};
+use rutie::{class, AnyObject, Array, Encoding, Hash, Integer, NilClass, Object, RString, methods, VM, AnyException, Exception};
 
 use crate::{librs::http::utils::{HttpRequest, HttpResponse}, proxy::log::{ReqResLog, LogRequest, LogResponse}};
 
