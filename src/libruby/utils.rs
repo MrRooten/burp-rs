@@ -39,13 +39,13 @@ pub fn rb_init() -> Result<(), STError> {
     VM::require("json");
     VM::require("enc/encdb");
     VM::require("enc/trans/transdb");
-    VM::require("./active/http/http.rb");
-    VM::require("./active/http/log.rb");
-    VM::require("./active/logger/logger.rb");
-    VM::require("./active/http/utils.rb");
-    VM::require("./active/issue/issue.rb");
-    VM::require("./active/utils/font.rb");
-    VM::require("./active/utils/similary.rb");
+    VM::require("./libruby/http/http.rb");
+    VM::require("./libruby/http/log.rb");
+    VM::require("./libruby/logger/logger.rb");
+    VM::require("./libruby/http/utils.rb");
+    VM::require("./libruby/issue/issue.rb");
+    VM::require("./libruby/utils/font.rb");
+    VM::require("./libruby/utils/similary.rb");
     Ok(())
 }
 

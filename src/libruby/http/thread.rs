@@ -147,7 +147,6 @@ pub fn rb_http_thread() {
                     };
 
                     map.insert(request.fd, Some(resp));
-                    println!("Insert to taht");
                     let mut f = File::from_raw_fd(request.fd2);
                     write!(&mut f, "Hello, world!").unwrap();
                 }
