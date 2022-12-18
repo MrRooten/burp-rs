@@ -218,7 +218,7 @@ pub fn remove_will_run_poc(name: &str) {
         WILL_RUN_POCS.retain(|x| !WildMatch::new(name).matches(x));
     }
 }
-pub fn get_next_to_scan() -> u32 {
+pub fn get_next_to_scan() -> Option<u32> {
     unsafe {
         let receiver = &mut SCAN_RECEIVER;
         let receiver = match receiver {
@@ -229,7 +229,10 @@ pub fn get_next_to_scan() -> u32 {
             }
         };
 
-        return receiver.recv().unwrap();
+        return match receiver.try_recv() {
+            Ok(o) => Some(o),
+            Err(e) => None
+        };
     }
 }
 

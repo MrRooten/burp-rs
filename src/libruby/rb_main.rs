@@ -7,7 +7,7 @@ use std::{
 
 use chrono::Utc;
 use log::{error, info};
-use rutie::{Fixnum, Object, Thread};
+use rutie::{Fixnum, Object, Thread, eval};
 
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
@@ -179,7 +179,13 @@ pub fn ruby_thread() -> JoinHandle<()> {
         loop {
             
             let will_run_modules = get_will_run_pocs();
-            let index = get_next_to_scan();
+            let index = match get_next_to_scan() {
+                Some(s) => s,
+                None => {
+                    eval!("sleep(1)");
+                    continue;
+                }
+            };
             unsafe {
                 if WILL_RELOAD == true {
                     update_modules();
