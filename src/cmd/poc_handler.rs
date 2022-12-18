@@ -191,8 +191,8 @@ impl CMDProc for RunningPocs {
             modules.get(&i).unwrap().get_starttime().to_rfc2822(), 
             modules.get(&i).unwrap().get_args().to_string().yellow(), 
             modules.get(&i).unwrap().get_state_colored(),
-            modules.get(&i).unwrap().get_cost(),
-            "ms".green()
+            (modules.get(&i).unwrap().get_cost() as f32 / 1000 as f32) as f32,
+            " second".green()
         );
         }
 

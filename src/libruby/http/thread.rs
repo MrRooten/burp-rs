@@ -26,7 +26,7 @@ pub struct HttpRequestWrapper {
 static mut REQUEST_SENDER: Option<Sender<HttpRequestWrapper>> = None;
 static mut REQUEST_RECEIVER: Option<Receiver<HttpRequestWrapper>> = None;
 
-static mut RESPONSE_HASHMAP: Option<HashMap<i32, Option<HttpResponse>>> = None;
+static mut RESPONSE_HASHMAP: Option<HashMap<i32, Result<Option<HttpResponse>,STError>>> = None;
 
 fn get_response(fd: i32) -> Result<HttpResponse, STError> {
     unsafe {
@@ -39,19 +39,30 @@ fn get_response(fd: i32) -> Result<HttpResponse, STError> {
 
         let resp = match map.remove(&fd) {
             Some(s) => {
-                match s  {
-                    Some(ok) => {
-                        return Ok(ok);
-                    },
-                    None => {
-                        return Err(STError::new("Not exist response"));
-                    }
-                }
+                s
+                
             },
             None => {
                 return Err(STError::new("Not exist fd"));
             }
         };
+
+        let resp = match resp {
+            Ok(o) => {
+                o
+            },
+            Err(e) => {
+                return Err(e);
+            }
+        };
+
+        let resp = match resp {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("No such a response"));
+            }
+        };
+        Ok(resp)
     }
 }
 
@@ -63,7 +74,7 @@ fn take_space(fd: i32) {
                 return ;
             }
         };
-        map.insert(fd, None);
+        map.insert(fd, Ok(None));
     }
 }
 pub fn send_request(method: &Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
@@ -135,6 +146,18 @@ pub fn rb_http_thread() {
                 let resp = match resp {
                     Ok(s) => s,
                     Err(e) => {
+                        unsafe {
+                            let map = match &mut RESPONSE_HASHMAP {
+                                Some(s) => s,
+                                None => {
+                                    return;
+                                }
+                            };
+        
+                            map.insert(request.fd, Err(e));
+                            let mut f = File::from_raw_fd(request.fd2);
+                            write!(&mut f, "Hello, world!").unwrap();
+                        }
                         return;
                     }
                 };
@@ -146,7 +169,7 @@ pub fn rb_http_thread() {
                         }
                     };
 
-                    map.insert(request.fd, Some(resp));
+                    map.insert(request.fd, Ok(Some(resp)));
                     let mut f = File::from_raw_fd(request.fd2);
                     write!(&mut f, "Hello, world!").unwrap();
                 }
