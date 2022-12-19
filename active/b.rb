@@ -4,7 +4,7 @@ class RBModule_b
     end
     def metadata
         info = { "name" => "b", 
-            "description" => "" }
+            "description" => "test b" }
         return info
     end
 

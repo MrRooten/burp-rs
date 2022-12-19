@@ -92,7 +92,7 @@ impl IActive for RBModule {
                         a
                     },
                     None => {
-                        let msg = format!("passive_run:{}", e);
+                        let msg = format!("RBModule:passive_run:{}", e);
                         return Err(STError::new(&msg));
                     }
                 };
@@ -100,7 +100,7 @@ impl IActive for RBModule {
                 for i in v {
                     bt.push(object_to_string(&i).unwrap_or_else(|x| { format!("{}",x) }));
                 }
-                let msg = format!("passive_run:{} \n{}",e.message(), bt.join("\n"));
+                let msg = format!("RBModule:passive_run:{} \n{}",e.message(), bt.join("\n"));
                 return Err(STError::new(&msg));
             }
         };

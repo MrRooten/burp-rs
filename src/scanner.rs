@@ -1,7 +1,10 @@
 use std::{
     collections::HashMap,
     fs,
-    sync::mpsc::{self},
+    sync::{
+        mpsc::{self},
+        Arc, Mutex,
+    },
     thread::{spawn, JoinHandle},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -15,8 +18,8 @@ use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
     libruby::{http::thread::rb_http_thread, utils::rb_init},
     modules::{
-        active::ruby_scan::RBModule, get_next_to_scan, get_will_run_pocs, IActive, ModuleType,
-        GLOB_POCS,
+        active::{information::dirscan::DirScan, ruby_scan::RBModule},
+        get_next_to_scan, get_will_run_pocs, IActive, ModuleType, GLOB_POCS,
     },
     st_error,
     utils::STError,
@@ -24,7 +27,7 @@ use crate::{
 
 pub static mut MODULE_INDEX: usize = 0;
 pub static mut MODULES: Vec<Box<dyn IActive + Sync>> = Vec::new();
-static mut RUNING_MODULES: Option<HashMap<u32, RunningModuleWrapper>> = None;
+static mut RUNING_MODULES: Option<HashMap<i32, RunningModuleWrapper>> = None;
 static mut WILL_RELOAD: bool = false;
 
 pub fn set_reload() {
@@ -50,18 +53,18 @@ pub enum RunningState {
 pub struct RunningModuleWrapper {
     name: String,
     date: DateTime<Local>,
-    index: u32,
+    index: i32,
     state: RunningState,
     args: u32,
     cost: u128,
 }
 
 impl RunningModuleWrapper {
-    pub fn new(name: &str, index: u32, args: u32) -> Self {
+    pub fn new(name: &str, args: u32) -> Self {
         RunningModuleWrapper {
             name: name.to_string(),
             date: Local::now(),
-            index: index,
+            index: -1,
             state: RunningState::RUNNING,
             args: args,
             cost: 0,
@@ -104,20 +107,27 @@ impl RunningModuleWrapper {
         self.cost
     }
 }
-fn add_running_modules(module: &RunningModuleWrapper) {
+
+static mut index_of_running_module: i32 = 0;
+static meta_locker: Mutex<i32> = Mutex::new(0);
+fn add_running_modules(module: &mut RunningModuleWrapper) {
     unsafe {
+        meta_locker.lock();
         let v = match &mut RUNING_MODULES {
             Some(s) => s,
             None => {
                 return;
             }
         };
-        v.insert(module.index, module.clone());
+        v.insert(index_of_running_module, module.clone());
+        module.index = index_of_running_module;
+        index_of_running_module += 1;
     }
 }
 
 fn remove_running_modules(module: &RunningModuleWrapper, cost: u128, state: RunningState) {
     unsafe {
+        meta_locker.lock();
         let v = match &mut RUNING_MODULES {
             Some(s) => s,
             None => {
@@ -160,7 +170,7 @@ pub fn remove_dead_modules() {
         }
     }
 }
-pub fn get_running_modules() -> &'static Option<HashMap<u32, RunningModuleWrapper>> {
+pub fn get_running_modules() -> &'static Option<HashMap<i32, RunningModuleWrapper>> {
     unsafe { &RUNING_MODULES }
 }
 pub fn update_modules() {
@@ -176,7 +186,24 @@ pub fn update_modules() {
 }
 
 pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
+    #[macro_export]
+    macro_rules! add_module {
+        (  $x:ident  ) => {
+            unsafe {
+                let module = Box::new($x::new());
+                match module.metadata() {
+                    Some(s) => {
+                        GLOB_POCS.push(s.clone());
+                    }
+                    None => {}
+                };
+                MODULES.push(module);
+            }
+        };
+    }
     //Add Rust module in here
+    add_module!(DirScan);
+
     let paths = fs::read_dir(dir).unwrap();
     for path in paths {
         let s = path.unwrap().path().to_str().unwrap().to_string();
@@ -237,6 +264,8 @@ pub fn send_command(command: &str) -> Result<(), STError> {
         }
     }
 }
+
+
 pub fn scaner_thread() -> JoinHandle<()> {
     unsafe {
         if SCAN_SENDER.is_none() {
@@ -270,6 +299,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
             }
         }
         let mut i = 0;
+        let counter = Arc::new(Mutex::new(0));
         loop {
             let will_run_modules = get_will_run_pocs();
             let index = match get_next_to_scan() {
@@ -293,16 +323,14 @@ pub fn scaner_thread() -> JoinHandle<()> {
                         continue;
                     }
                 };
-                if will_run_modules.contains(&meta.get_name().to_string()) == false {
+                if will_run_modules.contains(&meta) == false {
                     continue;
                 }
-
-                
+                i += 1;
                 if meta.get_type().eq(&ModuleType::RubyModule) {
                     let thread = Thread::new(|| {
-                        let running_module = RunningModuleWrapper::new(&meta.get_name(), i, index);
-                        
-                        add_running_modules(&running_module);
+                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), index);
+                        add_running_modules(&mut running_module);
                         let start = SystemTime::now();
                         let since_the_epoch = start
                             .duration_since(UNIX_EPOCH)
@@ -339,9 +367,8 @@ pub fn scaner_thread() -> JoinHandle<()> {
                     s.push(thread);
                 } else if meta.get_type().eq(&ModuleType::RustModule) {
                     std::thread::spawn(move || {
-                        let running_module = RunningModuleWrapper::new(&meta.get_name(), i, index);
-                        
-                        add_running_modules(&running_module);
+                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), index);
+                        add_running_modules(&mut running_module);
                         let start = SystemTime::now();
                         let since_the_epoch = start
                             .duration_since(UNIX_EPOCH)
@@ -360,6 +387,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                             Err(e) => RunningState::EXCEPTION,
                         };
                         remove_running_modules(&running_module, t, state);
+
                         match v {
                             Ok(o) => {}
                             Err(e) => {
@@ -368,7 +396,6 @@ pub fn scaner_thread() -> JoinHandle<()> {
                         }
                     });
                 }
-                i += 1;
             }
 
             // for thread in s {

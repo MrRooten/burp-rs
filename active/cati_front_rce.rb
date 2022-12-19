@@ -3,7 +3,7 @@ class RBModule_cati_front_rce
     end
     def metadata
         info = { "name" => "cacti_front_rce", 
-            "description" => "" }
+            "description" => "Poc for cacti front RCE" }
         return info
     end
 

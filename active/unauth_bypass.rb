@@ -20,7 +20,7 @@ class RBModule_unauth_bypass
     end
     def metadata
         info = { "name" => "unauth_bypass", 
-            "description" => "" }
+            "description" => "Unauth bypass 403" }
         return info
     end
 

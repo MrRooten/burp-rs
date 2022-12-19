@@ -164,18 +164,21 @@ use crate::{
     utils::STError,
 };
 
-#[derive(Debug,Clone, PartialEq)]
+#[derive(Debug,Clone, PartialEq,Hash)]
 pub enum ModuleType {
     RubyModule,
     RustModule
 }
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq,Hash)]
 pub struct ModuleMeta {
     name: String,
     description: String,
     m_type      : ModuleType
 }
 
+impl Eq for ModuleMeta {
+
+}
 
 
 impl ModuleMeta {
@@ -208,14 +211,14 @@ pub trait IActive {
 }
 
 pub static mut GLOB_POCS: Vec<ModuleMeta> = Vec::<ModuleMeta>::new();
-pub static mut WILL_RUN_POCS:Lazy<HashSet<String>> = Lazy::new(|| {HashSet::<String>::new()});
+pub static mut WILL_RUN_POCS:Lazy<HashSet<ModuleMeta>> = Lazy::new(|| {HashSet::<ModuleMeta>::new()});
 pub fn get_modules() -> &'static Vec<ModuleMeta> {
     unsafe {
         &GLOB_POCS
     }
 }
 
-pub fn get_will_run_pocs() -> &'static HashSet<String> {
+pub fn get_will_run_pocs() -> &'static HashSet<ModuleMeta> {
     unsafe {
         &WILL_RUN_POCS
     }
@@ -232,7 +235,7 @@ pub fn push_will_run_poc(name: &str) {
     unsafe {
         for poc in &GLOB_POCS {
             if WildMatch::new(name).matches(poc.get_name()) {
-                WILL_RUN_POCS.insert(poc.get_name().to_string());
+                WILL_RUN_POCS.insert(poc.clone());
             }
         }
     }
@@ -242,7 +245,7 @@ pub fn remove_loaded_poc(name: &str) {
     unsafe {
         for poc in &GLOB_POCS {
             if WildMatch::new(name).matches(poc.get_name()) {
-                WILL_RUN_POCS.remove(poc.get_name());
+                WILL_RUN_POCS.remove(poc);
             }
         }
     }
@@ -250,7 +253,7 @@ pub fn remove_loaded_poc(name: &str) {
 
 pub fn remove_will_run_poc(name: &str) {
     unsafe {
-        WILL_RUN_POCS.retain(|x| !WildMatch::new(name).matches(x));
+        WILL_RUN_POCS.retain(|x| !WildMatch::new(name).matches(x.get_name()));
     }
 }
 

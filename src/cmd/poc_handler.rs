@@ -1,6 +1,6 @@
-use colored::Colorize;
+use colored::{Colorize, ColoredString};
 
-use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc, remove_loaded_poc}, utils::STError, scanner::{set_reload, remove_dead_modules, get_running_modules}};
+use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc, remove_loaded_poc, ModuleType}, utils::STError, scanner::{set_reload, remove_dead_modules, get_running_modules}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
@@ -64,7 +64,13 @@ impl CMDProc for ListPocs {
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         let modules = get_modules();
         for module in modules {
-            println!("{}",module.get_name());
+            let s: ColoredString;
+            if module.get_type().eq(&ModuleType::RustModule) {
+                s = "RustModule".yellow();
+            } else {
+                s = "RubyModule".red();
+            }
+            println!("{: <20}: {: <20}  {}",module.get_name().green(), s, module.get_description());
         }
         Ok(())
     }
@@ -99,8 +105,14 @@ impl CMDProc for LoadedPocs {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         let pocs = get_will_run_pocs();
-        for poc in pocs {
-            println!("{}",poc);
+        for module in pocs {
+            let s: ColoredString;
+            if module.get_type().eq(&ModuleType::RustModule) {
+                s = "RustModule".yellow();
+            } else {
+                s = "RubyModule".red();
+            }
+            println!("{: <20}: {: <20}  {}",module.get_name().green(), s, module.get_description());
         }
 
         Ok(())
@@ -182,7 +194,7 @@ impl CMDProc for RunningPocs {
             }
         };
 
-        let mut keys = modules.keys().cloned().collect::<Vec<u32>>();
+        let mut keys = modules.keys().cloned().collect::<Vec<i32>>();
         keys.sort();
         for i in keys {
             println!("{: >3} {: <20} {} {: >3} {: <10} {: >7}{}" , 

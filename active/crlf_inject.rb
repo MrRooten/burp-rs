@@ -3,7 +3,7 @@ class RBModule_crlf_inject
     end
     def metadata
         info = { "name" => "crlf_inject", 
-            "description" => "" }
+            "description" => "Test for crlf inject" }
         return info
     end
 
