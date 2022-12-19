@@ -108,26 +108,26 @@ impl RunningModuleWrapper {
     }
 }
 
-static mut index_of_running_module: i32 = 0;
-static meta_locker: Mutex<i32> = Mutex::new(0);
+static mut INDEX_OF_RUNNING_MODULE: i32 = 0;
+static META_LOCKER: Mutex<i32> = Mutex::new(0);
 fn add_running_modules(module: &mut RunningModuleWrapper) {
     unsafe {
-        meta_locker.lock();
+        let _ = META_LOCKER.lock();
         let v = match &mut RUNING_MODULES {
             Some(s) => s,
             None => {
                 return;
             }
         };
-        v.insert(index_of_running_module, module.clone());
-        module.index = index_of_running_module;
-        index_of_running_module += 1;
+        v.insert(INDEX_OF_RUNNING_MODULE, module.clone());
+        module.index = INDEX_OF_RUNNING_MODULE;
+        INDEX_OF_RUNNING_MODULE += 1;
     }
 }
 
 fn remove_running_modules(module: &RunningModuleWrapper, cost: u128, state: RunningState) {
     unsafe {
-        meta_locker.lock();
+        let _ = META_LOCKER.lock();
         let v = match &mut RUNING_MODULES {
             Some(s) => s,
             None => {
