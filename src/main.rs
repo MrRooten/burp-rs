@@ -6,7 +6,7 @@ use std::{
 use burp_rs::{
     cmd::cmd::cmd,
     proxy::{proxy::proxy},
-    utils::{banner, log::init}, scanner::scaner_thread,
+    utils::{banner, log::init, config::Config}, scanner::scaner_thread,
 };
 
 
@@ -19,9 +19,10 @@ async fn _main(addr: &str) {
     proxy(addr).await
 }
 
-#[tokio::main]
-async fn test() {
-    
+
+fn test() {
+    let config = Config::read().unwrap();
+    println!("{:?}",config.get("http.parallel_per_site"));
 }
 
 fn main() {

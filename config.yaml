@@ -1,9 +1,8 @@
-request_filter:
-    ext: "jpg"
-
-response_body_filter:
-    mime: ""
+body_filter:
+    size_max: "5M"
+    content_type: ["json"]
+    
 
 http:
-    parallel: 5
+    parallel_per_site: 5
     
