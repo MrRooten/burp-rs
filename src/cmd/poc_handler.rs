@@ -1,6 +1,6 @@
 use colored::Colorize;
 
-use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc}, utils::STError, libruby::rb_main::{set_reload, get_running_modules, remove_dead_modules}};
+use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc, remove_loaded_poc}, utils::STError, libruby::rb_main::{set_reload, get_running_modules, remove_dead_modules}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
@@ -207,4 +207,41 @@ impl CMDProc for RunningPocs {
         "reload".to_string()
     }
     
+}
+
+pub struct RemovePoc {
+    opts    : CMDOptions
+}
+
+impl RemovePoc {
+    pub fn new() -> RemovePoc {
+        Self { opts: Default::default() }
+    }
+}
+
+impl CMDProc for RemovePoc {
+    fn get_name(&self) -> &str {
+        "remove_poc"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        let pocs = &line[1..];
+        for poc in pocs {
+            remove_loaded_poc(poc);
+        }
+
+        Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "Remove poc that loaded".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "remove_poc ${wilcard_pattern}".to_string()
+    }
 }

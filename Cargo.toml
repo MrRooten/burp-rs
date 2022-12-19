@@ -33,6 +33,7 @@ sha2 = "0.10.6"
 wildmatch = "2.1.1"
 strsim = "0.10.0"
 futures = "0.3"
+once_cell = "1.16.0"
 [dependencies.rutie]
 path = "./rutie/"
 [dependencies.minus]

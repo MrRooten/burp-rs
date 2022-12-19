@@ -148,9 +148,11 @@ impl IActive for RBModule {
                         return Err(STError::new(&msg));
                     }
                 };
-
-                let v = object_to_string(&v.try_convert_to::<AnyObject>().unwrap()).unwrap();
-                let msg = format!("passive_run:{} {}", v,e.message());
+                let mut bt = vec![];
+                for i in v {
+                    bt.push(object_to_string(&i).unwrap_or_else(|x| { format!("{}",x) }));
+                }
+                let msg = format!("passive_run:{} \n{}",e.message(), bt.join("\n"));
                 return Err(STError::new(&msg));
             }
         };

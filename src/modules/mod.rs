@@ -145,8 +145,9 @@ pub trait IPassive {
     fn help(&self) -> Helper;
 }
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::{HashMap, HashSet}, sync::Arc};
 
+use once_cell::unsync::Lazy;
 use wildmatch::WildMatch;
 
 use crate::{
@@ -183,14 +184,14 @@ pub trait IActive {
 }
 
 pub static mut GLOB_POCS: Vec<ModuleMeta> = Vec::<ModuleMeta>::new();
-pub static mut WILL_RUN_POCS: Vec<String> = Vec::<String>::new();
+pub static mut WILL_RUN_POCS:Lazy<HashSet<String>> = Lazy::new(|| {HashSet::<String>::new()});
 pub fn get_modules() -> &'static Vec<ModuleMeta> {
     unsafe {
         &GLOB_POCS
     }
 }
 
-pub fn get_will_run_pocs() -> &'static Vec<String> {
+pub fn get_will_run_pocs() -> &'static HashSet<String> {
     unsafe {
         &WILL_RUN_POCS
     }
@@ -207,7 +208,17 @@ pub fn push_will_run_poc(name: &str) {
     unsafe {
         for poc in &GLOB_POCS {
             if WildMatch::new(name).matches(poc.get_name()) {
-                WILL_RUN_POCS.push(poc.get_name().to_string());
+                WILL_RUN_POCS.insert(poc.get_name().to_string());
+            }
+        }
+    }
+}
+
+pub fn remove_loaded_poc(name: &str) {
+    unsafe {
+        for poc in &GLOB_POCS {
+            if WildMatch::new(name).matches(poc.get_name()) {
+                WILL_RUN_POCS.remove(poc.get_name());
             }
         }
     }

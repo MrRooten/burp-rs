@@ -2,7 +2,7 @@ use colored::Colorize;
 
 use crate::{utils::STError, cmd::{handlers::{Log, CatResponse, ClearScreen
     , CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Scan, Test}, 
-    issue_handler::{InfoIssue, ListIssues}, poc_handler::{PushPoc, ListPocs, LoadedPocs, Reload, RunningPocs}, target_handler::{Push, ListTarget}}};
+    issue_handler::{InfoIssue, ListIssues}, poc_handler::{PushPoc, ListPocs, LoadedPocs, Reload, RunningPocs, RemovePoc}, target_handler::{Push, ListTarget}}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
@@ -92,6 +92,7 @@ impl CMDHandler {
         hi!(ListTarget);
         hi!(Reload);
         hi!(RunningPocs);
+        hi!(RemovePoc);
     }
 
     pub fn get_opts(&self) -> &Vec<String> {

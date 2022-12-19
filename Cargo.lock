@@ -254,6 +254,7 @@ dependencies = [
  "lazy_static",
  "log 0.4.17",
  "minus",
+ "once_cell",
  "prettify-js",
  "rustls-pemfile",
  "rustyline",

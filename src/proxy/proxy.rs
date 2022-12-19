@@ -207,7 +207,15 @@ pub async fn proxy(addr: &str) {
         });
     }
 
-    let sock: SocketAddr = addr.parse().unwrap();
+    let sock: SocketAddr = match addr.parse() {
+        Ok(o) => {
+            o
+        },
+        Err(e) => {
+            println!("{}", e);
+            return ;
+        }
+    };
     let mut private_key_bytes: &[u8] = include_bytes!("../ca/rs.key");
     let mut ca_cert_bytes: &[u8] = include_bytes!("../ca/rs.cer");
     let private_key = rustls::PrivateKey(
