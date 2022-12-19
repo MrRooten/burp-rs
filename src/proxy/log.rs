@@ -802,13 +802,20 @@ impl LogHistory {
         self.history.get(&index)
     }
     
-    pub fn set_resp(&mut self, index: u32, resp: LogResponse) {
+    pub fn set_resp(&mut self, index: u32, resp: LogResponse) -> Result<(), STError>{
         match self.lock.lock() {
             Ok(o) => {}
             Err(e) => {}
         };
-        let log = self.history.get(&index).unwrap();
-        log.set_resp(resp)
+        let log = self.history.get(&index);
+        let log = match log {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("Not existed log"));
+            }
+        };
+        log.set_resp(resp);
+        return Ok(());
     }
 
     pub fn get_httplog(index: u32) -> Option<&'static Arc<ReqResLog>> {
@@ -886,7 +893,13 @@ impl SiteMap {
             }
         };
 
-        let log = history.get_log(index).unwrap();
+        let log = history.get_log(index);
+        let log = match log {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("Not exist log"));
+            }
+        };
         let request = match log.get_request() {
             Some(r) => r,
             None => {
@@ -931,22 +944,29 @@ impl SiteMap {
     site.push_issue(issue);
     ```
     */
-    pub fn push_issue(&mut self, issue: Issue) {
+    pub fn push_issue(&mut self, issue: Issue) -> Result<(),STError> {
         let host = issue.get_host();
         if self.map.contains_key(host) == false {
             self.map.insert(host.to_string(), Site::new());
         }
 
-        let site = self.map.get_mut(host).unwrap();
+        let site = self.map.get_mut(host);
+        let site = match site {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("Not existed site"));
+            }
+        };
         for iter in &site.issues {
             if iter.get_name().eq(issue.get_name()) {
                 
                 if iter.get_host().eq(issue.get_host()) {
-                    return ;
+                    return Ok(());
                 }
             }
         }
         site.push_issue(issue);
+        return Ok(());
     }
 
     pub fn get_site(&self, host: &str) -> Option<&Site> {

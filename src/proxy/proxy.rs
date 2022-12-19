@@ -136,10 +136,20 @@ impl HttpHandler for ProxyHandler {
         //println!("{:?}", res);
         if is_capture_res(&res) {
             let res_log = copy_resp(&mut res).await;
-            history.set_resp(self.index, res_log);
+            match history.set_resp(self.index, res_log) {
+                Ok(o) => {},
+                Err(e) => {
+                    error!("{}",e);
+                }
+            }
         } else {
             let res_log = copy_resp_header(&mut res).await;
-            history.set_resp(self.index, res_log);
+            match history.set_resp(self.index, res_log) {
+                Ok(o) => {},
+                Err(e) => {
+                    error!("{}",e);
+                }
+            }
         }
         let index = self.index.clone();
         unsafe {

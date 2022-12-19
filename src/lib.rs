@@ -6,7 +6,7 @@ pub mod utils;
 pub mod modules;
 pub mod librs;
 pub mod libruby;
-
+pub mod scanner;
 
 
 

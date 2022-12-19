@@ -64,7 +64,14 @@ impl Issue {
             }
         };
 
-        sitemap.push_issue(issue);
+        match sitemap.push_issue(issue) {
+            Ok(()) => {
+
+            },
+            Err(e) => {
+                error!("{}",e);
+            }
+        }
     }
 
     pub fn get_issues() -> Vec<&'static Issue> {
@@ -147,6 +154,7 @@ pub trait IPassive {
 
 use std::{collections::{HashMap, HashSet}, sync::Arc};
 
+use log::error;
 use once_cell::unsync::Lazy;
 use wildmatch::WildMatch;
 
@@ -156,10 +164,16 @@ use crate::{
     utils::STError,
 };
 
+#[derive(Debug,Clone, PartialEq)]
+pub enum ModuleType {
+    RubyModule,
+    RustModule
+}
 #[derive(Debug,Clone)]
 pub struct ModuleMeta {
     name: String,
     description: String,
+    m_type      : ModuleType
 }
 
 
@@ -172,8 +186,14 @@ impl ModuleMeta {
     pub fn get_description(&self) -> &str {
         &self.description
     }
+
+    pub fn get_type(&self) -> &ModuleType {
+        &self.m_type
+    }
+
 }
 type Args = HashMap<String, String>;
+
 pub trait IActive {
     //Use in proxy mod
     fn passive_run(&self, index: u32) -> Result<Vec<Issue>, STError>;
@@ -181,6 +201,10 @@ pub trait IActive {
     fn active_run(&self, url: &str, args: Args) -> Result<Vec<Issue>, STError>;
 
     fn metadata(&self) -> &Option<ModuleMeta>;
+
+    fn is_change(&self) -> bool;
+
+    fn update(&mut self) -> Result<(), STError>;
 }
 
 pub static mut GLOB_POCS: Vec<ModuleMeta> = Vec::<ModuleMeta>::new();
@@ -229,6 +253,7 @@ pub fn remove_will_run_poc(name: &str) {
         WILL_RUN_POCS.retain(|x| !WildMatch::new(name).matches(x));
     }
 }
+
 pub fn get_next_to_scan() -> Option<u32> {
     unsafe {
         let receiver = &mut SCAN_RECEIVER;

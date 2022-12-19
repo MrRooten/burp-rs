@@ -1,6 +1,6 @@
 use colored::Colorize;
 
-use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc, remove_loaded_poc}, utils::STError, libruby::rb_main::{set_reload, get_running_modules, remove_dead_modules}};
+use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc, remove_loaded_poc}, utils::STError, scanner::{set_reload, remove_dead_modules, get_running_modules}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 

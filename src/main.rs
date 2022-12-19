@@ -5,9 +5,8 @@ use std::{
 
 use burp_rs::{
     cmd::cmd::cmd,
-    libruby::{rb_main::ruby_thread, utils::rb_init},
     proxy::{proxy::proxy},
-    utils::{banner, log::init},
+    utils::{banner, log::init}, scanner::scaner_thread,
 };
 
 
@@ -27,7 +26,7 @@ async fn test() {
 
 fn main() {
     banner();
-    let _ = ruby_thread();
+    let _ = scaner_thread();
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
     if args.len() < 2 {
@@ -37,8 +36,6 @@ fn main() {
     } else if args[1].starts_with("test") {
         test();
     } else if args[1].starts_with("r_test") {
-        let _ = rb_init();
-        test();
         //let s = fs::read_to_string(args[2].to_string()).unwrap();
         //let _ = VM::require(&s);
     } else {

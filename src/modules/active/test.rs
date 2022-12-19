@@ -18,6 +18,18 @@ impl IActive for TestScan {
     }
 
     fn metadata(&self) -> &Option<crate::modules::ModuleMeta> {
-        todo!()
+        Some(
+            ModuleMeta {
+                
+            }
+        )
+    }
+
+    fn is_change(&self) -> bool {
+        false
+    }
+
+    fn update(&mut self) -> Result<(), crate::utils::STError> {
+        Ok(())
     }
 }
