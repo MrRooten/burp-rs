@@ -2,7 +2,7 @@
 body_filter:
     # size_max allow max body size will capture, like 5M 5K 5B
     size_max: "5M"
-    # content_type allow content type of body, start_with ! is not capture
+    # content_type allow content type of body, start_with ! will not capture
     content_type: ["html","!jpeg"]
     
 
