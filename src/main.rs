@@ -6,7 +6,7 @@ use std::{
 use burp_rs::{
     cmd::cmd::cmd,
     proxy::{proxy::proxy},
-    utils::{banner, log::init, config::Config}, scanner::scaner_thread,
+    utils::{banner, log::init, config::{get_config}}, scanner::scaner_thread,
 };
 
 
@@ -21,12 +21,13 @@ async fn _main(addr: &str) {
 
 
 fn test() {
-    let config = Config::read().unwrap();
-    println!("{:?}",config.get("http.parallel_per_site"));
+    let config = get_config();
+    println!("{:?}",config.get("body_filter.content_type").as_vec());
 }
 
 fn main() {
     banner();
+    let _ = get_config();
     let _ = scaner_thread();
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);

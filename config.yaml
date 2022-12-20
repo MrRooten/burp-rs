@@ -1,6 +1,9 @@
+# Body filter means that only capture the body match body_filter, every item condition operation is 'and' op
 body_filter:
+    # size_max allow max body size will capture, like 5M 5K 5B
     size_max: "5M"
-    content_type: ["json"]
+    # content_type allow content type of body, start_with ! is not capture
+    content_type: ["html","!jpeg"]
     
 
 http:
