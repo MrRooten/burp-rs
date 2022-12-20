@@ -197,6 +197,9 @@ impl CMDProc for RunningPocs {
         let mut keys = modules.keys().cloned().collect::<Vec<i32>>();
         keys.sort();
         for i in keys {
+            if modules.get(&i).is_none() {
+                continue;
+            }
             println!("{: >3} {: <20} {} {: >3} {: <10} {: >7}{}" , 
             i,
             modules.get(&i).unwrap().get_name().blue(), 

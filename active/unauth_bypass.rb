@@ -60,16 +60,16 @@ class RBModule_unauth_bypass
     end
 
     def scan(method, uri, headers, body)
-        notfound_url = scheme + "://" + uri["host"] + ":" + uri["port"].to_s + "/sdklfjsklcbnskdjfsdf"
+        notfound_url = uri.scheme + "://" + uri.host + ":" + uri.port.to_s + "/sdklfjsklcbnskdjfsdf"
         notfound = get_notfound_page(notfound_url)
         headers.delete_if {|key,value| (key.downcase.include?("cookie") or key.downcase.include?("token"))}
-        scheme = uri["scheme"]
+        scheme = uri.scheme
         if scheme == nil 
             error("Scheme is none #{uri}")
             return 
         end
         #simeple test
-        path = uri["path"]
+        path = uri.path
         
         
         nodes = path.split("/")
@@ -81,7 +81,7 @@ class RBModule_unauth_bypass
                 out = var_node + "/" + payload 
                 nodes[i] = out
                 target_path = nodes.join("/")
-                url = scheme + "://" + uri["host"] + ":" + uri["port"].to_s + target_path + "?" + uri["query"]
+                url = scheme + "://" + uri.host + ":" + uri.port.to_s + target_path + "?" + uri.query
                 
                 check(method, url, headers, body, notfound)
             end

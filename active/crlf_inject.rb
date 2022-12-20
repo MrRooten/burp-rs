@@ -10,7 +10,7 @@ class RBModule_crlf_inject
     def match_headers?(value, headers)
     end
     def scan(uri, headers)
-        query = uri['query']
+        query = uri.query
         if query == nil 
             return
         end
@@ -21,16 +21,16 @@ class RBModule_crlf_inject
             
 
         end
-        scheme = uri["scheme"]
+        scheme = uri.scheme
         if scheme == nil 
             error("Scheme is none #{uri}")
             return 
         end
         #simeple test
-        url = scheme + "://" + uri["host"] + uri["path"] + "%0D%0ASet-Cookie:testkey=testvalue"
+        url = scheme + "://" + uri.host + uri.path + "%0D%0ASet-Cookie:testkey=testvalue"
         client = Request.new
-        resp = client.get(url, headers={"host"=>uri["host"]})
-        headers = resp["headers"]
+        resp = client.get(url, headers={"host"=>uri.host})
+        headers = resp.headers
         if headers == nil 
             return 
         end
@@ -44,7 +44,7 @@ class RBModule_crlf_inject
                         "level" => "highrisk",
                         "confidence" => "confirm",
                         "detail" => "this is a detail",
-                        "host" => uri["host"],
+                        "host" => uri.host,
                         "response" => resp
                     }
 
