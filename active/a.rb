@@ -17,4 +17,7 @@ class RBModule_a
         #puts resp.inspect
     end
 
+    def active_run(url, opts)
+    end
+
 end

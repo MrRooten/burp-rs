@@ -16,5 +16,6 @@ class RBModule_b
         resp = Request.get("http://127.0.0.1:8009/index.php")
         #puts resp.inspect
     end
-
+    def active_run(url, opts)
+    end
 end

@@ -1,4 +1,9 @@
-use crate::{proxy::log::{SiteMap, LogHistory}, st_error, utils::STError};
+use std::{collections::HashMap, time::{UNIX_EPOCH, SystemTime}};
+
+use colored::Colorize;
+use log::{info, error};
+
+use crate::{proxy::log::{SiteMap, LogHistory}, st_error, utils::STError, scanner::{get_modules, RunningModuleWrapper, add_running_modules, RunningState, remove_running_modules}, modules::IActive};
 
 use super::{
     cmd_handler::{CMDOptions, CMDProc},
@@ -129,5 +134,102 @@ impl CMDProc for ListTarget {
 
     fn get_help(&self) -> String {
         "list_target".to_string()
+    }
+}
+
+pub struct ActiveScan {
+    opts    : CMDOptions
+}
+
+
+impl ActiveScan {
+    pub fn new() -> Self {
+        Self {
+            opts: CMDOptions::default(),
+        }
+    }
+}
+
+impl CMDProc for ActiveScan {
+    fn get_name(&self) -> &str {
+        "active_scan"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        if line.len() < 3 {
+            return Err(STError::new("need a url and name paramters: active_scan ${module} ${url}"));
+        }
+        println!("[{}] Task running have been move to background, use {} to get more info about task", "*".green() ,"log".green());
+        let url = line[2].to_string();
+        let modules = get_modules();
+        let mut module: Option<&Box<dyn IActive + Sync>> = None;
+        for m in modules {
+            let meta = match m.metadata() {
+                Some(s) => s,
+                None => {
+                    continue;
+                }
+            };  
+
+            let name = meta.get_name();
+            if name.eq(line[1]) {
+                module = Some(m);
+            }
+        }
+
+        let args = (&line[2..].join(" ")).to_string();
+        if module.is_some() {
+            std::thread::spawn(move || {
+                let module = module.unwrap();
+                let meta = module.metadata();
+                let meta = match meta {
+                    Some(s) => s,
+                    None => {
+                        return ;
+                    }
+                };
+                let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &args);
+                add_running_modules(&mut running_module);
+                let start = SystemTime::now();
+                let since_the_epoch = start
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards");
+                let t1 = since_the_epoch.as_millis();
+                let v = module.active_run(&url, HashMap::new());
+                let start = SystemTime::now();
+                let since_the_epoch = start
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards");
+                let t2 = since_the_epoch.as_millis();
+                let t = t2 - t1;
+                info!("{} cost time: {} ms", meta.get_name(), t);
+                let state = match &v {
+                    Ok(o) => RunningState::DEAD,
+                    Err(e) => RunningState::EXCEPTION,
+                };
+                remove_running_modules(&running_module, t, state);
+
+                match v {
+                    Ok(o) => {}
+                    Err(e) => {
+                        error!("{}", e);
+                    }
+                };
+            });
+        }
+        
+        Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "active scan".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "active_scan ${url} ${opt:options}".to_string()
     }
 }

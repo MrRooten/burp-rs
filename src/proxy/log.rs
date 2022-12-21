@@ -10,10 +10,12 @@ use flate2::read::GzDecoder;
 use http::Request;
 use hudsucker::hyper::{Body, Response};
 use hyper::body::Bytes;
-use hyper::{http, StatusCode, Version, Method};
+use hyper::{http, StatusCode, Version, Method, Uri};
+use log::error;
 use serde_json::{Value, Error};
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use std::io::Read;
+use std::str::FromStr;
 use std::sync::{Mutex, Arc};
 use url::Url;
 
@@ -839,16 +841,44 @@ impl LogHistory {
     }
 }
 
+pub struct FoundUrl {
+    method  : Method,
+    url     : String,
+    length  : u32,
+    status  : u16,
+    c_type  : String
+}
+
+impl FoundUrl {
+    pub fn new(
+        method : Method,
+        url    : &str,
+        length : u32,
+        status : u16,
+        c_type : &str
+    ) -> Self {
+        Self {
+            method : method,
+            url    : url.to_string(),
+            length : length,
+            status : status,
+            c_type : c_type.to_string(),
+        }
+    }
+}
+
 pub struct Site {
     logs    : Vec<u32>,
-    issues  : Vec<Issue>
+    issues  : Vec<Issue>,
+    paths   : Vec<String>
 }
 
 impl Site {
     pub fn new() -> Self {
         Site {
             logs: Vec::default(),
-            issues : Default::default()
+            issues : Default::default(),
+            paths : Default::default()
         }
     }
 
@@ -866,6 +896,17 @@ impl Site {
 
     pub fn get_issues(&self) -> &Vec<Issue> {
         &self.issues
+    }
+
+    pub fn add_paths(&mut self, s: &str) {
+        if self.paths.contains(&s.to_string()) {
+            return ;
+        }
+        self.paths.push(s.to_string());
+    }
+
+    pub fn get_paths(&self) -> &Vec<String> {
+        &self.paths
     }
 }
 pub struct SiteMap {
@@ -971,5 +1012,51 @@ impl SiteMap {
 
     pub fn get_site(&self, host: &str) -> Option<&Site> {
         self.map.get(host)
+    }
+
+    pub fn add_exist_path(&mut self, url: &FoundUrl) {
+        let uri = Uri::from_str(&url.url);
+        let uri = match uri {
+            Ok(o) => o,
+            Err(e) => {
+                error!("{}", e);
+                return ;
+            }
+        };
+
+        let key: String;
+        if uri.port().is_none() {
+            let host = match uri.host() {
+                Some(s) => s,
+                None => {
+                    error!("host not found");
+                    return ;
+                }
+            };
+            key = format!("{}",host);
+        } else {
+            let host = match uri.host() {
+                Some(s) => s,
+                None => {
+                    error!("host not found");
+                    return ;
+                }
+            };
+            key = format!("{}:{}", host, uri.port().unwrap());
+        }
+        if self.map.contains_key(&key) == false {
+            self.map.insert(key.to_string(), Site::new());
+        }
+        let site = match self.map.get_mut(&key) {
+            Some(s) => s,
+            None => {
+                error!("Can not get site from Sitemap");
+                return ;
+            }
+        };
+
+        let s = format!("{} {} {} {} {}",
+        url.method.as_str().green(), uri.path().yellow(),url.status.to_string().blue(), url.length, url.c_type.green());
+        site.add_paths(&s);
     }
 }

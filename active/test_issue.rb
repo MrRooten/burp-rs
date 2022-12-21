@@ -13,5 +13,6 @@ class RBModule_test_issue
         resp = Request.get("http://127.0.0.1:8009")
         puts resp.inspect
     end
-
+    def active_run(url, opts)
+    end
 end

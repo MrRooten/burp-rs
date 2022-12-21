@@ -112,7 +112,7 @@ impl IActive for RBModule {
         url: &str,
         args: crate::modules::Args,
     ) -> Result<Vec<crate::modules::Issue>, STError> {
-        todo!()
+        return Err(STError::new("active run not support Ruby module"));
     }
 
     fn metadata(&self) -> &Option<ModuleMeta> {

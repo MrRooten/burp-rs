@@ -1,22 +1,25 @@
 use std::{str::FromStr, sync::Arc};
 
+use colored::Colorize;
 use hyper::{Method, StatusCode, Uri};
-use log::error;
+use log::{error, info};
 use strsim::normalized_levenshtein;
 
 use crate::{
     librs::http::utils::HttpRequest,
     modules::{IActive, ModuleMeta, ModuleType},
     st_error,
-    utils::STError,
+    utils::STError, cmd::handlers::Sitemap, proxy::log::{SiteMap, FoundUrl},
 };
 
 pub struct DirScan {
     meta: Option<ModuleMeta>,
 }
 
+
+
 fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
-    let mut found_urls = Vec::<String>::new();
+    let mut found_urls = Vec::new();
     let url = Uri::from_str(url);
     let url = match url {
         Ok(o) => o,
@@ -49,8 +52,8 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
     };
     let not_found_content_s = Arc::new(String::from_utf8_lossy(resp.get_body()).to_string());
 
-    let dict: Vec<String> = vec![];
-    let rt = match tokio::runtime::Builder::new_current_thread().build() {
+    let dict: Vec<String> = vec!["index.html".to_string(),"index.php".to_string()];
+    let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
         Ok(o) => o,
         Err(e) => {
             return Err(st_error!(e));
@@ -58,29 +61,58 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
     };
 
     let mut asyncs = vec![];
+    let mut count = 0 ;
     for item in dict {
         let url = base_url.clone();
+        let not_found = not_found_content_s.clone();
         let ret = rt.spawn(async move {
             let target_url = format!("{}{}", url, item);
             let request = HttpRequest::from_url(&target_url);
             let resp = HttpRequest::send_async(Method::GET, &request).await;
+            count += 1;
+            if count % 10 == 0 {
+                info!("Currently have scan {} url", count);
+            }
             let resp = match resp {
                 Ok(o) => o,
                 Err(e) => {
                     error!("{}", e);
-                    return None::<String>;
+                    return None::<FoundUrl>;
                 }
             };
 
             if resp.get_status().eq(&StatusCode::NOT_FOUND)
                 || resp.get_status().eq(&StatusCode::FORBIDDEN)
             {
-                return None::<String>;
+                return None::<FoundUrl>;
             }
 
             let content = String::from_utf8_lossy(resp.get_body()).to_string();
             //r.push("sdf".to_string());
-            unimplemented!()
+            let result = normalized_levenshtein(&content, &not_found.clone());
+            if result > 0.9 {
+                return None::<FoundUrl>;
+            }
+            let length: u32;
+            if resp.get_header("content-length").len() == 0 {
+                length = 0;
+            } else {
+                length = match resp.get_header("content-length").parse::<u32>() {
+                    Ok(o) => o,
+                    Err(e) => {
+                        error!("{}", e);
+                        0
+                    }
+                };
+            }
+            let ret = FoundUrl::new(
+                Method::GET,
+                &target_url,
+                length,
+                resp.get_status().as_u16(),
+                &resp.get_header("content-type")
+            );
+            Some(ret)
         });
 
         asyncs.push(ret);
@@ -108,7 +140,18 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
 
         found_urls
     });
-    unimplemented!()
+    let map = match SiteMap::single() {
+        Some(s) => s,
+        None => {
+            return Err(STError::new("Error to get sitemap"));
+        }
+    };
+    info!("Found {} urls is accessiable, use sitemap ${{host_key}} to checkout", found_urls.len().to_string().red());
+    for i in found_urls {
+        map.add_exist_path(&i);
+    }
+
+    Ok(vec![])
 }
 impl IActive for DirScan {
     fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
@@ -122,8 +165,9 @@ impl IActive for DirScan {
         url: &str,
         args: crate::modules::Args,
     ) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
+        //println!("test");
         let result = dir_scan(url);
-        return result;
+        return Ok(vec![]);
     }
 
     fn metadata(&self) -> &Option<crate::modules::ModuleMeta> {

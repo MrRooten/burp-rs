@@ -1,6 +1,6 @@
 use colored::{Colorize, ColoredString};
 
-use crate::{modules::{get_will_run_pocs, get_modules, push_will_run_poc, remove_loaded_poc, ModuleType}, utils::STError, scanner::{set_reload, remove_dead_modules, get_running_modules}};
+use crate::{modules::{get_will_run_pocs, get_modules_meta, push_will_run_poc, remove_loaded_poc, ModuleType}, utils::STError, scanner::{set_reload, remove_dead_modules, get_running_modules}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
@@ -62,7 +62,7 @@ impl CMDProc for ListPocs {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        let modules = get_modules();
+        let modules = get_modules_meta();
         for module in modules {
             let s: ColoredString;
             if module.get_type().eq(&ModuleType::RustModule) {

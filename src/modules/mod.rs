@@ -212,7 +212,7 @@ pub trait IActive {
 
 pub static mut GLOB_POCS: Vec<ModuleMeta> = Vec::<ModuleMeta>::new();
 pub static mut WILL_RUN_POCS:Lazy<HashSet<ModuleMeta>> = Lazy::new(|| {HashSet::<ModuleMeta>::new()});
-pub fn get_modules() -> &'static Vec<ModuleMeta> {
+pub fn get_modules_meta() -> &'static Vec<ModuleMeta> {
     unsafe {
         &GLOB_POCS
     }

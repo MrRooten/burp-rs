@@ -71,5 +71,6 @@ class RBModule_crlf_inject
         scan(uri, headers)
         #scan("http://127.0.0.1:8009")
     end
-
+    def active_run(url, opts)
+    end
 end

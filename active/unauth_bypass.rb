@@ -99,5 +99,6 @@ class RBModule_unauth_bypass
         scan(log.method, uri, log.headers, log.body)
         #scan("http://127.0.0.1:8009")
     end
-
+    def active_run(url, opts)
+    end
 end

@@ -55,18 +55,18 @@ pub struct RunningModuleWrapper {
     date: DateTime<Local>,
     index: i32,
     state: RunningState,
-    args: u32,
+    args: String,
     cost: u128,
 }
 
 impl RunningModuleWrapper {
-    pub fn new(name: &str, args: u32) -> Self {
+    pub fn new(name: &str, args: &str) -> Self {
         RunningModuleWrapper {
             name: name.to_string(),
             date: Local::now(),
             index: -1,
             state: RunningState::RUNNING,
-            args: args,
+            args: args.to_string(),
             cost: 0,
         }
     }
@@ -87,7 +87,7 @@ impl RunningModuleWrapper {
         if self.state.eq(&RunningState::RUNNING) {
             return "RUNNING".to_string().green();
         } else if self.state.eq(&RunningState::DEAD) {
-            return "DEAD".to_string().red();
+            return "DONE".to_string().red();
         } else if self.state.eq(&RunningState::EXCEPTION) {
             return "EXCEPTION".to_string().yellow();
         }
@@ -95,8 +95,8 @@ impl RunningModuleWrapper {
         return "".to_string().red();
     }
 
-    pub fn get_args(&self) -> u32 {
-        self.args
+    pub fn get_args(&self) -> &String {
+        &self.args
     }
 
     pub fn set_cost(&mut self, cost: u128) {
@@ -110,7 +110,7 @@ impl RunningModuleWrapper {
 
 static mut INDEX_OF_RUNNING_MODULE: i32 = 0;
 static META_LOCKER: Mutex<i32> = Mutex::new(0);
-fn add_running_modules(module: &mut RunningModuleWrapper) {
+pub fn add_running_modules(module: &mut RunningModuleWrapper) {
     unsafe {
         let _ = META_LOCKER.lock();
         let v = match &mut RUNING_MODULES {
@@ -125,7 +125,7 @@ fn add_running_modules(module: &mut RunningModuleWrapper) {
     }
 }
 
-fn remove_running_modules(module: &RunningModuleWrapper, cost: u128, state: RunningState) {
+pub fn remove_running_modules(module: &RunningModuleWrapper, cost: u128, state: RunningState) {
     unsafe {
         let _ = META_LOCKER.lock();
         let v = match &mut RUNING_MODULES {
@@ -185,6 +185,11 @@ pub fn update_modules() {
     }
 }
 
+pub fn get_modules() -> &'static Vec<Box<dyn IActive + Sync>> {
+    unsafe {
+        &MODULES
+    }
+}
 pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
     #[macro_export]
     macro_rules! add_module {
@@ -329,7 +334,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                 i += 1;
                 if meta.get_type().eq(&ModuleType::RubyModule) {
                     let thread = Thread::new(|| {
-                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), index);
+                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &index.to_string());
                         add_running_modules(&mut running_module);
                         let start = SystemTime::now();
                         let since_the_epoch = start
@@ -367,7 +372,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                     s.push(thread);
                 } else if meta.get_type().eq(&ModuleType::RustModule) {
                     std::thread::spawn(move || {
-                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), index);
+                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &index.to_string());
                         add_running_modules(&mut running_module);
                         let start = SystemTime::now();
                         let since_the_epoch = start

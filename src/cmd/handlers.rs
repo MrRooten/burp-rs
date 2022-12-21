@@ -767,6 +767,10 @@ impl CMDProc for Sitemap {
         println!("Response num:{}", response_num);
         println!("Request size:{}", size_to_human_readable(request_size));
         println!("Response size:{}", size_to_human_readable(response_size));
+        let paths = site.get_paths();
+        for path in paths {
+            println!("  {}",path);
+        }
         Ok(())
     }
 

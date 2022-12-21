@@ -42,5 +42,6 @@ class RBModule_confluence_ognl_inject
         scan(uri)
         #scan("http://127.0.0.1:8009")
     end
-
+    def active_run(url, opts)
+    end
 end
