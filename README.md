@@ -1,4 +1,4 @@
-# burp-rs
+# burp-rs //debug now, something change may not Forward Compatibility
 
 burpsuite-like tools. Because the burp extension is hard to debug, so I write a burp-like tool
 
