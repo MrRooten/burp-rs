@@ -1,24 +1,24 @@
 use colored::{Colorize, ColoredString};
 
-use crate::{modules::{get_will_run_pocs, get_modules_meta, push_will_run_poc, remove_loaded_poc, ModuleType}, utils::STError, scanner::{set_reload, remove_dead_modules, get_running_modules}};
+use crate::{modules::{get_will_run_mods, get_modules_meta, push_will_run_mod, remove_loaded_mod, ModuleType}, utils::STError, scanner::{set_reload, remove_dead_modules, get_running_modules}};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
 
 
-pub struct PushPoc {
+pub struct PushMod {
     opts    : CMDOptions
 }
 
-impl PushPoc {
+impl PushMod {
     pub fn new() -> Self {
-        PushPoc { opts: Default::default() }
+        PushMod { opts: Default::default() }
     }
 }
 
-impl CMDProc for PushPoc {
+impl CMDProc for PushMod {
     fn get_name(&self) -> &str {
-        "push_poc"
+        "push_mod"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -28,7 +28,7 @@ impl CMDProc for PushPoc {
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         let pocs = &line[1..];
         for poc in pocs {
-            push_will_run_poc(poc);
+            push_will_run_mod(poc);
         }
         Ok(())
     }
@@ -38,23 +38,23 @@ impl CMDProc for PushPoc {
     }
 
     fn get_help(&self) -> String {
-        "push_poc ${poc_name}".to_string()
+        "push_mod ${poc_name}".to_string()
     }
 }
 
-pub struct ListPocs {
+pub struct ListMods {
     opts    : CMDOptions
 }
 
-impl ListPocs {
+impl ListMods {
     pub fn new() -> Self {
-        ListPocs { opts: Default::default() }
+        ListMods { opts: Default::default() }
     }
 }
 
-impl CMDProc for ListPocs {
+impl CMDProc for ListMods {
     fn get_name(&self) -> &str {
-        "list_pocs"
+        "list_mods"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -80,23 +80,23 @@ impl CMDProc for ListPocs {
     }
 
     fn get_help(&self) -> String {
-        "list_pocs".to_string()
+        "list_mods".to_string()
     }
 }
 
-pub struct LoadedPocs {
+pub struct LoadedMods {
     opts    : CMDOptions
 }
 
-impl LoadedPocs {
+impl LoadedMods {
     pub fn new() -> Self {
         Self { opts: Default::default() }
     }
 }
 
-impl CMDProc for LoadedPocs {
+impl CMDProc for LoadedMods {
     fn get_name(&self) -> &str {
-        "loaded_pocs"
+        "loaded_mods"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -104,7 +104,7 @@ impl CMDProc for LoadedPocs {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        let pocs = get_will_run_pocs();
+        let pocs = get_will_run_mods();
         for module in pocs {
             let s: ColoredString;
             if module.get_type().eq(&ModuleType::RustModule) {
@@ -123,7 +123,7 @@ impl CMDProc for LoadedPocs {
     }
 
     fn get_help(&self) -> String {
-        "run_pocs".to_string()
+        "run_mods".to_string()
     }
 }
 
@@ -161,19 +161,19 @@ impl CMDProc for Reload {
     
 }
 
-pub struct RunningPocs {
+pub struct RunningMods {
     opts    : CMDOptions
 }
 
-impl RunningPocs {
+impl RunningMods {
     pub fn new() -> Self { 
-        RunningPocs { opts: Default::default() }
+        RunningMods { opts: Default::default() }
     }
 }
 
-impl CMDProc for RunningPocs {
+impl CMDProc for RunningMods {
     fn get_name(&self) -> &str {
-        "running_pocs"
+        "running_mods"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -224,19 +224,19 @@ impl CMDProc for RunningPocs {
     
 }
 
-pub struct RemovePoc {
+pub struct RemoveMod {
     opts    : CMDOptions
 }
 
-impl RemovePoc {
-    pub fn new() -> RemovePoc {
+impl RemoveMod {
+    pub fn new() -> RemoveMod {
         Self { opts: Default::default() }
     }
 }
 
-impl CMDProc for RemovePoc {
+impl CMDProc for RemoveMod {
     fn get_name(&self) -> &str {
-        "remove_poc"
+        "remove_mod"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -246,7 +246,7 @@ impl CMDProc for RemovePoc {
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         let pocs = &line[1..];
         for poc in pocs {
-            remove_loaded_poc(poc);
+            remove_loaded_mod(poc);
         }
 
         Ok(())
@@ -257,6 +257,6 @@ impl CMDProc for RemovePoc {
     }
 
     fn get_help(&self) -> String {
-        "remove_poc ${wilcard_pattern}".to_string()
+        "remove_mod ${wilcard_pattern}".to_string()
     }
 }

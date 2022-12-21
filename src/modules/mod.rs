@@ -210,50 +210,50 @@ pub trait IActive {
     fn update(&mut self) -> Result<(), STError>;
 }
 
-pub static mut GLOB_POCS: Vec<ModuleMeta> = Vec::<ModuleMeta>::new();
-pub static mut WILL_RUN_POCS:Lazy<HashSet<ModuleMeta>> = Lazy::new(|| {HashSet::<ModuleMeta>::new()});
+pub static mut GLOB_MODS: Vec<ModuleMeta> = Vec::<ModuleMeta>::new();
+pub static mut WILL_RUN_MODS:Lazy<HashSet<ModuleMeta>> = Lazy::new(|| {HashSet::<ModuleMeta>::new()});
 pub fn get_modules_meta() -> &'static Vec<ModuleMeta> {
     unsafe {
-        &GLOB_POCS
+        &GLOB_MODS
     }
 }
 
-pub fn get_will_run_pocs() -> &'static HashSet<ModuleMeta> {
+pub fn get_will_run_mods() -> &'static HashSet<ModuleMeta> {
     unsafe {
-        &WILL_RUN_POCS
+        &WILL_RUN_MODS
     }
 }
 
-/** `push_will_run_poc` Push poc you want to run, Support wildcard match
+/** `push_will_run_mod` Push poc you want to run, Support wildcard match
 
 
 ```
-push_will_run_poc("crlf*")
+push_will_run_mod("crlf*")
 ```
 */
-pub fn push_will_run_poc(name: &str) {
+pub fn push_will_run_mod(name: &str) {
     unsafe {
-        for poc in &GLOB_POCS {
+        for poc in &GLOB_MODS {
             if WildMatch::new(name).matches(poc.get_name()) {
-                WILL_RUN_POCS.insert(poc.clone());
+                WILL_RUN_MODS.insert(poc.clone());
             }
         }
     }
 }
 
-pub fn remove_loaded_poc(name: &str) {
+pub fn remove_loaded_mod(name: &str) {
     unsafe {
-        for poc in &GLOB_POCS {
+        for poc in &GLOB_MODS {
             if WildMatch::new(name).matches(poc.get_name()) {
-                WILL_RUN_POCS.remove(poc);
+                WILL_RUN_MODS.remove(poc);
             }
         }
     }
 }
 
-pub fn remove_will_run_poc(name: &str) {
+pub fn remove_will_run_mod(name: &str) {
     unsafe {
-        WILL_RUN_POCS.retain(|x| !WildMatch::new(name).matches(x.get_name()));
+        WILL_RUN_MODS.retain(|x| !WildMatch::new(name).matches(x.get_name()));
     }
 }
 

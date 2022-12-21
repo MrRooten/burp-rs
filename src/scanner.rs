@@ -19,7 +19,7 @@ use crate::{
     libruby::{http::thread::rb_http_thread, utils::rb_init},
     modules::{
         active::{information::dirscan::DirScan, ruby_scan::RBModule},
-        get_next_to_scan, get_will_run_pocs, IActive, ModuleType, GLOB_POCS,
+        get_next_to_scan, get_will_run_mods, IActive, ModuleType, GLOB_MODS,
     },
     st_error,
     utils::STError,
@@ -198,7 +198,7 @@ pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
                 let module = Box::new($x::new());
                 match module.metadata() {
                     Some(s) => {
-                        GLOB_POCS.push(s.clone());
+                        GLOB_MODS.push(s.clone());
                     }
                     None => {}
                 };
@@ -217,7 +217,7 @@ pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
             unsafe {
                 match module.metadata() {
                     Some(s) => {
-                        GLOB_POCS.push(s.clone());
+                        GLOB_MODS.push(s.clone());
                     }
                     None => {}
                 };
@@ -306,7 +306,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
         let mut i = 0;
         let counter = Arc::new(Mutex::new(0));
         loop {
-            let will_run_modules = get_will_run_pocs();
+            let will_run_modules = get_will_run_mods();
             let index = match get_next_to_scan() {
                 Some(s) => s,
                 None => {

@@ -230,10 +230,15 @@ impl CMDProc for ListHistory {
             output = item + &output;
         }
 
-        match pager(&output, p) {
-            Ok(o) => {}
-            Err(e) => {
-                return Err(st_error!(e));
+        if output.split("\n").count() < 50 {
+            println!("{}",output);
+        } else {
+            let p = Pager::new();
+            match pager(&output, p) {
+                Ok(o) => {}
+                Err(e) => {
+                    return Err(st_error!(e));
+                }
             }
         }
         Ok(())
@@ -328,11 +333,15 @@ impl CMDProc for CatResponse {
             Some(s) => s.get_beauty_string(),
             None => "".to_string(),
         };
-        let p = Pager::new();
-        match pager(&s, p) {
-            Ok(o) => {}
-            Err(e) => {
-                return Err(st_error!(e));
+        if s.split("\n").count() < 50 {
+            println!("{}",s);
+        } else {
+            let p = Pager::new();
+            match pager(&s, p) {
+                Ok(o) => {}
+                Err(e) => {
+                    return Err(st_error!(e));
+                }
             }
         }
         Ok(())
@@ -481,10 +490,15 @@ impl CMDProc for CatRequest {
         };
         let s = s.get_request().unwrap().to_string();
         let p = Pager::new();
-        match pager(&s, p) {
-            Ok(o) => {}
-            Err(e) => {
-                return Err(st_error!(e));
+        if s.split("\n").count() < 50 {
+            println!("{}",s);
+        } else {
+            let p = Pager::new();
+            match pager(&s, p) {
+                Ok(o) => {}
+                Err(e) => {
+                    return Err(st_error!(e));
+                }
             }
         }
         Ok(())
@@ -666,7 +680,7 @@ impl SearchLog {
     }
 }
 
-fn size_to_human_readable(size: usize) -> String{
+fn size_to_human_readable(size: usize) -> String {
     let mut ret = String::new();
     if size < 1024 {
         ret = format!("{} byte", size);
@@ -706,10 +720,15 @@ impl CMDProc for Sitemap {
                 result.push_str(&push);
             }
             let p = Pager::new();
-            match pager(&result, p) {
-                Ok(o) => {}
-                Err(e) => {
-                    return Err(st_error!(e));
+            if result.split("\n").count() < 50 {
+                println!("{}",result);
+            } else {
+                let p = Pager::new();
+                match pager(&result, p) {
+                    Ok(o) => {}
+                    Err(e) => {
+                        return Err(st_error!(e));
+                    }
                 }
             }
 
@@ -723,7 +742,6 @@ impl CMDProc for Sitemap {
             }
         };
 
-        
         let httplog = match map.get_httplogs_by_host(line[1]) {
             Some(log) => log,
             None => {
@@ -744,7 +762,7 @@ impl CMDProc for Sitemap {
                 Some(r) => {
                     response_size += r.get_body().len();
                     r.get_status()
-                },
+                }
                 None => StatusCode::GONE,
             };
             let size = match response {
@@ -760,7 +778,6 @@ impl CMDProc for Sitemap {
             request_num += 1;
             response_num += 1;
             request_size += request.get_body().len();
-            
         }
 
         println!("Request num:{}", request_num);
@@ -769,7 +786,7 @@ impl CMDProc for Sitemap {
         println!("Response size:{}", size_to_human_readable(response_size));
         let paths = site.get_paths();
         for path in paths {
-            println!("  {}",path);
+            println!("  {}", path);
         }
         Ok(())
     }
@@ -846,8 +863,6 @@ impl CMDProc for Scan {
         "scan".to_string()
     }
 }
-
-
 
 pub struct Test {
     opts: CMDOptions,
