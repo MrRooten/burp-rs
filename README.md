@@ -37,6 +37,20 @@ burpsuite-like tools. Because the burp extension is hard to debug, so I write a 
  ![image](https://user-images.githubusercontent.com/25635931/208839540-eff42130-b333-4d04-90e9-7965e3d76a3f.png)
  ![image](https://user-images.githubusercontent.com/25635931/208838481-23b2a138-74af-4cb4-b6ad-308f55cb53ed.png)
  ![image](https://user-images.githubusercontent.com/25635931/208838573-83c01e57-4da6-40f4-b867-5eb6b834bb60.png)
+ #### running_mods
+ ![image](https://user-images.githubusercontent.com/25635931/208858444-e618ff4f-f5f1-486e-a66a-79be39f4dabf.png)
+ #### log
+ ![image](https://user-images.githubusercontent.com/25635931/208858632-aa70b3d1-0e44-4ddb-953c-9c6a064edd68.png)
+ #### cat_resp/cat_req
+![image](https://user-images.githubusercontent.com/25635931/208859193-be78a6c2-5879-479c-ba21-f8e1d93e1521.png)
+![image](https://user-images.githubusercontent.com/25635931/208858998-545df78c-f1bb-40cd-adf1-cec300e3bab8.png)
+![image](https://user-images.githubusercontent.com/25635931/208859289-5d959a19-34d0-4a58-847b-17e8d070290f.png)
+ #### get_req (not format output yet)
+ ![image](https://user-images.githubusercontent.com/25635931/208859600-bd9b2bef-f8df-418e-b7d2-ec9c8ccce4b9.png)
+ #### debug_level
+ ![image](https://user-images.githubusercontent.com/25635931/208859856-bd719b74-9fd8-47dc-b643-5f0d501d32b2.png)
+
+
 
 
 
