@@ -38,6 +38,7 @@ burpsuite-like tools. Because the burp extension is hard to debug, so I write a 
  #### active_scan
 ![image](https://user-images.githubusercontent.com/25635931/208836245-0d1166f6-2ded-4d4f-a2aa-c673490c4707.png)
  #### scan [#warning poc related commands have been rename to mod, like: loaded_pocs -> loaded_mods, running_pocs -> running_mods]
+ https://github.com/vulhub/vulhub/tree/master/cacti/CVE-2022-46169 this is the test vuln environment
  ![image](https://user-images.githubusercontent.com/25635931/208837152-447be76f-e483-4382-9876-0aa3727506be.png)
  ![image](https://user-images.githubusercontent.com/25635931/208839723-7d3912cd-2e6f-4efc-a94c-c2d602c5b2d8.png)
 
