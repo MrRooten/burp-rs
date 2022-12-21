@@ -23,9 +23,11 @@ burpsuite-like tools. Because the burp extension is hard to debug, so I write a 
   If you got ruby install in your system, just ``git clone`` and ``cargo run``
 
 ![image](https://user-images.githubusercontent.com/25635931/207817203-c283640c-40df-45d1-a403-0b54e05abba9.png)  
-  #### Extensions or Poc(Proof of Concept) is writting in ruby or rust, placed in ./active/ directory
+  #### Extensions or Modules are writting in ruby or rust, ruby modules placed in ./active/ directory
  ### Commands
  #### list_history
+ `burp-rs> list_history`
+ 
 ![image](https://user-images.githubusercontent.com/25635931/207822587-318133ce-0239-4722-978b-e3cb9764b82a.png)
  #### active_scan
 ![image](https://user-images.githubusercontent.com/25635931/208836245-0d1166f6-2ded-4d4f-a2aa-c673490c4707.png)
