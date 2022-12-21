@@ -38,6 +38,9 @@ class Uri
         @@query
     end
 
+    def port 
+        @@port 
+    end
     def path_increment_with_slash
         path = @@path.split('/')
         increment = "/"

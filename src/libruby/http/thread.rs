@@ -141,7 +141,6 @@ pub fn rb_http_thread() {
             let request = receiver.recv().unwrap();
             
             let r = tokio::spawn(async move {
-                println!("Send request");
                 let resp = HttpRequest::send_async(request.method, &request.request).await;
                 let resp = match resp {
                     Ok(s) => s,
