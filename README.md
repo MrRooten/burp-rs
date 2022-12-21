@@ -28,7 +28,13 @@ burpsuite-like tools. Because the burp extension is hard to debug, so I write a 
  #### list_history
  `burp-rs> list_history`
  
-![image](https://user-images.githubusercontent.com/25635931/207822587-318133ce-0239-4722-978b-e3cb9764b82a.png)
+![image](https://user-images.githubusercontent.com/25635931/208865736-8d709660-2abd-4318-b7d3-b641590f0236.png)
+
+`burp-rs> list_history cn.bing.com`  Some pages are not captured, because of the config.yaml not allow cature jpeg, you can modify the cature rule in config.yaml
+
+![image](https://user-images.githubusercontent.com/25635931/208866101-7e56b950-9c3e-48e6-a041-1d121487bd05.png)
+
+
  #### active_scan
 ![image](https://user-images.githubusercontent.com/25635931/208836245-0d1166f6-2ded-4d4f-a2aa-c673490c4707.png)
  #### scan [#warning poc related commands have been rename to mod, like: loaded_pocs -> loaded_mods, running_pocs -> running_mods]
