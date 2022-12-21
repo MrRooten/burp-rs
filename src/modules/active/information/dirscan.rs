@@ -9,7 +9,7 @@ use crate::{
     librs::http::utils::HttpRequest,
     modules::{IActive, ModuleMeta, ModuleType},
     st_error,
-    utils::STError, cmd::handlers::Sitemap, proxy::log::{SiteMap, FoundUrl},
+    utils::STError, proxy::log::{SiteMap, FoundUrl},
 };
 
 pub struct DirScan {
