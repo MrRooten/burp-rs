@@ -1,4 +1,4 @@
-# burp-rs //debug version, a lots of changes may not Forward Compatible and lots of unwrap not handle
+# burp-rs //debug version, a lots of changes may not Forward Compatible and lots of unwrap not handle and welcome advice for improving this project
 
 burpsuite-like tools. Because the burp extension is hard to debug, so I write a burp-like tool
 
