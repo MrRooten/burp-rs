@@ -13,6 +13,8 @@ burpsuite-like tools. Because the burp extension is hard to debug, so I write a 
   ``cargo build --release``  
 
   ``cp -r active/ target/release/``  
+  
+  ``cp -r libruby/ target/release/``  
 
   ``cd target/release``  
 
