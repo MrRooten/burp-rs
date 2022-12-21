@@ -76,7 +76,7 @@ impl CMDProc for ListMods {
     }
 
     fn get_detail(&self) -> String {
-        "list pocs".to_string()
+        "list mods".to_string()
     }
 
     fn get_help(&self) -> String {
@@ -119,7 +119,7 @@ impl CMDProc for LoadedMods {
     }
 
     fn get_detail(&self) -> String {
-        "List running pocs".to_string()
+        "List mods that loaded task".to_string()
     }
 
     fn get_help(&self) -> String {
@@ -152,7 +152,7 @@ impl CMDProc for Reload {
     }
 
     fn get_detail(&self) -> String {
-        "Reload all modules".to_string()
+        "Reload all modules that reloadable (RubyModule can be reloaded)".to_string()
     }
 
     fn get_help(&self) -> String {
@@ -219,7 +219,7 @@ impl CMDProc for RunningMods {
     }
 
     fn get_help(&self) -> String {
-        "reload".to_string()
+        "running_mods".to_string()
     }
     
 }

@@ -68,7 +68,11 @@ impl CMDProc for Push {
     }
 
     fn get_detail(&self) -> String {
-        "push the history to index".to_string()
+        format!(r#"push history log to scan queue, like: 
+            `{} 1 2 3` 
+                push index eq 1 2 3 to scan queue or 
+            `{} host:google.com` 
+                push host is google indexes to scan queue"#,"push".green(), "push".green())
     }
 
     fn get_help(&self) -> String {
@@ -129,7 +133,8 @@ impl CMDProc for ListTarget {
     }
 
     fn get_detail(&self) -> String {
-        "list targets that been pushed".to_string()
+        format!(r#"list targets that scan queue, when you run command {}, the loaded mod will execute use argument that scan queue
+        "#,"scan".green())
     }
 
     fn get_help(&self) -> String {
@@ -226,10 +231,12 @@ impl CMDProc for ActiveScan {
     }
 
     fn get_detail(&self) -> String {
-        "active scan".to_string()
+        format!(r#"active run module: active_scan ${{module}} ${{url}} ${{opt:options}}
+            `{} dir_scan https://127.0.0.1:8080`
+        "#,"active_scan".green())
     }
 
     fn get_help(&self) -> String {
-        "active_scan ${url} ${opt:options}".to_string()
+        "active_scan ${module} ${url} ${opt:options}".to_string()
     }
 }
