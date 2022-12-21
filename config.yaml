@@ -5,6 +5,10 @@ body_filter:
     # content_type allow content type of body, start_with ! will not capture
     content_type: ["html","!jpeg"]
     
+modules:
+    dir_scan:
+        wordlist: "./data/dirscan/dict.txt"
+        parallel: 5
 
 http:
     parallel_per_site: 5

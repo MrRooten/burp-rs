@@ -1,15 +1,16 @@
-use std::{str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc, fs::{File}, io::{BufReader, BufRead}};
 
 use colored::Colorize;
 use hyper::{Method, StatusCode, Uri};
 use log::{error, info};
 use strsim::normalized_levenshtein;
+use tokio::sync::Semaphore;
 
 use crate::{
     librs::http::utils::HttpRequest,
     modules::{IActive, ModuleMeta, ModuleType},
     st_error,
-    utils::STError, proxy::log::{SiteMap, FoundUrl},
+    utils::{STError, config::{get_config}}, proxy::log::{SiteMap, FoundUrl},
 };
 
 pub struct DirScan {
@@ -41,7 +42,12 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
         );
     }
     let not_found_url = format!("{}fjaskdfbasjdkhfasdjfhbvjasdfhjsadh", base_url);
-    let not_found_request = HttpRequest::from_url(&not_found_url);
+    let not_found_request = match HttpRequest::from_url(&not_found_url) {
+        Ok(o) => o,
+        Err(e) => {
+            return Err(e);
+        }
+    };
     let resp = HttpRequest::send(Method::GET, &not_found_request);
     let resp = match resp {
         Ok(o) => o,
@@ -62,13 +68,52 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
 
     let mut asyncs = vec![];
     let mut count = 0 ;
-    for item in dict {
+    let config = get_config();
+    let num_parallel = config.get("modules.dir_scan.parallel").as_i64();
+    let dict_path = config.get("modules.dir_scan.wordlist").as_str();
+    let num_parallel = match num_parallel {
+        Some(s) => s,
+        None => {
+            3
+        }
+    };
+
+    let dict_path = match dict_path {
+        Some(s) => s,
+        None => {
+            return Err(STError::new("No wordlist file"));
+        }
+    };
+    let f = match File::open(dict_path) {
+        Ok(o) => o,
+        Err(e) => {
+            return Err(st_error!(e));
+        }
+    };
+    let lines = BufReader::new(f).lines();
+
+
+    let sem = Arc::new(Semaphore::new(num_parallel as usize));
+    for item in lines {
         let url = base_url.clone();
         let not_found = not_found_content_s.clone();
+        let sem_clone = sem.clone();
+        let item = match item {
+            Ok(o) => o,
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        };
         let ret = rt.spawn(async move {
             let target_url = format!("{}{}", url, item);
-            let request = HttpRequest::from_url(&target_url);
-            let resp = HttpRequest::send_async(Method::GET, &request).await;
+            let request = match HttpRequest::from_url(&target_url) {
+                Ok(e) => e,
+                Err(e) => {
+                    return None::<FoundUrl>;
+                }
+            };
+            let aq = sem_clone.acquire().await;
+            let resp =HttpRequest::send_async(Method::GET, &request).await;
             count += 1;
             if count % 10 == 0 {
                 info!("Currently have scan {} url", count);
@@ -116,9 +161,11 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
         });
 
         asyncs.push(ret);
+        
     }
 
     let found_urls = rt.block_on(async move {
+        
         for i in asyncs {
             let url = match i.await {
                 Ok(o) => o,

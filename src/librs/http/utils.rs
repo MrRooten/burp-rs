@@ -8,6 +8,7 @@ use hyper::{
     header::*,
     Body, Client, Method, Request, Response, Uri, StatusCode, Version, http::uri::Scheme,
 };
+use log::{info, error};
 use tokio::runtime::Runtime;
 
 use crate::{
@@ -42,13 +43,19 @@ impl HttpRequest {
         *self.request.version_mut() = v.clone();
     }
 
-    pub fn from_url(url: &str) -> HttpRequest {
+    pub fn from_url(url: &str) -> Result<HttpRequest,STError> {
         let mut request = Request::new(Body::from(""));
-        *request.uri_mut() = Uri::from_str(url).unwrap();
-        HttpRequest {
+        *request.uri_mut() = match Uri::from_str(url) {
+            Ok(o) => o,
+            Err(e) => {
+                error!("invalid url: {}", url);
+                return Err(st_error!(e));
+            }
+        };
+        Ok(HttpRequest {
             request: request,
             body: Arc::new(Bytes::new()),
-        }
+        })
     }
 
     pub fn clone_origial(&self) -> Request<Body> {

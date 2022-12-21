@@ -212,7 +212,14 @@ fn ruby_hash_to_inner_request(hash: &Hash) -> Option<HttpRequest> {
             Version::HTTP_11
         }
     };
-    let mut req = HttpRequest::from_url(&url);
+    let mut req = match HttpRequest::from_url(&url) {
+        Ok(o) => o,
+        Err(e) => {
+            let s = format!("{:?}",e);
+            VM::raise_ex(AnyException::new("StandardError", Some(&s)));
+            return None;
+        }
+    };
     req.set_version(&version);
     let headers_key = RString::from("headers")
         .try_convert_to::<AnyObject>()
