@@ -29,7 +29,7 @@ burpsuite-like tools. Because the burp extension is hard to debug, so I write a 
 ![image](https://user-images.githubusercontent.com/25635931/207822587-318133ce-0239-4722-978b-e3cb9764b82a.png)
  #### active_scan
 ![image](https://user-images.githubusercontent.com/25635931/208836245-0d1166f6-2ded-4d4f-a2aa-c673490c4707.png)
- #### scan [#warning poc related commands have been rename to mod: loaded_pocs -> loaded_mods, running_pocs -> running_mods]
+ #### scan [#warning poc related commands have been rename to mod, like: loaded_pocs -> loaded_mods, running_pocs -> running_mods]
  ![image](https://user-images.githubusercontent.com/25635931/208837152-447be76f-e483-4382-9876-0aa3727506be.png)
  ![image](https://user-images.githubusercontent.com/25635931/208839723-7d3912cd-2e6f-4efc-a94c-c2d602c5b2d8.png)
 
