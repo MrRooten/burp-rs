@@ -1,9 +1,9 @@
-use std::{collections::HashMap, time::{UNIX_EPOCH, SystemTime}};
+use std::{collections::HashMap, time::{UNIX_EPOCH, SystemTime}, sync::mpsc};
 
 use colored::Colorize;
 use log::{info, error};
 
-use crate::{proxy::log::{SiteMap, LogHistory}, st_error, utils::STError, scanner::{get_modules, RunningModuleWrapper, add_running_modules, RunningState, remove_running_modules}, modules::IActive};
+use crate::{proxy::log::{SiteMap, LogHistory, LogRequest, ReqResLog, LogType}, st_error, utils::STError, scanner::{get_modules, RunningModuleWrapper, add_running_modules, RunningState, remove_running_modules}, modules::{IActive, ModuleType, Task}, cmd::handlers::{SCAN_SENDER, SCAN_RECEIVER}, librs::http::utils::HttpRequest};
 
 use super::{
     cmd_handler::{CMDOptions, CMDProc},
@@ -47,8 +47,13 @@ impl CMDProc for Push {
 
             let logs = site.get_logs();
             for log in logs {
+                let task = Task::new(
+                    log.clone(),
+                    "dummy",
+                    false
+                );
                 unsafe {
-                    TO_SCAN_QUEUE.push(log.clone());
+                    TO_SCAN_QUEUE.push(task);
                 }
             }
         } else if line[1].to_string().parse::<u32>().is_ok() {
@@ -60,7 +65,12 @@ impl CMDProc for Push {
                 }
             };
             unsafe {
-                TO_SCAN_QUEUE.push(index);
+                let task = Task::new(
+                    index,
+                    "dummy",
+                    false
+                );
+                TO_SCAN_QUEUE.push(task);
             }
         }
 
@@ -111,7 +121,7 @@ impl CMDProc for ListTarget {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         unsafe { for target in &TO_SCAN_QUEUE {
-            let log = LogHistory::get_httplog(target.clone());
+            let log = LogHistory::get_httplog(target.get_index());
             let log = match log {
                 Some(s) => s,
                 None => {
@@ -127,7 +137,7 @@ impl CMDProc for ListTarget {
             };
 
 
-            println!("{} {}", target, request.get_url());
+            println!("{} {}", target.get_index(), request.get_url());
         } }
         Ok(())
     }
@@ -188,6 +198,63 @@ impl CMDProc for ActiveScan {
 
         let args = (&line[2..].join(" ")).to_string();
         if module.is_some() {
+            let meta = match module.unwrap().metadata() {
+                Some(s) => s,
+                None => {
+                    return Err(STError::new("error"));
+                }
+            };
+
+            if meta.get_type().eq(&ModuleType::RubyModule) {
+                unsafe {
+                    
+                    let request = match HttpRequest::from_url(&url) {
+                        Ok(o) => o,
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    };
+                    let log_request = LogRequest::from_http_request(&request);
+                    let mut reqreslog = ReqResLog::new(log_request);
+                    reqreslog.set_type(LogType::TempForActive);
+                    let httplog = match LogHistory::single() {
+                        Some(s) => s,
+                        None => {
+                            return Err(STError::new("error to get history log"));
+                        }
+                    };
+                    let scan_index = match httplog.push_log(reqreslog) {
+                        Ok(o) => o,
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    };
+
+                    
+                    if SCAN_SENDER.is_none() {
+                        let (tx, rx) = mpsc::channel::<Task>();
+                        SCAN_SENDER = Some(tx);
+                        SCAN_RECEIVER = Some(rx);
+                    }
+                    let sender = match &SCAN_SENDER {
+                        Some(o) => o,
+                        None => {
+                            return Err(STError::new("SCAN_SENDER is none"));
+                        }
+                    };
+                    let task = Task::new(
+                        scan_index,
+                        line[1],
+                        true
+                    );
+                    let ret = sender.send(task);
+                    match ret {
+                        Ok(o) => {}
+                        Err(e) => return Err(st_error!(e)),
+                    };
+                }
+            } else {
+            
             std::thread::spawn(move || {
                 let module = module.unwrap();
                 let meta = module.metadata();
@@ -225,6 +292,7 @@ impl CMDProc for ActiveScan {
                     }
                 };
             });
+        }
         }
         
         Ok(())

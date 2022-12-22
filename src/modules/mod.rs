@@ -257,7 +257,35 @@ pub fn remove_will_run_mod(name: &str) {
     }
 }
 
-pub fn get_next_to_scan() -> Option<u32> {
+pub struct Task {
+    once    : bool,
+    index   : u32,
+    mod_name: String
+}
+
+impl Task {
+    pub fn new(index: u32, mod_name: &str, once: bool) -> Self {
+        Self {
+            index: index,
+            once : once,
+            mod_name : mod_name.to_string()
+        }
+    }
+
+    pub fn get_index(&self) -> u32 {
+        self.index
+    }
+
+    pub fn is_once(&self) -> bool {
+        self.once
+    }
+
+    pub fn get_mod_name(&self) -> &String {
+        &self.mod_name
+    }
+}
+
+pub fn get_next_to_scan() -> Option<Task> {
     unsafe {
         let receiver = &mut SCAN_RECEIVER;
         let receiver = match receiver {

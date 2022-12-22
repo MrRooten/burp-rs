@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::librs::http::utils::HttpResponse;
+use crate::librs::http::utils::{HttpResponse, HttpRequest};
 use crate::librs::object::object::IObject;
 use crate::modules::Issue;
 use crate::utils::utils::tidy_html;
@@ -20,10 +20,18 @@ use std::sync::{Mutex, Arc};
 use url::Url;
 
 #[derive(Debug)]
+pub enum LogType {
+    Proxy,
+    Module,
+    TempForActive
+}
+
+#[derive(Debug)]
 pub struct ReqResLog {
     request: Option<LogRequest>,
     response: Option<LogResponse>,
     record_t: DateTime<Utc>,
+    log_type: LogType
 }
 
 impl ReqResLog {
@@ -44,6 +52,7 @@ impl ReqResLog {
             request: Some(request),
             response: Some(resp),
             record_t: Utc::now(),
+            log_type: LogType::Module
         }
     }
 
@@ -52,7 +61,16 @@ impl ReqResLog {
             request: Some(req),
             response: None,
             record_t: Utc::now(),
+            log_type: LogType::Proxy
         }
+    }
+
+    pub fn set_type(&mut self, log_type: LogType) {
+        self.log_type = log_type;
+    }
+
+    pub fn get_type(&self) -> &LogType {
+        &self.log_type
     }
 
     pub fn get_host(&self) -> String {
@@ -249,6 +267,14 @@ impl LogRequest {
         LogRequest {
             orignal: req,
             body: body,
+            record_t: Utc::now(),
+        }
+    }
+
+    pub fn from_http_request(request: &HttpRequest) -> Self {
+        LogRequest {
+            orignal: request.clone_origial(),
+            body: request.get_body().clone(),
             record_t: Utc::now(),
         }
     }

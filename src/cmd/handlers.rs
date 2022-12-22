@@ -7,7 +7,7 @@ use colored::{ColoredString, Colorize};
 use hyper::StatusCode;
 use log::Level;
 use minus::Pager;
-use rustyline::ColorMode;
+
 
 use crate::{
     librs::object::object::IObject,
@@ -16,7 +16,7 @@ use crate::{
     utils::{
         log::{LEVEL, LOGS},
         STError,
-    },
+    }, modules::Task,
 };
 
 use super::{cmd_handler::*, pager::pager};
@@ -925,9 +925,9 @@ impl Sitemap {
     }
 }
 
-pub static mut TO_SCAN_QUEUE: Vec<u32> = Vec::<u32>::new();
-pub static mut SCAN_SENDER: Option<std::sync::mpsc::Sender<u32>> = None::<Sender<u32>>;
-pub static mut SCAN_RECEIVER: Option<std::sync::mpsc::Receiver<u32>> = None::<Receiver<u32>>;
+pub static mut TO_SCAN_QUEUE: Vec<Task> = Vec::<Task>::new();
+pub static mut SCAN_SENDER: Option<std::sync::mpsc::Sender<Task>> = None::<Sender<Task>>;
+pub static mut SCAN_RECEIVER: Option<std::sync::mpsc::Receiver<Task>> = None::<Receiver<Task>>;
 pub struct Scan {
     opts: CMDOptions,
 }
@@ -951,7 +951,7 @@ impl CMDProc for Scan {
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         unsafe {
             if SCAN_SENDER.is_none() {
-                let (tx, rx) = mpsc::channel::<u32>();
+                let (tx, rx) = mpsc::channel::<Task>();
                 SCAN_SENDER = Some(tx);
                 SCAN_RECEIVER = Some(rx);
             }

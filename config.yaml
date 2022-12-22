@@ -12,4 +12,6 @@ modules:
 
 http:
     parallel_per_site: 5
+    cature_send_request: false
+    
     

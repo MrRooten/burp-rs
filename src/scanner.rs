@@ -19,7 +19,7 @@ use crate::{
     libruby::{http::thread::rb_http_thread, utils::rb_init},
     modules::{
         active::{information::dirscan::DirScan, ruby_scan::RBModule},
-        get_next_to_scan, get_will_run_mods, IActive, ModuleType, GLOB_MODS,
+        get_next_to_scan, get_will_run_mods, IActive, ModuleType, GLOB_MODS, Task,
     },
     st_error,
     utils::STError,
@@ -274,7 +274,7 @@ pub fn send_command(command: &str) -> Result<(), STError> {
 pub fn scaner_thread() -> JoinHandle<()> {
     unsafe {
         if SCAN_SENDER.is_none() {
-            let (tx, rx) = mpsc::channel::<u32>();
+            let (tx, rx) = mpsc::channel::<Task>();
             SCAN_SENDER = Some(tx);
             SCAN_RECEIVER = Some(rx);
         }
@@ -307,13 +307,57 @@ pub fn scaner_thread() -> JoinHandle<()> {
         let counter = Arc::new(Mutex::new(0));
         loop {
             let will_run_modules = get_will_run_mods();
-            let index = match get_next_to_scan() {
+            let task = match get_next_to_scan() {
                 Some(s) => s,
                 None => {
                     let _ = eval!("sleep(1)");
                     continue;
                 }
             };
+            let index = task.get_index();
+            if task.is_once() == true {
+                for module in modules {
+                    let meta = match module.metadata() {
+                        Some(o) => o,
+                        None => {
+                            continue;
+                        }
+                    };
+                    if meta.get_name().eq(task.get_mod_name()) == false {
+                        continue;
+                    }
+                    let thread = Thread::new(|| {
+                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &index.to_string());
+                        add_running_modules(&mut running_module);
+                        let start = SystemTime::now();
+                        let since_the_epoch = start
+                            .duration_since(UNIX_EPOCH)
+                            .expect("Time went backwards");
+                        let t1 = since_the_epoch.as_millis();
+                        let v = module.passive_run(index);
+                        let start = SystemTime::now();
+                        let since_the_epoch = start
+                            .duration_since(UNIX_EPOCH)
+                            .expect("Time went backwards");
+                        let t2 = since_the_epoch.as_millis();
+                        let t = t2 - t1;
+                        info!("Active scan: {} cost time: {} ms", meta.get_name(), t);
+                        let state = match &v {
+                            Ok(o) => RunningState::DEAD,
+                            Err(e) => RunningState::EXCEPTION,
+                        };
+                        remove_running_modules(&running_module, t, state);
+                        match v {
+                            Ok(o) => {}
+                            Err(e) => {
+                                error!("{}", e);
+                            }
+                        }
+                        Fixnum::new(0)
+                    });
+                }
+                continue;
+            }
             unsafe {
                 if WILL_RELOAD == true {
                     update_modules();
@@ -392,7 +436,6 @@ pub fn scaner_thread() -> JoinHandle<()> {
                             Err(e) => RunningState::EXCEPTION,
                         };
                         remove_running_modules(&running_module, t, state);
-
                         match v {
                             Ok(o) => {}
                             Err(e) => {

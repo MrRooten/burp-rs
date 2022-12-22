@@ -8,7 +8,7 @@ use hyper::{
     header::*,
     Body, Client, Method, Request, Response, Uri, StatusCode, Version, http::uri::Scheme,
 };
-use log::{info, error};
+use log::{error};
 use tokio::runtime::Runtime;
 
 use crate::{
