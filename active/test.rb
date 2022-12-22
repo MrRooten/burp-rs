@@ -1,9 +1,9 @@
 require 'json'
-class RBModule_test_issue
+class RBModule_test
     def initialize
     end
     def metadata
-        info = { "name" => "test_issue", 
+        info = { "name" => "test", 
             "description" => "Test issue" }
         return info
     end
