@@ -104,6 +104,10 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
                 return Err(st_error!(e));
             }
         };
+        count += 1;
+        if count % 121 == 0 {
+            info!("Currently have scan {} url", count);
+        }
         let ret = rt.spawn(async move {
             let target_url = format!("{}{}", url, item);
             let request = match HttpRequest::from_url(&target_url) {
@@ -114,10 +118,7 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
             };
             let aq = sem_clone.acquire().await;
             let resp =HttpRequest::send_async(Method::GET, &request).await;
-            count += 1;
-            if count % 10 == 0 {
-                info!("Currently have scan {} url", count);
-            }
+            
             let resp = match resp {
                 Ok(o) => o,
                 Err(e) => {

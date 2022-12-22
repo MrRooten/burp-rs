@@ -11,7 +11,7 @@ class RBModule_test_issue
     def passive_run(index)
         #scan("http://127.0.0.1:8009")
         resp = Request.get("http://127.0.0.1:8009")
-        puts resp.inspect
+        #puts resp.inspect
     end
     def active_run(url, opts)
     end
