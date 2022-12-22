@@ -1,6 +1,8 @@
 
 pub mod cookie_match;
 pub mod path_match;
+pub mod param_inspect;
+pub mod js_miner;
 use self::cookie_match::CookieMatch;
 
 use super::IPassive;

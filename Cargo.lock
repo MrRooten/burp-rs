@@ -256,6 +256,7 @@ dependencies = [
  "minus",
  "once_cell",
  "prettify-js",
+ "regex",
  "rustls-pemfile",
  "rustyline",
  "rustyline-derive",
