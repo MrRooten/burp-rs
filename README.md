@@ -15,6 +15,10 @@ burpsuite-like tools. Because the burp extension is hard to debug, so I write a 
   ``cp -r active/ target/release/``  
   
   ``cp -r libruby/ target/release/``  
+  
+  ``cp config.yaml target/release/``  
+  
+  ``cp -r data target/release/``  
 
   ``cd target/release``  
 
