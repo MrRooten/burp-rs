@@ -1,4 +1,4 @@
-class RBModule_unauth_bypass
+class RBModule_unauth_bypass_test
     @@payloads = [
         "%09",
         "%20" ,
@@ -19,7 +19,7 @@ class RBModule_unauth_bypass
     def initialize
     end
     def metadata
-        info = { "name" => "unauth_bypass", 
+        info = { "name" => "unauth_bypass_test", 
             "description" => "Unauth bypass 403" }
         return info
     end

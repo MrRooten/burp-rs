@@ -18,7 +18,7 @@ use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
     libruby::{http::thread::rb_http_thread, utils::rb_init},
     modules::{
-        active::{information::dirscan::DirScan, ruby_scan::RBModule},
+        active::{information::dirscan::DirScan, ruby_scan::RBModule, fuzz::unauth_bypass::UnauthBypass},
         get_next_to_scan, get_will_run_mods, IActive, ModuleType, GLOB_MODS, Task,
     },
     st_error,
@@ -208,7 +208,7 @@ pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
     }
     //Add Rust module in here
     add_module!(DirScan);
-
+    add_module!(UnauthBypass);
     let paths = fs::read_dir(dir).unwrap();
     for path in paths {
         let s = path.unwrap().path().to_str().unwrap().to_string();

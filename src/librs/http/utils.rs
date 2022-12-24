@@ -111,6 +111,9 @@ impl HttpRequest {
         );
     }
 
+    pub fn set_headers(&mut self, headers: &HeaderMap) {
+        *self.request.headers_mut() = headers.clone();
+    }
     pub fn set_body(&mut self, body: Arc<Bytes>) {
         self.body = body.clone();
     }
