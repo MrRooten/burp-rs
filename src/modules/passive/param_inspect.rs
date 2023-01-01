@@ -1,4 +1,6 @@
-use crate::{modules::IPassive, utils::STError, proxy::log::LogHistory};
+use std::sync::Arc;
+
+use crate::{modules::IPassive, utils::STError, proxy::log::{ReqResLog}, librs::http::utils::BurpRequest};
 
 pub struct ParamInspect;
 
@@ -12,14 +14,7 @@ pub fn is_jave_deserialize(s: &str) -> bool {
 
 
 impl IPassive for ParamInspect {
-    fn run(&self, index: u32) -> Result<(), crate::utils::STError> {
-        let log = LogHistory::get_httplog(index);
-        let log = match log {
-            Some(o) => o,
-            None => {
-                return Err(STError::new("Not found history log"));
-            }
-        };
+    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest) -> Result<(), crate::utils::STError> {
 
         let request = match log.get_request() {
             Some(r) => r,

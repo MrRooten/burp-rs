@@ -1,12 +1,12 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use hyper::Uri;
 use url::Url;
 
 use crate::{
     modules::{IPassive, Issue, IssueLevel},
-    proxy::log::LogHistory,
-    utils::STError,
+    proxy::log::{ReqResLog},
+    utils::STError, librs::http::utils::BurpRequest,
 };
 
 pub struct PathMatch;
@@ -29,15 +29,7 @@ fn solr(s: &Uri) -> Option<Issue> {
 
 
 impl IPassive for PathMatch {
-    fn run(&self, index: u32) -> Result<(), crate::utils::STError> {
-        let log = LogHistory::get_httplog(index);
-        let log = match log {
-            Some(o) => o,
-            None => {
-                return Err(STError::new("Not found history log"));
-            }
-        };
-        
+    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest) -> Result<(), crate::utils::STError> {
         let request = match log.get_request() {
             Some(r) => r,
             None => {

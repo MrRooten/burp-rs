@@ -1,8 +1,8 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use regex::Regex;
 
-use crate::{modules::IPassive, proxy::log::LogHistory, utils::STError};
+use crate::{modules::IPassive, proxy::log::{ReqResLog}, utils::STError, librs::http::utils::BurpRequest};
 
 
 pub struct JsMiner;
@@ -29,15 +29,8 @@ static CLOUD_URLS_REGEX: &str = "([\\w]+[.]){1,10}(s3.amazonaws.com|\
         slack[_-]?token) ?= ?\"([\\w\\-/~!@#$%^&*+]+)\"";
 
 impl IPassive for JsMiner {
-    fn run(&self, index: u32) -> Result<(), crate::utils::STError> {
+    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest) -> Result<(), crate::utils::STError> {
         let screts_regex = Regex::from_str(ECRETS_REGEX);
-        let log = LogHistory::get_httplog(index);
-        let log = match log {
-            Some(o) => o,
-            None => {
-                return Err(STError::new("Not found history log"));
-            }
-        };
 
         let response = match log.get_response() {
             Some(r) => r,

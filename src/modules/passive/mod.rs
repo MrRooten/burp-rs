@@ -3,6 +3,11 @@ pub mod cookie_match;
 pub mod path_match;
 pub mod param_inspect;
 pub mod js_miner;
+pub mod serialize_detect;
+use log::error;
+
+use crate::{proxy::log::LogHistory, librs::http::utils::HttpRequest};
+
 use self::cookie_match::CookieMatch;
 
 use super::IPassive;
@@ -21,8 +26,30 @@ impl PassiveScanner {
     }
 
     pub fn passive_scan(&self, index: u32) {
+        let log = match LogHistory::get_httplog(index) {
+            Some(s) => s,
+            None => {
+                return ;
+            }
+        };
+
+        let request = match log.get_request() {
+            Some(s) => s,
+            None => {
+                return ;
+            }
+        };
+
+        let request = HttpRequest::from_log_request(request);
+        let burp = request.to_burp();
         for module in &self.modules {
-            let result = module.run(index);
+            let result = match module.run(log, &burp) {
+                Ok(o) => {},
+                Err(e) => {
+                    error!("{}",e);
+                    return ;
+                }
+            };
         }
     }
 }

@@ -1,21 +1,15 @@
+use std::sync::Arc;
+
 use crate::{
     modules::{IPassive, Issue, IssueConfidence, IssueLevel},
-    proxy::log::LogHistory,
-    utils::STError,
+    proxy::log::{ReqResLog},
+    utils::STError, librs::http::utils::BurpRequest,
 };
 
 pub struct CookieMatch;
 
 impl IPassive for CookieMatch {
-    fn run(&self, index: u32) -> Result<(), crate::utils::STError> {
-        let log = LogHistory::get_httplog(index);
-        let log = match log {
-            Some(o) => o,
-            None => {
-                return Err(STError::new("Not found history log"));
-            }
-        };
-
+    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest) -> Result<(), crate::utils::STError> {
         let request = match log.get_request() {
             Some(r) => r,
             None => {
@@ -40,7 +34,7 @@ impl IPassive for CookieMatch {
                 IssueConfidence::Confirm,
                 &log.get_host()
             );
-            Issue::add_issue(issue, &log);
+            Issue::add_issue(issue, log);
         }
         let response = match log.get_response() {
             Some(r) => r,

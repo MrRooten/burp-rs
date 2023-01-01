@@ -145,7 +145,7 @@ impl Issue {
 }
 
 pub trait IPassive {
-    fn run(&self, index: u32) -> Result<(), STError>;
+    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest) -> Result<(), STError>;
 
     fn name(&self) -> String;
 
@@ -161,7 +161,7 @@ use wildmatch::WildMatch;
 use crate::{
     cmd::handlers::SCAN_RECEIVER,
     proxy::log::{ReqResLog, SiteMap},
-    utils::STError,
+    utils::STError, librs::http::utils::BurpRequest,
 };
 
 #[derive(Debug,Clone, PartialEq,Hash)]

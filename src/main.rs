@@ -6,7 +6,7 @@ use std::{
 use burp_rs::{
     cmd::cmd::cmd,
     proxy::{proxy::proxy},
-    utils::{banner, log::init, config::{get_config}}, scanner::scaner_thread,
+    utils::{banner, log::init, config::{get_config}}, scanner::scaner_thread, librs::http::utils::{HttpRequest},
 };
 
 
@@ -21,8 +21,14 @@ async fn _main(addr: &str) {
 
 
 fn test() {
-    let config = get_config();
-    println!("{:?}",config.get("body_filter.content_type").as_vec());
+    let mut request = HttpRequest::from_url("http://baidu.com/?abc=123&asdjk=1232&badi=hello").unwrap();
+    request.set_header("X-Forworded-For", "127.0.0.1:7890");
+    request.set_header("cookie", "asdf=123;hello=456");
+    let request = request.to_burp();
+    let ss = request.get_params().unwrap();
+    for s in ss {
+        println!("{:?}",s);
+    }
 }
 
 fn main() {
