@@ -1,7 +1,7 @@
 use colored::Colorize;
 
 use crate::{utils::STError, cmd::{handlers::{Log, CatResponse, ClearScreen
-    , CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Scan, Test}, 
+    , CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Scan, Test, SearchLog}, 
     issue_handler::{InfoIssue, ListIssues}, poc_handler::{PushMod, ListMods, LoadedMods, Reload, RunningMods, RemoveMod}, target_handler::{Push, ListTarget, ActiveScan}}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
@@ -94,6 +94,7 @@ impl CMDHandler {
         hi!(RunningMods);
         hi!(RemoveMod);
         hi!(ActiveScan);
+        hi!(SearchLog);
     }
 
     pub fn get_opts(&self) -> &Vec<String> {

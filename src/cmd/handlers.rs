@@ -8,15 +8,15 @@ use hyper::StatusCode;
 use log::Level;
 use minus::Pager;
 
-
 use crate::{
     librs::object::object::IObject,
+    modules::Task,
     proxy::log::{LogHistory, SiteMap},
     st_error,
     utils::{
         log::{LEVEL, LOGS},
         STError,
-    }, modules::Task,
+    },
 };
 
 use super::{cmd_handler::*, pager::pager};
@@ -777,7 +777,101 @@ impl CMDProc for SearchLog {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        todo!()
+        if line.len() < 2 {
+            return Err(STError::new("Need search string"));
+        }
+        let target = line[1];
+        let history = LogHistory::single();
+        let history = match history {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("Error to get LogHistory"));
+            }
+        };
+
+        let history = history.get_history();
+        let mut keys = history.keys().collect::<Vec<&u32>>();
+        if keys.len() == 0 {
+            return Err(STError::new("No log"));
+        }
+        keys.sort();
+        let p = Pager::new();
+        let mut output = String::new();
+        for key in keys {
+            let request = history.get(key).unwrap().get_request().unwrap();
+            let response = history.get(key).unwrap().get_response();
+            let mut flag = false;
+            if let Some(r) = response {
+                if request.contains(target, false) || r.contains(target, false) {
+                    flag = true;
+                }
+            } else {
+                if request.contains(target, false) {
+                    flag = true;
+                }
+            }
+
+            if flag == false {
+                continue;
+            }
+            let status = match response {
+                Some(r) => r.get_status(),
+                None => StatusCode::GONE,
+            };
+            let size = match response {
+                Some(r) => r.get_size(),
+                None => 0,
+            };
+
+            let mut url_brief = request.get_url();
+            if url_brief.len() > 61 {
+                url_brief = url_brief[0..60].to_string();
+                url_brief.push_str("...");
+            }
+
+            let c_type = match response {
+                Some(r) => match r.get_header("content-type") {
+                    Some(v) => v,
+                    None => "".to_string(),
+                },
+                None => "".to_string(),
+            };
+            let status_s: ColoredString;
+            let status_first = status.as_u16() / 100;
+            if status_first == 1 {
+                status_s = status.as_str().green();
+            } else if status_first == 2 {
+                status_s = status.as_str().blue();
+            } else if status_first == 3 {
+                status_s = status.as_str().yellow();
+            } else if status_first == 4 {
+                status_s = status.as_str().red();
+            } else {
+                status_s = status.as_str().bright_red();
+            }
+            let item = format!(
+                "{} {} {} {} {}\n",
+                key,
+                url_brief.yellow(),
+                status_s,
+                size,
+                c_type.bright_blue()
+            );
+            output = item + &output;
+        }
+
+        if output.split("\n").count() < 50 {
+            println!("{}", output);
+        } else {
+            let p = Pager::new();
+            match pager(&output, p) {
+                Ok(o) => {}
+                Err(e) => {
+                    return Err(st_error!(e));
+                }
+            }
+        }
+        return Ok(());
     }
 
     fn get_detail(&self) -> String {

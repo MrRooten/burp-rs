@@ -16,6 +16,7 @@ use serde_json::{Value, Error};
 use std::collections::{HashMap};
 use std::io::Read;
 use std::str::FromStr;
+use std::string;
 use std::sync::{Mutex, Arc};
 use url::Url;
 
@@ -527,6 +528,73 @@ impl LogRequest {
         return &self.body;
     }
 
+    fn find_subsequence(&self, haystack: &[u8], needle: &[u8]) -> Option<usize> {
+        haystack
+            .windows(needle.len())
+            .position(|window| window == needle)
+    }
+
+    pub fn contains(&self, s: &str, ignore_case: bool) -> bool {
+        if ignore_case {
+            if self.orignal.uri().to_string().to_lowercase().contains(s) {
+                return true;
+            }
+
+            for kv in self.orignal.headers() {
+                if kv.0.to_string().to_lowercase().contains(&s.to_lowercase()) {
+                    return true;
+                }
+
+                match kv.1.to_str() {
+                    Ok(o) => {
+                        if o.to_lowercase().contains(&o.to_lowercase()) {
+                            return true;
+                        }
+                    }
+                    Err(e) => {}
+                }
+            }
+
+            let find = self.find_subsequence(&self.body, s.as_bytes());
+            if find.is_some() {
+                return true;
+            }
+
+            let body_s = String::from_utf8_lossy(&self.body).to_string();
+            if body_s.to_lowercase().contains(&s.to_lowercase()) {
+                return true;
+            }
+
+            return false;
+        } else {
+            if self.orignal.uri().to_string().contains(s) {
+                return true;
+            }
+            
+            for kv in self.orignal.headers() {
+                if kv.0.to_string().contains(s) {
+                    return true;
+                }
+
+                match kv.1.to_str() {
+                    Ok(o) => {
+                        if o.contains(s) {
+                            return true;
+                        }
+                    }
+                    Err(e) => {}
+                }
+            }
+
+            let find = self.find_subsequence(&self.body, s.as_bytes());
+            if find.is_none() {
+                return false;
+            } else {
+                return true;
+            }
+        }
+    }
+
     pub fn to_string(&self) -> String {
         let mut ret = String::new();
         ret.push_str(&self.orignal.method().to_string());
@@ -552,6 +620,7 @@ impl LogRequest {
             ret.push_str("\r\n");
         }
         ret.push_str("\r\n");
+        ret.push_str(&String::from_utf8_lossy(self.get_body()));
         return ret;
     }
 }
@@ -582,6 +651,8 @@ impl LogResponse {
             c_type: content_type,
         }
     }
+
+    
 
     pub fn get_header(&self, key: &str) -> Option<String> {
         let mut ret = String::new();

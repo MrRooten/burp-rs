@@ -1,18 +1,21 @@
-
+pub mod body_match;
 pub mod cookie_match;
-pub mod path_match;
-pub mod param_inspect;
 pub mod js_miner;
+pub mod param_inspect;
+pub mod path_match;
 use log::error;
 
-use crate::{proxy::log::LogHistory, librs::http::utils::HttpRequest};
+use crate::{librs::http::utils::HttpRequest, proxy::log::LogHistory};
 
-use self::{cookie_match::CookieMatch, param_inspect::ParamInspect, js_miner::JsMiner, path_match::PathMatch};
+use self::{
+    cookie_match::CookieMatch, js_miner::JsMiner, param_inspect::ParamInspect,
+    path_match::PathMatch,
+};
 
 use super::IPassive;
 
 pub struct PassiveScanner {
-    modules     : Vec<Box<(dyn IPassive+'static)>>
+    modules: Vec<Box<(dyn IPassive + 'static)>>,
 }
 
 impl PassiveScanner {
@@ -22,35 +25,34 @@ impl PassiveScanner {
         ret.push(Box::new(ParamInspect));
         ret.push(Box::new(JsMiner));
         ret.push(Box::new(PathMatch));
-        Self {
-            modules : ret
-        }
+        Self { modules: ret }
     }
 
     pub fn passive_scan(&self, index: u32) {
         let log = match LogHistory::get_httplog(index) {
             Some(s) => s,
             None => {
-                return ;
+                return;
             }
         };
 
         let request = match log.get_request() {
             Some(s) => s,
             None => {
-                return ;
+                return;
             }
         };
 
         let request = HttpRequest::from_log_request(request);
         let burp = request.to_burp();
         let params = burp.get_params().unwrap_or(vec![]);
+        let body = String::new();
         for module in &self.modules {
             let result = match module.run(log, &burp, &params) {
-                Ok(o) => {},
+                Ok(o) => {}
                 Err(e) => {
-                    error!("{}",e);
-                    return ;
+                    error!("{}", e);
+                    return;
                 }
             };
         }
