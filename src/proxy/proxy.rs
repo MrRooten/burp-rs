@@ -16,7 +16,7 @@ use hyper::{
     body::{self, Bytes},
     Body, Method, Request, Response,
 };
-use std::{net::SocketAddr, sync::mpsc::{Receiver, self, SyncSender}, thread::spawn};
+use std::{net::SocketAddr, sync::{mpsc::{Receiver, self, SyncSender}, Arc}, thread::spawn};
 use tracing::*;
 
 async fn shutdown_signal() {
@@ -45,7 +45,7 @@ async fn copy_req(req: &mut Request<Body>) -> LogRequest {
     new_req.uri_mut().clone_from(req.uri());
     new_req.version_mut().clone_from(&req.version());
     new_req.extensions().clone_from(&req.extensions());
-    return LogRequest::from(new_req, s);
+    return LogRequest::from(new_req, Arc::new(s));
 }
 
 async fn copy_req_header(req: &mut Request<Body>) -> LogRequest {
@@ -58,7 +58,7 @@ async fn copy_req_header(req: &mut Request<Body>) -> LogRequest {
     new_req.uri_mut().clone_from(req.uri());
     new_req.version_mut().clone_from(&req.version());
     new_req.extensions().clone_from(&req.extensions());
-    return LogRequest::from(new_req, s);
+    return LogRequest::from(new_req, Arc::new(s));
 }
 
 async fn copy_resp(resp: &mut Response<Body>) -> LogResponse {

@@ -150,7 +150,7 @@ pub fn ruby_resp_hash_to_reqresplog(resp: &Hash) -> ReqResLog {
     let mut original = Request::new(Body::from(""));
     *original.uri_mut() = Uri::from_str(&url).unwrap();
     *original.headers_mut() = ori_headers;
-    let req = LogRequest::from(original, Bytes::from(body));
+    let req = LogRequest::from(original, Arc::new(Bytes::from(body)));
 
     let body = resp.at(&RString::from("body")).try_convert_to::<RString>().unwrap().to_string();
     let mut original = Response::new(Body::from(""));

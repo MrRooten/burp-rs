@@ -2,7 +2,7 @@ use std::{str::FromStr, sync::Arc};
 
 use regex::Regex;
 
-use crate::{modules::IPassive, proxy::log::{ReqResLog}, utils::STError, librs::http::utils::BurpRequest};
+use crate::{modules::IPassive, proxy::log::{ReqResLog}, utils::STError, librs::http::utils::{BurpRequest, BurpParam}};
 
 
 pub struct JsMiner;
@@ -29,7 +29,8 @@ static CLOUD_URLS_REGEX: &str = "([\\w]+[.]){1,10}(s3.amazonaws.com|\
         slack[_-]?token) ?= ?\"([\\w\\-/~!@#$%^&*+]+)\"";
 
 impl IPassive for JsMiner {
-    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest) -> Result<(), crate::utils::STError> {
+    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest, params: &Vec<BurpParam>) -> Result<(), crate::utils::STError> {
+        let allow_headers = vec!["javascript", "html", "xml", "json", "text"];
         let screts_regex = Regex::from_str(ECRETS_REGEX);
 
         let response = match log.get_response() {
@@ -45,8 +46,8 @@ impl IPassive for JsMiner {
 
 
         let header = header.unwrap();
-        if header.contains("javascript") == false {
-            return Ok(());
+        if allow_headers.iter().any(|x| { header.contains(x) }) == false {
+            return Ok(())
         }
 
 

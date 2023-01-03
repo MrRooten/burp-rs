@@ -3,13 +3,13 @@ use std::sync::Arc;
 use crate::{
     modules::{IPassive, Issue, IssueConfidence, IssueLevel},
     proxy::log::{ReqResLog},
-    utils::STError, librs::http::utils::BurpRequest,
+    utils::STError, librs::http::utils::{BurpRequest, BurpParam},
 };
 
 pub struct CookieMatch;
 
 impl IPassive for CookieMatch {
-    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest) -> Result<(), crate::utils::STError> {
+    fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest, params: &Vec<BurpParam>) -> Result<(), crate::utils::STError> {
         let request = match log.get_request() {
             Some(r) => r,
             None => {

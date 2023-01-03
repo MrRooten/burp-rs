@@ -213,7 +213,7 @@ impl MultiPart {
 #[derive(Debug)]
 pub struct LogRequest {
     orignal: Request<Body>,
-    body: Bytes,
+    body: Arc<Bytes>,
     record_t: DateTime<Utc>,
 }
 
@@ -263,11 +263,24 @@ impl IObject for LogRequest {
 }
 
 impl LogRequest {
-    pub fn from(req: Request<Body>, body: Bytes) -> LogRequest {
+    pub fn from(req: Request<Body>, body: Arc<Bytes>) -> LogRequest {
         LogRequest {
             orignal: req,
             body: body,
             record_t: Utc::now(),
+        }
+    }
+
+    pub fn to_http_request(&self) -> HttpRequest {
+        let mut new_req = Request::new(Body::from(""));
+        new_req.headers_mut().clone_from(self.orignal.headers());
+        new_req.method_mut().clone_from(self.orignal.method());
+        new_req.uri_mut().clone_from(self.orignal.uri());
+        new_req.version_mut().clone_from(&self.orignal.version());
+        new_req.extensions().clone_from(&self.orignal.extensions());
+        HttpRequest {
+            request: new_req,
+            body: self.body.clone(),
         }
     }
 
@@ -289,7 +302,7 @@ impl LogRequest {
         new_req.extensions().clone_from(&self.orignal.extensions());
         LogRequest {
             orignal: new_req,
-            body: Bytes::from(self.body.clone()),
+            body: self.body.clone(),
             record_t: self.record_t.clone(),
         }
     }

@@ -21,8 +21,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct HttpRequest {
-    request: Request<Body>,
-    body: Arc<Bytes>,
+    pub(crate) request: Request<Body>,
+    pub(crate) body: Arc<Bytes>,
 }
 
 impl HttpRequest {
@@ -70,12 +70,12 @@ impl HttpRequest {
         request
     }
 
-    pub fn get_body(&self) -> &Bytes {
+    pub fn get_body(&self) -> &Arc<Bytes> {
         &self.body
     }
 
     pub fn from_log_request(request: &LogRequest) -> HttpRequest {
-        unimplemented!()
+        request.to_http_request()
     }
 
     pub fn update_with_params(&self, params: &Vec<RequestParam>) -> Result<(), STError> {
@@ -621,7 +621,6 @@ impl BurpRequest {
 
             query = (&first[query_base..query_end]).to_string();
         }
-        println!("{}", query);
 
         let query_param = BurpParam {
             name_start: 0,
