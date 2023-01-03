@@ -778,7 +778,7 @@ impl CMDProc for SearchLog {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         if line.len() < 2 {
-            return Err(STError::new("Need search string"));
+            return Err(STError::new("Need search string: search_log ${target}"));
         }
         let target = line[1];
         let history = LogHistory::single();

@@ -633,41 +633,25 @@ impl BurpRequest {
             place: BPlace::Headers
         };
         result.push(query_param);
-        let items = query.split("&");
-        let mut start = query_base;
-        let mut end = query_base + 1;
-        while end <= query_end {
-            if first.chars().nth(end).unwrap() == '&' || first[end..].find("&").is_none() {
-                if first[end..].find("&").is_none() {
-                    end = query_end;
+        let get_pattern = Regex::new(r"(\w+)=([^;\n\r]+)").unwrap();
+        for cap in get_pattern.captures_iter(first) {
+            let key = cap.get(1);
+            let value = cap.get(2);
+            if let Some(k) = key {
+                if let Some(v) = value {
+                    let header_param = BurpParam {
+                        name_start: k.start() + first.len() + 2,
+                        name: k.as_str().to_string(),
+                        name_end: k.end() + first.len() + 2,
+                        value_start: v.start() + first.len() + 2,
+                        value_end: v.end() + first.len() + 2,
+                        value: v.as_str().to_string(),
+                        param_type: BParamType::Get,
+                        place: BPlace::Headers
+                    };
+                    result.push(header_param);
                 }
-                let _kv = &first[start..end];
-                let mut _start = start;
-                let mut _end = start;
-                let mut key: String = String::new();
-                let value: String;
-                while _end < end {
-                    if first.chars().nth(_end).unwrap() == '=' {
-                        key = (&first[_start.._end]).to_string();
-                        break;
-                    }
-                    _end += 1
-                }
-                value = (&first[(_end + 1)..end]).to_string();
-                let get_param = BurpParam {
-                    name_start: _start,
-                    name: key,
-                    name_end: _end,
-                    value_start: _end + 1,
-                    value_end: end,
-                    value: value,
-                    param_type: BParamType::Get,
-                    place: BPlace::Headers,
-                };
-                result.push(get_param);
-                start = end + 1;
             }
-            end += 1;
         }
         let headers = &headers[1..].join("\r\n");
         let header_pattern = Regex::new(r"([\w\-]+): ?([\r\n]+)").unwrap();

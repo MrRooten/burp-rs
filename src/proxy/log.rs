@@ -16,7 +16,6 @@ use serde_json::{Value, Error};
 use std::collections::{HashMap};
 use std::io::Read;
 use std::str::FromStr;
-use std::string;
 use std::sync::{Mutex, Arc};
 use url::Url;
 
@@ -536,18 +535,19 @@ impl LogRequest {
 
     pub fn contains(&self, s: &str, ignore_case: bool) -> bool {
         if ignore_case {
+            let lower_s = s.to_lowercase();
             if self.orignal.uri().to_string().to_lowercase().contains(s) {
                 return true;
             }
 
             for kv in self.orignal.headers() {
-                if kv.0.to_string().to_lowercase().contains(&s.to_lowercase()) {
+                if kv.0.to_string().to_lowercase().contains(&lower_s) {
                     return true;
                 }
 
                 match kv.1.to_str() {
                     Ok(o) => {
-                        if o.to_lowercase().contains(&o.to_lowercase()) {
+                        if o.to_lowercase().contains(&lower_s) {
                             return true;
                         }
                     }
@@ -561,7 +561,7 @@ impl LogRequest {
             }
 
             let body_s = String::from_utf8_lossy(&self.body).to_string();
-            if body_s.to_lowercase().contains(&s.to_lowercase()) {
+            if body_s.to_lowercase().contains(&lower_s) {
                 return true;
             }
 
@@ -570,7 +570,7 @@ impl LogRequest {
             if self.orignal.uri().to_string().contains(s) {
                 return true;
             }
-            
+
             for kv in self.orignal.headers() {
                 if kv.0.to_string().contains(s) {
                     return true;
