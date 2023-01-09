@@ -23,13 +23,7 @@ impl IActive for SSRFDetect {
             }
         };
 
-        let request = match log.get_request() {
-            Some(s) => s,
-            None => {
-                let m = format!("log {} no request",index);
-                return Err(STError::new(&m));
-            }
-        };
+        let request = log.get_request();
 
         let request = HttpRequest::from_log_request(request);
         let burp = request.to_burp();

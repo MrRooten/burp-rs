@@ -64,7 +64,7 @@ impl CMDProc for InfoIssue {
             }
         };
 
-        let request = log.get_request().unwrap();
+        let request = log.get_request();
         let response = log.get_response();
         println!("Request:\n{}", request.to_string());
         match response {

@@ -3,7 +3,7 @@ use std::{collections::HashMap, time::{UNIX_EPOCH, SystemTime}, sync::mpsc};
 use colored::Colorize;
 use log::{info, error};
 
-use crate::{proxy::log::{SiteMap, LogHistory, LogRequest, ReqResLog, LogType}, st_error, utils::STError, scanner::{get_modules, RunningModuleWrapper, add_running_modules, RunningState, remove_running_modules}, modules::{IActive, ModuleType, Task}, cmd::handlers::{SCAN_SENDER, SCAN_RECEIVER}, librs::http::utils::HttpRequest};
+use crate::{proxy::log::{SiteMap, LogHistory, LogRequest, ReqResLog, LogType}, st_error, utils::STError, scanner::{get_modules, RunningModuleWrapper, add_running_modules, RunningState, remove_running_modules}, modules::{IActive, ModuleType, Task, passive::PassiveScanner}, cmd::handlers::{SCAN_SENDER, SCAN_RECEIVER}, librs::http::utils::HttpRequest};
 
 use super::{
     cmd_handler::{CMDOptions, CMDProc},
@@ -129,12 +129,7 @@ impl CMDProc for ListTarget {
                 }
             };
 
-            let request = match log.get_request() {
-                Some(r) => r,
-                None => {
-                    continue;
-                }
-            };
+            let request = log.get_request();
 
 
             println!("{} {}", target.get_index(), request.get_url());
@@ -152,9 +147,92 @@ impl CMDProc for ListTarget {
     }
 }
 
+pub struct PassiveScan {
+    opts    : CMDOptions
+}
+
+impl PassiveScan {
+    pub fn new() -> Self {
+        Self {
+            opts: CMDOptions::default(),
+        }
+    }
+}
+
+impl CMDProc for PassiveScan {
+    fn get_name(&self) -> &str {
+        "passive_scan"
+    }
+
+    fn get_opts(&self) -> &CMDOptions {
+        &self.opts
+    }
+
+    fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
+        let scanner = PassiveScanner::new();
+        if line.len() >= 2 {
+            let history = LogHistory::single();
+            let history = match history {
+                Some(s) => s,
+                None => {
+                    return Err(STError::new("Error to get LogHistory"));
+                }
+            };
+            let history = history.get_history();
+            let map = match SiteMap::single() {
+                Some(s) => s,
+                None => {
+                    return Err(STError::new("Can not get Sitemap Single instance"));
+                }
+            };
+
+            let site = map.get_site(line[1]);
+            let site = match site {
+                Some(s) => s,
+                None => {
+                    return Err(STError::new("Not exist in logs"));
+                }
+            };
+
+            let httplog = match map.get_httplogs_by_host(line[1]) {
+                Some(log) => log,
+                None => {
+                    return Err(STError::new("Not exist in logs"));
+                }
+            };
+
+            for target in httplog {
+                scanner.passive_scan(*target);
+            }
+        } else {
+            let history = LogHistory::single();
+            let history = match history {
+                Some(s) => s,
+                None => {
+                    return Err(STError::new("Error to get LogHistory"));
+                }
+            };
+            let history = history.get_history();
+            for target in history.keys() {
+                scanner.passive_scan(*target);
+            }
+        }
+        Ok(())
+    }
+
+    fn get_detail(&self) -> String {
+        "".to_string()
+    }
+
+    fn get_help(&self) -> String {
+        "".to_string()
+    }
+}
+
 pub struct ActiveScan {
     opts    : CMDOptions
 }
+
 
 
 impl ActiveScan {

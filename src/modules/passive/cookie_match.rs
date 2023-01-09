@@ -10,12 +10,7 @@ pub struct CookieMatch;
 
 impl IPassive for CookieMatch {
     fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest, params: &Vec<BurpParam>) -> Result<(), crate::utils::STError> {
-        let request = match log.get_request() {
-            Some(r) => r,
-            None => {
-                return Err(STError::new("Not found history log request"));
-            }
-        };
+        let request = log.get_request();
 
         let header = request.get_header("cookie");
         let header = match header {

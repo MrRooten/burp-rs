@@ -212,7 +212,7 @@ pub async fn proxy(addr: &str) {
                         continue;
                     }
                 };
-                scanner.passive_scan(index);
+                //scanner.passive_scan(index);
             }
         });
     }

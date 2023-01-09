@@ -133,12 +133,7 @@ impl Issue {
             }
         };
 
-        let request = match httplog.get_request() {
-            Some(s) => s,
-            None => {
-                return "".to_string();
-            }
-        };
+        let request = httplog.get_request();
 
         return request.get_url();
     }

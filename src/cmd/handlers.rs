@@ -220,7 +220,7 @@ impl CMDProc for ListHistory {
             let p = Pager::new();
             let mut output = String::new();
             for key in httplog {
-                let request = history.get(key).unwrap().get_request().unwrap();
+                let request = history.get(key).unwrap().get_request();
                 let response = history.get(key).unwrap().get_response();
                 let status = match response {
                     Some(r) => r.get_status(),
@@ -298,7 +298,7 @@ impl CMDProc for ListHistory {
             let p = Pager::new();
             let mut output = String::new();
             for key in keys {
-                let request = history.get(key).unwrap().get_request().unwrap();
+                let request = history.get(key).unwrap().get_request();
                 let response = history.get(key).unwrap().get_response();
                 let status = match response {
                     Some(r) => r.get_status(),
@@ -605,7 +605,7 @@ impl CMDProc for CatRequest {
                 return Err(STError::new("Not such a request"));
             }
         };
-        let s = s.get_request().unwrap().to_string();
+        let s = s.get_request().to_string();
         let p = Pager::new();
         if s.split("\n").count() < 50 {
             println!("{}", s);
@@ -690,13 +690,13 @@ impl CMDProc for GetRequest {
         };
 
         let req = s.get_request();
-        let req = match req {
-            Some(r) => r,
+        let output = match req.get_object(&object_path) {
+            Some(s) => s,
             None => {
-                return Err(STError::new("No such a request in log"));
+                "\"\"".to_string()
             }
         };
-        println!("{:?}", req.get_object(&object_path));
+        println!("{}: {}", object_path, output);
         Ok(())
     }
 
@@ -798,7 +798,7 @@ impl CMDProc for SearchLog {
         let p = Pager::new();
         let mut output = String::new();
         for key in keys {
-            let request = history.get(key).unwrap().get_request().unwrap();
+            let request = history.get(key).unwrap().get_request();
             let response = history.get(key).unwrap().get_response();
             let mut flag = false;
             if let Some(r) = response {
@@ -875,11 +875,11 @@ impl CMDProc for SearchLog {
     }
 
     fn get_detail(&self) -> String {
-        todo!()
+        "filter the proxy log".to_string()
     }
 
     fn get_help(&self) -> String {
-        todo!()
+        "search_log ${string}".to_string()
     }
 }
 
@@ -966,8 +966,7 @@ impl CMDProc for Sitemap {
         for key in httplog {
             let request = LogHistory::get_httplog(*key)
                 .unwrap()
-                .get_request()
-                .unwrap();
+                .get_request();
             let response = LogHistory::get_httplog(*key).unwrap().get_response();
             let status = match response {
                 Some(r) => {
@@ -1117,7 +1116,7 @@ impl CMDProc for Test {
             }
         };
 
-        let request = s.get_request().unwrap();
+        let request = s.get_request();
         println!("{:?}", request.get_params());
         Ok(())
     }

@@ -32,13 +32,10 @@ impl IPassive for JsMiner {
     fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest, params: &Vec<BurpParam>) -> Result<(), crate::utils::STError> {
         let allow_headers = vec!["javascript", "html", "xml", "json", "text"];
         let screts_regex = Regex::from_str(ECRETS_REGEX);
-
-        let response = match log.get_response() {
-            Some(r) => r,
-            None => {
-                return Err(STError::new("Not found history log request"));
-            }
-        };
+        if log.get_response().is_none() {
+            return Err(STError::new("Not found history log request"));
+        }
+        let response = log.get_response().unwrap();
         let header = response.get_header("content-type");
         if header.is_none() {
             return Ok(());

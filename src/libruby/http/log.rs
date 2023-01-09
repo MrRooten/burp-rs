@@ -157,12 +157,7 @@ fn _get_http_req(i: Fixnum) -> AnyObject {
     };
 
     let mut req_hash = Hash::new();
-    let request = match reqresp.get_request() {
-        Some(s) => s,
-        None => {
-            return NilClass::new().try_convert_to::<AnyObject>().unwrap();
-        }
-    };
+    let request = reqresp.get_request();
     let method = request.get_method();
     req_hash.store(RString::from("method"), RString::from(method));
     let version = request.get_proto();

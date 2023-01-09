@@ -28,7 +28,7 @@ pub enum LogType {
 
 #[derive(Debug)]
 pub struct ReqResLog {
-    request: Option<LogRequest>,
+    request: LogRequest,
     response: Option<LogResponse>,
     record_t: DateTime<Utc>,
     log_type: LogType
@@ -49,7 +49,7 @@ impl ReqResLog {
             c_type: response.get_header("content-type"),
         };
         ReqResLog {
-            request: Some(request),
+            request: request,
             response: Some(resp),
             record_t: Utc::now(),
             log_type: LogType::Module
@@ -58,7 +58,7 @@ impl ReqResLog {
 
     pub fn new(req: LogRequest) -> Self {
         ReqResLog {
-            request: Some(req),
+            request: req,
             response: None,
             record_t: Utc::now(),
             log_type: LogType::Proxy
@@ -74,49 +74,27 @@ impl ReqResLog {
     }
 
     pub fn get_host(&self) -> String {
-        let request = match &self.request {
-            Some(r) => {
-                r
-            }
-            None => {
-                return "".to_string();
-            }
-        };
-
-        request.get_host()
+        self.request.get_host()
     }
 
     pub fn set_resp(&self, resp: LogResponse) {
         i_to_m(self).response = Some(resp);
     }
 
-    pub fn get_request(&self) -> Option<&LogRequest> {
-        match &self.request {
-            Some(r) => {
-                return Some(r);
-            }
-            None => {
-                return None;
-            }
-        }
+    pub fn get_request(&self) -> &LogRequest {
+        &self.request
     }
 
     pub fn get_size(&self) -> usize {
-        let request = match &self.request {
-            Some(r) => r,
-            None => {
-                return 0;
-            }
-        };
 
         let response = match &self.response {
             Some(r) => r,
             None => {
-                return request.body.len();
+                return self.request.body.len();
             }
         };
 
-        let ret = request.body.len() + response.body.len();
+        let ret = self.request.body.len() + response.body.len();
 
         return ret;
     }
@@ -133,14 +111,9 @@ impl ReqResLog {
     }
 
     pub fn clone(&self) -> Option<ReqResLog> {
-        let s = match &self.request {
-            Some(s) => s,
-            None => {
-                return None;
-            }
-        };
 
-        let log = ReqResLog::new(s.clone());
+
+        let log = ReqResLog::new(self.request.clone());
         let s = match &self.response {
             Some(s) => s,
             None => {
@@ -1051,13 +1024,7 @@ impl SiteMap {
                 return Err(STError::new("Not exist log"));
             }
         };
-        let request = match log.get_request() {
-            Some(r) => r,
-            None => {
-                return Err(STError::new("Can not get request from ReqResLog"));
-            }
-        };
-
+        let request = log.get_request();
         let host = request.get_host();
         if self.map.contains_key(&host) == false {
             self.map.insert(host.to_string(), Site::new());

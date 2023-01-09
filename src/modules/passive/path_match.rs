@@ -30,12 +30,7 @@ fn solr(s: &Uri) -> Option<Issue> {
 
 impl IPassive for PathMatch {
     fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest, params: &Vec<BurpParam>) -> Result<(), crate::utils::STError> {
-        let request = match log.get_request() {
-            Some(r) => r,
-            None => {
-                return Err(STError::new("Not found history log request"));
-            }
-        };
+        let request = log.get_request();
         let url = request.get_url();
         let url = match Url::from_str(&url) {
             Ok(o) => o,

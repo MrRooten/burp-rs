@@ -21,7 +21,7 @@ pub struct PassiveScanner {
 impl PassiveScanner {
     pub fn new() -> Self {
         let mut ret: Vec<Box<(dyn IPassive + 'static)>> = Vec::default();
-        ret.push(Box::new(CookieMatch));
+        //ret.push(Box::new(CookieMatch));
         ret.push(Box::new(ParamInspect));
         ret.push(Box::new(JsMiner));
         ret.push(Box::new(PathMatch));
@@ -36,12 +36,7 @@ impl PassiveScanner {
             }
         };
 
-        let request = match log.get_request() {
-            Some(s) => s,
-            None => {
-                return;
-            }
-        };
+        let request = log.get_request();
 
         let request = HttpRequest::from_log_request(request);
         let burp = request.to_burp();
