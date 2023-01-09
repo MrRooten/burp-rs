@@ -8,7 +8,7 @@ use log::error;
 use crate::{librs::http::utils::HttpRequest, proxy::log::LogHistory};
 
 use self::{
-    cookie_match::CookieMatch, js_miner::JsMiner, param_inspect::ParamInspect,
+    js_miner::JsMiner, param_inspect::ParamInspect,
     path_match::PathMatch,
 };
 
