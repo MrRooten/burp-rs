@@ -1,0 +1,28 @@
+[package]
+name = "rutie"
+version = "0.8.4"
+authors = [
+  "Steve Klabnik <steve@steveklabnik.com>",
+  "Dmitry Gritsay <unseductable@gmail.com>",
+  "Daniel P. Clark <6ftdan@gmail.com>"
+]
+
+description = "The tie between Ruby and Rust."
+repository = "https://github.com/danielpclark/rutie"
+readme = "README.md"
+keywords = ["cruby", "ruby", "rutie"]
+license = "MIT"
+
+build = "build.rs"
+links = "ruby"
+
+[features]
+no-link = [] # tells build.rs to not link to libruby
+
+[dependencies]
+libc = "0.2.121"
+lazy_static = "1.4.0"
+
+[badges]
+travis-ci = { repository = "danielpclark/rutie", branch = "master" }
+maintenance = { status = "actively-developed" }
