@@ -1,5 +1,5 @@
-pub mod active;
-pub mod passive;
+pub mod remotescan;
+pub mod localscan;
 
 #[derive(Default)]
 pub struct Helper {}

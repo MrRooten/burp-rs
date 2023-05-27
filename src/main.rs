@@ -1,6 +1,6 @@
 use std::{
     env,
-    thread::{self},
+    thread::{self}, fs::File, io::Write,
 };
 
 use burp_rs::{
@@ -32,6 +32,7 @@ fn test() {
 }
 
 fn main() {
+    
     banner();
     let _ = get_config();
     let _ = scaner_thread();
@@ -50,4 +51,5 @@ fn main() {
         println!("{} listen on: {}", args[0], args[1]);
         _main(&args[1]);
     }
+    
 }

@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc, fs::{File}, io::{BufReader, BufRead}};
+use std::{str::FromStr, sync::Arc, fs::{File}, io::{BufReader, BufRead}, thread};
 
 use colored::Colorize;
 use hyper::{Method, StatusCode, Uri};
@@ -107,7 +107,7 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
         if count % 121 == 0 {
             info!("Currently have scan {} url", count);
         }
-        let ret = rt.spawn(async move {
+        let ret = thread::spawn(move || {
             let target_url = format!("{}{}", url, item);
             let request = match HttpRequest::from_url(&target_url) {
                 Ok(e) => e,
@@ -115,8 +115,8 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
                     return None::<FoundUrl>;
                 }
             };
-            let aq = sem_clone.acquire().await;
-            let resp =HttpRequest::send_async(Method::GET, &request).await;
+            let aq = sem_clone.acquire();
+            let resp = HttpRequest::send(Method::GET, &request);
             
             let resp = match resp {
                 Ok(o) => o,
@@ -164,13 +164,13 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
         
     }
 
-    let found_urls = rt.block_on(async move {
+    let found_urls =  {
         
         for i in asyncs {
-            let url = match i.await {
+            let url = match i.join() {
                 Ok(o) => o,
                 Err(e) => {
-                    error!("{}", e);
+                    error!("{:?}", e);
                     continue;
                 }
             };
@@ -186,7 +186,7 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
         }
 
         found_urls
-    });
+    };
     let map = match SiteMap::single() {
         Some(s) => s,
         None => {

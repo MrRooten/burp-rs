@@ -1,8 +1,9 @@
-use std::{collections::HashMap, ops::Range, str::FromStr, sync::Arc};
+use std::{collections::HashMap, ops::Range, str::FromStr, sync::Arc, io::Read};
 
 extern crate hyper;
 extern crate hyper_native_tls;
 
+use html5ever::tendril::fmt::Slice;
 use hyper::{
     body::{self, Bytes},
     header::*,
@@ -16,13 +17,14 @@ use tokio::runtime::Runtime;
 use crate::{
     proxy::log::{LogRequest, ReqResLog, RequestParam},
     st_error,
-    utils::STError,
+    utils::{STError, config::{get_config}},
 };
 
 #[derive(Debug)]
 pub struct HttpRequest {
     pub(crate) request: Request<Body>,
     pub(crate) body: Arc<Bytes>,
+    pub(crate) proxy: Arc<String>
 }
 
 impl HttpRequest {
@@ -37,6 +39,7 @@ impl HttpRequest {
         HttpRequest {
             request: request,
             body: self.body.clone(),
+            proxy: self.proxy.clone()
         }
     }
 
@@ -57,9 +60,11 @@ impl HttpRequest {
                 return Err(st_error!(e));
             }
         };
+ 
         Ok(HttpRequest {
             request: request,
             body: Arc::new(Bytes::new()),
+            proxy: get_config().get_proxy().clone()
         })
     }
 
@@ -132,120 +137,112 @@ impl HttpRequest {
         *self.request.method_mut() = method;
     }
 
-    pub fn send(method: Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
-        let response = HttpRequest::send_async(Method::GET, &request);
+    pub async fn send_async(method: Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
+        let cli = {
+            if request.proxy.len() == 0 {
+                reqwest::Client::new()
+            } else {
+                let proxy = match reqwest::Proxy::http(request.proxy.as_str()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e));
+                    }
+                };
+                match reqwest::Client::builder().proxy(proxy).build() {
+                    Ok(o) => o, 
+                    Err(e) => {
+                        return Err(st_error!(e));
+                    }
+                }
+            }
+        };
+            
         let rt = Runtime::new().unwrap();
-        let ret = rt.block_on(async { response.await });
-        ret
-    }
-
-    pub async fn send_async(
-        method: Method,
-        request: &HttpRequest,
-    ) -> Result<HttpResponse, STError> {
-        let cli = Client::new();
-
-        let https = hyper_rustls::HttpsConnectorBuilder::new()
-            .with_native_roots()
-            .https_only()
-            .enable_http1()
-            .build();
-
-        let clis: Client<_, hyper::Body> = Client::builder().build(https);
-
-        let mut response = None::<Response<Body>>;
-        let mut req = Request::builder()
-            .uri(request.request.uri())
-            .body(Body::from(""))
-            .expect("");
-        req.extensions().clone_from(&request.request.extensions());
-        *req.headers_mut() = request.request.headers().clone();
-        *req.version_mut() = request.request.version();
-        req.uri_mut().clone_from(request.request.uri());
-        *req.body_mut() = Body::from((*request.body).clone());
-        if request.request.uri().to_string().starts_with("https") {
-            if method == Method::GET {
-                *req.method_mut() = Method::GET;
-                let r = match clis.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => return Err(st_error!(e)),
-                };
-
-                response = Some(r);
-            } else if method == Method::POST {
-                *req.method_mut() = Method::POST;
-                let r = match clis.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => return Err(st_error!(e)),
-                };
-
-                response = Some(r);
-            } else if method == Method::PUT {
-                *req.method_mut() = Method::PUT;
-                let r = match clis.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => return Err(st_error!(e)),
-                };
-
-                response = Some(r);
-            } else if method == Method::OPTIONS {
-                *req.method_mut() = Method::OPTIONS;
-                let r = match clis.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => return Err(st_error!(e)),
-                };
-
-                response = Some(r);
+        let body = reqwest::Body::from((*request.body).clone());
+        let response = {
+            if method.eq(&Method::GET) {
+                cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::POST) {
+                cli.post(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::OPTIONS) {
+                cli.request(reqwest::Method::OPTIONS,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::PATCH) {
+                cli.request(reqwest::Method::PATCH,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::DELETE) {
+                cli.request(reqwest::Method::DELETE,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::HEAD) {
+                cli.request(reqwest::Method::HEAD,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::PUT) {
+                cli.request(reqwest::Method::PUT,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::TRACE) {
+                cli.request(reqwest::Method::TRACE,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } 
+            
+            else {
+                cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
             }
-        } else {
-            let clis = Client::builder().build_http();
-            if method == Method::GET {
-                *req.method_mut() = Method::GET;
-                let r = match clis.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => return Err(st_error!(e)),
-                };
-
-                response = Some(r);
-            } else if method == Method::POST {
-                *req.method_mut() = Method::POST;
-                let r = match clis.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => return Err(st_error!(e)),
-                };
-
-                response = Some(r);
-            } else if method == Method::PUT {
-                *req.method_mut() = Method::PUT;
-                let r = match clis.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => return Err(st_error!(e)),
-                };
-
-                response = Some(r);
-            } else if method == Method::OPTIONS {
-                *req.method_mut() = Method::OPTIONS;
-                let r = match clis.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => return Err(st_error!(e)),
-                };
-
-                response = Some(r);
-            }
-        }
-        let mut response = match response {
-            Some(res) => res,
-            None => {
-                return Err(STError::new("Error get response from request"));
+        }; 
+        let ret = match response.await {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(st_error!(e));
             }
         };
-        let body = match body::to_bytes(response.body_mut()).await {
-            Ok(o) => o,
-            Err(e) => Bytes::new(),
-        };
-
-        Ok(HttpResponse::from(request, response, body))
+        let resp = HttpResponse::from_reqwest_response_async(request, ret);
+        resp
     }
+
+    pub fn send(method: Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
+        let cli = {
+            if request.proxy.len() == 0 {
+                reqwest::blocking::Client::new()
+            } else {
+                let proxy = match reqwest::Proxy::http(request.proxy.as_str()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(st_error!(e));
+                    }
+                };
+                match reqwest::blocking::Client::builder().proxy(proxy).build() {
+                    Ok(o) => o, 
+                    Err(e) => {
+                        return Err(st_error!(e));
+                    }
+                }
+            }
+        };
+            
+        let rt = Runtime::new().unwrap();
+        let body = reqwest::blocking::Body::from((*request.body).clone());
+        let response = {
+            if method.eq(&Method::GET) {
+                cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::POST) {
+                cli.post(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::OPTIONS) {
+                cli.request(reqwest::Method::OPTIONS,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::PATCH) {
+                cli.request(reqwest::Method::PATCH,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::DELETE) {
+                cli.request(reqwest::Method::DELETE,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::HEAD) {
+                cli.request(reqwest::Method::HEAD,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::PUT) {
+                cli.request(reqwest::Method::PUT,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } else if method.eq(&Method::TRACE) {
+                cli.request(reqwest::Method::TRACE,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            } 
+            
+            else {
+                cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+            }
+        }; 
+        let ret = response.unwrap();
+        let resp = HttpResponse::from_reqwest_response(request, ret);
+        resp
+    }
+
+    
 }
 
 #[derive(Debug)]
@@ -256,6 +253,28 @@ pub struct HttpResponse {
 }
 
 impl HttpResponse {
+    pub fn from_reqwest_response_async(req: &HttpRequest, resp: reqwest::Response) -> Result<Self,STError> {
+        let mut _resp = Response::new(Body::from(""));
+        _resp.headers_mut().clone_from(resp.headers());
+        let rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
+        let body = rt.block_on(resp.bytes()).unwrap();
+        Ok(Self { req: req.clone(), 
+            resp: _resp, 
+            body: body
+        })
+    }
+
+    pub fn from_reqwest_response(req: &HttpRequest, resp: reqwest::blocking::Response) -> Result<Self,STError> {
+        let mut _resp = Response::new(Body::from(""));
+        _resp.headers_mut().clone_from(resp.headers());
+
+        let body = resp.bytes().unwrap();
+        Ok(Self { req: req.clone(), 
+            resp: _resp, 
+            body: body
+        })
+    }
+
     pub fn from(req: &HttpRequest, resp: Response<Body>, body: Bytes) -> Self {
         Self {
             req: req.clone(),
@@ -387,9 +406,11 @@ impl HttpRequest {
         }
 
         *request.version_mut() = p;
+
         Ok(Self {
             request: request,
             body: burp.body.clone(),
+            proxy: get_config().get_proxy().clone()
         })
     }
 

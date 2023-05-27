@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc, vec};
+use std::{str::FromStr, sync::Arc, vec, thread};
 
 use hyper::{body::Bytes, header::HOST, http::HeaderValue, HeaderMap, Method, StatusCode, Uri};
 use log::error;
@@ -137,9 +137,9 @@ fn run(
                 let not_found2 = not_found.clone();
                 let h_port = host_with_port.clone();
                 let mut r = request.clone();
-                let handle = rt.spawn(async move {
+                let handle = thread::spawn( move || {
                     r.set_header(header.0, header.1);
-                    let resp = match HttpRequest::send_async(m, &r).await {
+                    let resp = match HttpRequest::send(m, &r) {
                         Ok(o) => o,
                         Err(e) => {
                             error!("{}", e);
@@ -175,16 +175,16 @@ fn run(
         i += 1
     }
 
-    rt.block_on(async move {
+
         for h in handles {
-            let s = match h.await {
+            let s = match h.join() {
                 Ok(o) => o,
                 Err(e) => {
                     continue;
                 }
             };
         }
-    });
+
 
     Ok(vec![])
 }

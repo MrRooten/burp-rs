@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, sync::Arc};
 
 use log::info;
 use once_cell::sync::Lazy;
@@ -18,7 +18,8 @@ pub fn get_config() -> &'static mut Lazy<Config> {
     }
 }
 pub struct Config {
-    config      : Vec<Yaml>
+    config      : Vec<Yaml>,
+    proxy       : Arc<String>
 }
 
 impl Config {
@@ -36,8 +37,23 @@ impl Config {
                 return Err(st_error!(e));
             }
         };
+        let path = "http.proxy";
+        let keys = path.split(".").collect::<Vec<&str>>();
+
+        let mut sub: &Yaml = &yaml[0];
+        for key in keys {
+            sub = &sub[key];
+        }
+
+        let proxy = match sub.as_str() {
+            Some(s) => s,
+            None => ""
+        };
+
+        let proxy = proxy.to_string();
         Ok(Self {
-            config  : yaml
+            config  : yaml,
+            proxy: Arc::new(proxy)
         })
     }
 
@@ -81,4 +97,7 @@ impl Config {
         unimplemented!()
     }
 
+    pub fn get_proxy(&self) -> Arc<String> {
+        self.proxy.clone()
+    }
 }

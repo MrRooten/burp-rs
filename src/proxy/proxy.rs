@@ -6,7 +6,7 @@ use rustls_pemfile as pemfile;
 
 
 use crate::{
-    modules::passive::PassiveScanner,
+    modules::localscan::PassiveScanner,
     proxy::{
         filter::{is_capture_req, is_capture_res},
         log::{LogHistory, LogRequest, LogResponse, ReqResLog, SiteMap},

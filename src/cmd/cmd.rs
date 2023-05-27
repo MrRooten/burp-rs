@@ -1,6 +1,9 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
+use std::fs::File;
+use std::io::Write;
 
 use colored::Colorize;
+use pprof::protos::Message;
 use rustyline::completion::{Completer};
 
 use rustyline::error::ReadlineError;
@@ -105,8 +108,23 @@ pub fn cmd() -> rustyline::Result<()> {
     if rl.load_history("history.txt").is_err() {
         println!("No previous history.");
     }
+    //let guard = pprof::ProfilerGuardBuilder::default().frequency(1000).blocklist(&["libc", "libgcc", "pthread", "vdso"]).build().unwrap();
+    
     let mut count = 1;
     loop {
+        // match guard.report().build() {
+        //     Ok(report) => {
+        //         let mut file = File::create("profile.pb").unwrap();
+        //         let mut profile = report.pprof().unwrap();
+        
+        //         let mut content = Vec::new();
+        //         profile.write_to_vec(&mut content).unwrap();
+        //         file.write_all(&content).unwrap();
+        
+        //         //println!("report: {}", &report);
+        //     }
+        //     Err(_) => {}
+        // };
         let p = format!("burp-rs {count}> ");
         rl.helper_mut().expect("No helper").colored_prompt = format!("{}",p.bright_blue());
         let readline = rl.readline(&p);
@@ -124,6 +142,14 @@ pub fn cmd() -> rustyline::Result<()> {
                         }
                     }
 
+                }
+
+                if line.eq("shell") {
+                    println!("Shell mode, not implement")
+                }
+
+                if line.eq("exit_shell") {
+                    println!("Shell mode exit")
                 }
                 let handler = CMDHandler::get_handler();
                 handler.process(line)

@@ -12,7 +12,7 @@ use once_cell::sync::Lazy;
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
     librs::http::utils::HttpRequest,
-    modules::{passive::PassiveScanner, IActive, ModuleType, Task},
+    modules::{localscan::PassiveScanner, IActive, ModuleType, Task},
     proxy::log::{LogHistory, LogRequest, LogType, ReqResLog, SiteMap},
     scanner::{
         add_running_modules, get_modules, remove_running_modules, RunningModuleWrapper,

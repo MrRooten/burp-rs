@@ -2,6 +2,7 @@
 use crate::librs::http::utils::{HttpResponse, HttpRequest};
 use crate::librs::object::object::IObject;
 use crate::modules::Issue;
+use crate::utils::config::get_config;
 use crate::utils::utils::tidy_html;
 use crate::utils::STError;
 use chrono::{DateTime, Utc};
@@ -257,9 +258,11 @@ impl LogRequest {
         new_req.uri_mut().clone_from(self.orignal.uri());
         new_req.version_mut().clone_from(&self.orignal.version());
         new_req.extensions().clone_from(&self.orignal.extensions());
+
         HttpRequest {
             request: new_req,
             body: self.body.clone(),
+            proxy: get_config().get_proxy().clone()
         }
     }
 

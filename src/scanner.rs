@@ -5,10 +5,10 @@ use std::{
         Arc, Mutex,
     },
     thread::{spawn, JoinHandle},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH, self},
 };
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Duration};
 use colored::{ColoredString, Colorize};
 use log::{error, info};
 //use rutie::{eval, Fixnum, Object, Thread};
@@ -16,7 +16,7 @@ use log::{error, info};
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
     modules::{
-        active::{information::dirscan::DirScan, fuzz::unauth_bypass::UnauthBypass},
+        remotescan::{information::dirscan::DirScan, fuzz::unauth_bypass::UnauthBypass},
         get_next_to_scan, get_will_run_mods, IActive, ModuleType, GLOB_MODS, Task,
     },
     st_error,
@@ -284,6 +284,8 @@ pub fn scaner_thread() -> JoinHandle<()> {
             let task = match get_next_to_scan() {
                 Some(s) => s,
                 None => {
+                    //In case cost too much CPU
+                    std::thread::sleep(time::Duration::from_millis(100));
                     continue;
                 }
             };
@@ -318,6 +320,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                     }
                 };
                 if will_run_modules.contains(&meta) == false {
+                    
                     continue;
                 }
                 i += 1;
