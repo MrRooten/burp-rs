@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    fs,
     sync::{
         mpsc::{self},
         Arc, Mutex,
@@ -12,13 +11,12 @@ use std::{
 use chrono::{DateTime, Local};
 use colored::{ColoredString, Colorize};
 use log::{error, info};
-use rutie::{eval, Fixnum, Object, Thread};
+//use rutie::{eval, Fixnum, Object, Thread};
 
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
-    libruby::{http::thread::rb_http_thread, utils::rb_init},
     modules::{
-        active::{information::dirscan::DirScan, ruby_scan::RBModule, fuzz::unauth_bypass::UnauthBypass},
+        active::{information::dirscan::DirScan, fuzz::unauth_bypass::UnauthBypass},
         get_next_to_scan, get_will_run_mods, IActive, ModuleType, GLOB_MODS, Task,
     },
     st_error,
@@ -209,24 +207,6 @@ pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
     //Add Rust module in here
     add_module!(DirScan);
     add_module!(UnauthBypass);
-    let paths = fs::read_dir(dir).unwrap();
-    for path in paths {
-        let s = path.unwrap().path().to_str().unwrap().to_string();
-        if s.ends_with(".rb") {
-            let module = Box::new(RBModule::new(&s).unwrap());
-            unsafe {
-                match module.metadata() {
-                    Some(s) => {
-                        GLOB_MODS.push(s.clone());
-                    }
-                    None => {}
-                };
-            }
-            unsafe {
-                MODULES.push(module);
-            }
-        }
-    }
 
     unsafe { &MODULES }
 }
@@ -279,15 +259,9 @@ pub fn scaner_thread() -> JoinHandle<()> {
             SCAN_RECEIVER = Some(rx);
         }
 
-        if RUBY_COMMAND_SENDER.is_none() {
-            let (sender, receiver) = std::sync::mpsc::channel::<String>();
-            RUBY_COMMAND_SENDER = Some(sender);
-            RUBY_COMMAND_RECEIVER = Some(receiver);
-        }
     }
-    rb_http_thread();
+
     let t = spawn(|| {
-        let _ = rb_init();
         let modules = initialize_modules("./active/");
         // Thread::new(|| {
         //     loop {
@@ -310,7 +284,6 @@ pub fn scaner_thread() -> JoinHandle<()> {
             let task = match get_next_to_scan() {
                 Some(s) => s,
                 None => {
-                    let _ = eval!("sleep(1)");
                     continue;
                 }
             };
@@ -326,35 +299,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                     if meta.get_name().eq(task.get_mod_name()) == false {
                         continue;
                     }
-                    let thread = Thread::new(|| {
-                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &index.to_string());
-                        add_running_modules(&mut running_module);
-                        let start = SystemTime::now();
-                        let since_the_epoch = start
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Time went backwards");
-                        let t1 = since_the_epoch.as_millis();
-                        let v = module.passive_run(index);
-                        let start = SystemTime::now();
-                        let since_the_epoch = start
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Time went backwards");
-                        let t2 = since_the_epoch.as_millis();
-                        let t = t2 - t1;
-                        info!("Active scan: {} cost time: {} ms", meta.get_name(), t);
-                        let state = match &v {
-                            Ok(o) => RunningState::DEAD,
-                            Err(e) => RunningState::EXCEPTION,
-                        };
-                        remove_running_modules(&running_module, t, state);
-                        match v {
-                            Ok(o) => {}
-                            Err(e) => {
-                                error!("{}", e);
-                            }
-                        }
-                        Fixnum::new(0)
-                    });
+
                 }
                 continue;
             }
@@ -364,7 +309,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                     unset_reload();
                 }
             }
-            let mut s = vec![];
+
             for module in modules {
                 let meta = match module.metadata() {
                     Some(o) => o,
@@ -377,43 +322,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                 }
                 i += 1;
                 if meta.get_type().eq(&ModuleType::RubyModule) {
-                    let thread = Thread::new(|| {
-                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &index.to_string());
-                        add_running_modules(&mut running_module);
-                        let start = SystemTime::now();
-                        let since_the_epoch = start
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Time went backwards");
-                        let t1 = since_the_epoch.as_millis();
-                        let v = module.passive_run(index);
-                        let start = SystemTime::now();
-                        let since_the_epoch = start
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Time went backwards");
-                        let t2 = since_the_epoch.as_millis();
-                        let t = t2 - t1;
-                        info!("{} cost time: {} ms", meta.get_name(), t);
-                        let state = match &v {
-                            Ok(o) => RunningState::DEAD,
-                            Err(e) => RunningState::EXCEPTION,
-                        };
-                        remove_running_modules(&running_module, t, state);
-                        match v {
-                            Ok(o) => {}
-                            Err(e) => {
-                                error!("{}", e);
-                            }
-                        }
-                        Fixnum::new(0)
-                    });
-                    match thread.protect_send("run", &[]) {
-                        Ok(o) => {}
-                        Err(e) => {
-                            error!("{}", e);
-                        }
-                    }
-
-                    s.push(thread);
+                    
                 } else if meta.get_type().eq(&ModuleType::RustModule) {
                     std::thread::spawn(move || {
                         let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &index.to_string());

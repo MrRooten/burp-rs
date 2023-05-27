@@ -18,6 +18,8 @@ class RBModule_a
     end
 
     def active_run(url, opts)
+        resp = Request.get("https://baidu.com")
+        puts resp.inspect
     end
 
 end

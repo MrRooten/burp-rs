@@ -192,7 +192,7 @@ fn run(
 impl IActive for UnauthBypass {
     fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
         let result = Vec::default();
-        println!("passive_run...");
+        //println!("passive_run...");
         return Ok(result);
     }
 
