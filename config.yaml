@@ -13,7 +13,7 @@ modules:
         parallel: 5
 
 http:
-    parallel_per_site: 20
+    parallel_per_site: 5
     cature_send_request: false
     proxy: "socks5://192.168.75.1:1111"
     
