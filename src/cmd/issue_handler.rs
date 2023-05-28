@@ -50,31 +50,33 @@ impl CMDProc for InfoIssue {
                 return Err(STError::new("Index must be integer"))
             }
         };
-        if issue.len() <= index {
-            return Err(STError::new("Index out of range"))
-        }
-        println!("Url: {}", issue[index].get_url());
-        println!("Detail: {}",issue[index].get_detail());
-        println!("Name: {}", issue[index].get_name());
-        let log = issue[index].get_httplog();
-        let log = match log {
-            Some(o) => o,
-            None => {
-                return Ok(())
-            }
-        };
+        // if issue.len() <= index {
+        //     return Err(STError::new("Index out of range"))
+        // }
 
-        let request = log.get_request();
-        let response = log.get_response();
-        println!("Request:\n{}", request.to_string());
-        match response {
-            Some(o) => {
-                println!("Response:\n{}",o.to_string())
-            },
-            None => {
 
-            }
-        };
+        // println!("Url: {}", issue[index].get_url());
+        // println!("Detail: {}",issue[index].get_detail());
+        // println!("Name: {}", issue[index].get_name());
+        // let log = issue[index].get_httplog();
+        // let log = match log {
+        //     Some(o) => o,
+        //     None => {
+        //         return Ok(())
+        //     }
+        // };
+
+        // let request = log.get_request();
+        // let response = log.get_response();
+        // println!("Request:\n{}", request.to_string());
+        // match response {
+        //     Some(o) => {
+        //         println!("Response:\n{}",o.to_string())
+        //     },
+        //     None => {
+
+        //     }
+        // };
         Ok(())
     }
 
@@ -122,11 +124,8 @@ impl CMDProc for ListIssues {
             println!("{}", host.blue());
             let mut index = 1;
             let issues = site.get_issues();
-            for issue in issues {
-                println!("\t{}: '{}'", "Name".green(), issue.get_name());
-                println!("\t{}: '{}'", "Description".green(), issue.get_detail());
-                println!("\t{}: '{}'", "Url".green(), issue.get_url());
-                index += 1;
+            for issue_group in issues {
+                println!("\t{}: {} times", issue_group.0, issue_group.1.len());
             }
         }
         Ok(())

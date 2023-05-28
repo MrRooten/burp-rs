@@ -32,7 +32,7 @@ pub(crate) fn pager(s: &str, p: minus::Pager) -> Result<(), STError> {
     match res2 {
         Ok(o) => {},
         Err(e) => {
-            return Err(STError::from(e));
+            return Err(STError::new(&format!("{:?}",e)));
         },
     }
 

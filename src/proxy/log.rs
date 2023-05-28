@@ -1007,7 +1007,7 @@ impl FoundUrl {
 
 pub struct Site {
     logs    : Vec<u32>,
-    issues  : Vec<Issue>,
+    issues  : HashMap<String,Vec<Arc<Issue>>>,
     paths   : Vec<String>
 }
 
@@ -1028,11 +1028,15 @@ impl Site {
         &self.logs
     }
 
-    pub fn push_issue(&mut self, issue: Issue) {
-        self.issues.push(issue);
+    pub fn push_issue(&mut self, issue: Arc<Issue>) {
+        if let Some(iss) = self.issues.get_mut(issue.get_name()) {
+            iss.push(issue.clone());
+        } else {
+            self.issues.insert(issue.get_name().to_string(), vec![issue.clone()]);
+        }
     }
 
-    pub fn get_issues(&self) -> &Vec<Issue> {
+    pub fn get_issues(&self) -> &HashMap<String,Vec<Arc<Issue>>> {
         &self.issues
     }
 
@@ -1117,7 +1121,7 @@ impl SiteMap {
     site.push_issue(issue);
     ```
     */
-    pub fn push_issue(&mut self, issue: Issue) -> Result<(),STError> {
+    pub fn push_issue(&mut self, issue: Arc<Issue>) -> Result<(),STError> {
         let host = issue.get_host();
         if self.map.contains_key(host) == false {
             self.map.insert(host.to_string(), Site::new());
@@ -1130,10 +1134,10 @@ impl SiteMap {
                 return Err(STError::new("Not existed site"));
             }
         };
-        for iter in &site.issues {
-            if iter.get_name().eq(issue.get_name()) {
-                
-                if iter.get_host().eq(issue.get_host()) {
+        
+        if let Some(issues_group) = site.get_issues().get(issue.get_name()) {
+            for save_issue in issues_group {
+                if issue.get_url().eq(&save_issue.get_url()) {
                     return Ok(());
                 }
             }

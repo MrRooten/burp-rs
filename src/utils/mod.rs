@@ -11,7 +11,7 @@ pub mod utils;
 #[derive(Debug,Default)]
 pub struct STError {
     detail  : String,
-    err     : Option<Box<dyn Error>>
+    err     : Option<Box<dyn Error + Send>>
 }
 
 

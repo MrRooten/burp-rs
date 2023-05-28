@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Range, str::FromStr, sync::Arc, io::Read};
+use std::{collections::HashMap, ops::Range, str::FromStr, sync::{Arc, Mutex}, io::Read};
 
 extern crate hyper;
 extern crate hyper_native_tls;
@@ -11,8 +11,9 @@ use hyper::{
     Body, Client, Method, Request, Response, StatusCode, Uri, Version,
 };
 use log::error;
+use once_cell::sync::Lazy;
 use regex::Regex;
-use tokio::runtime::Runtime;
+use tokio::{runtime::Runtime, sync::Semaphore};
 
 use crate::{
     proxy::log::{LogRequest, ReqResLog, RequestParam},
@@ -25,6 +26,69 @@ pub struct HttpRequest {
     pub(crate) request: Request<Body>,
     pub(crate) body: Arc<Bytes>,
     pub(crate) proxy: Arc<String>
+}
+
+pub struct RequestPools {
+    pools       : HashMap<String, Arc<Semaphore>>,
+    default     : u32
+}
+
+static mut REQUEST_POOLS: Lazy<RequestPools> = Lazy::new(|| {
+    RequestPools::new()
+});
+
+static mut REQ_RT: Lazy<Runtime> = Lazy::new(|| {
+    tokio::runtime::Runtime::new().unwrap()
+});
+
+static mut _REQUEST_POOLS_LOCK: Lazy<Mutex<u32>> = Lazy::new(|| {
+    Mutex::new(0)
+});
+
+fn get_pools_lock() -> &'static mut Lazy<Mutex<u32>> {
+    unsafe {
+        &mut _REQUEST_POOLS_LOCK
+    }
+}
+
+pub fn get_req_rt() -> &'static mut Lazy<Runtime> {
+    unsafe {
+        &mut REQ_RT
+    }
+}
+
+impl RequestPools {
+    pub fn new() -> Self {
+        let num = match get_config().get("http.parallel_per_site").as_i64() {
+            Some(s) => s,
+            None => {
+                5
+            }
+        };
+
+        Self {
+            pools: HashMap::new(),
+            default: num as u32,
+        }
+    }
+
+    pub fn get_sem(&mut self, host: &str) -> &Semaphore {
+        let lock = get_pools_lock();
+        if self.pools.contains_key(host) {
+            return self.pools.get(host).unwrap();
+        }
+        
+        self.pools.insert(host.to_string(), Arc::new(Semaphore::new(self.default as usize)));
+        return self.pools.get(host).unwrap();
+    }
+
+    pub fn get_pools() -> &'static mut Lazy<RequestPools> {
+        unsafe { &mut REQUEST_POOLS }
+    }
+
+    pub fn resize_pool(&mut self, host: &str, num: u32) {
+        self.pools.insert(host.to_string(), Arc::new(Semaphore::new(self.default as usize)));
+    }
 }
 
 impl HttpRequest {
@@ -137,7 +201,36 @@ impl HttpRequest {
         *self.request.method_mut() = method;
     }
 
-    pub async fn send_async(method: Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
+    pub async fn send2(method: Method, request: HttpRequest) -> Result<HttpResponse, STError> {
+        let h = tokio::spawn(async move {
+            match HttpRequest::send_async(method, request).await {
+                Ok(s) => {
+                    Ok(s)
+                },
+                Err(e) => {
+                    Err(e)
+                }
+            }
+        });
+        let result = h.await;
+
+
+        match result {
+            Ok(s) => s,
+            Err(e) => {
+                Err(st_error!(e))
+            }
+        }
+    }
+
+    pub async fn send_async(method: Method, request: HttpRequest) -> Result<HttpResponse, STError> {
+        let host = match request.request.uri().host() {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("No host in request"))
+            }
+        };
+
         let cli = {
             if request.proxy.len() == 0 {
                 reqwest::Client::new()
@@ -156,8 +249,10 @@ impl HttpRequest {
                 }
             }
         };
-            
-        let rt = Runtime::new().unwrap();
+        let pools = RequestPools::get_pools();
+        let sem = pools.get_sem(host).clone();
+        let _ = sem.acquire().await;  
+
         let body = reqwest::Body::from((*request.body).clone());
         let response = {
             if method.eq(&Method::GET) {
@@ -189,10 +284,17 @@ impl HttpRequest {
             }
         };
         let resp = HttpResponse::from_reqwest_response_async(request, ret);
-        resp
+        resp.await
     }
 
-    pub fn send(method: Method, request: &HttpRequest) -> Result<HttpResponse, STError> {
+    pub fn send(method: Method, request: HttpRequest) -> Result<HttpResponse, STError> {
+        let host = match request.request.uri().host() {
+            Some(s) => s,
+            None => {
+                return Err(STError::new("No host in request"))
+            }
+        };
+        
         let cli = {
             if request.proxy.len() == 0 {
                 reqwest::blocking::Client::new()
@@ -200,6 +302,7 @@ impl HttpRequest {
                 let proxy = match reqwest::Proxy::http(request.proxy.as_str()) {
                     Ok(s) => s,
                     Err(e) => {
+                        
                         return Err(st_error!(e));
                     }
                 };
@@ -211,8 +314,9 @@ impl HttpRequest {
                 }
             }
         };
-            
-        let rt = Runtime::new().unwrap();
+        let pools = RequestPools::get_pools();
+        let sem = pools.get_sem(host).clone();
+        let _ = sem.acquire(); 
         let body = reqwest::blocking::Body::from((*request.body).clone());
         let response = {
             if method.eq(&Method::GET) {
@@ -237,8 +341,13 @@ impl HttpRequest {
                 cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
             }
         }; 
-        let ret = response.unwrap();
-        let resp = HttpResponse::from_reqwest_response(request, ret);
+        let ret = match response {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        };
+        let resp = HttpResponse::from_reqwest_response(&request, ret);
         resp
     }
 
@@ -253,12 +362,16 @@ pub struct HttpResponse {
 }
 
 impl HttpResponse {
-    pub fn from_reqwest_response_async(req: &HttpRequest, resp: reqwest::Response) -> Result<Self,STError> {
+    pub async fn from_reqwest_response_async(req: HttpRequest, resp: reqwest::Response) -> Result<Self,STError> {
         let mut _resp = Response::new(Body::from(""));
         _resp.headers_mut().clone_from(resp.headers());
-        let rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
-        let body = rt.block_on(resp.bytes()).unwrap();
-        Ok(Self { req: req.clone(), 
+        let body = match resp.bytes().await {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(st_error!(e));
+            }
+        };
+        Ok(Self { req: req, 
             resp: _resp, 
             body: body
         })
@@ -275,7 +388,7 @@ impl HttpResponse {
         })
     }
 
-    pub fn from(req: &HttpRequest, resp: Response<Body>, body: Bytes) -> Self {
+    pub fn from(req: HttpRequest, resp: Response<Body>, body: Bytes) -> Self {
         Self {
             req: req.clone(),
             resp: resp,

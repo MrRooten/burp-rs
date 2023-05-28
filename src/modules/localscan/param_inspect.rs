@@ -71,7 +71,6 @@ impl IPassive for ParamInspect {
 
                 }
             } 
-            
         }
         Ok(())
     }

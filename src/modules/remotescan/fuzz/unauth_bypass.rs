@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc, vec, thread};
+use std::{str::FromStr, sync::Arc, thread, vec};
 
 use hyper::{body::Bytes, header::HOST, http::HeaderValue, HeaderMap, Method, StatusCode, Uri};
 use log::error;
@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use strsim::normalized_levenshtein;
 
 use crate::{
-    librs::http::utils::HttpRequest,
+    librs::http::utils::{get_req_rt, HttpRequest},
     modules::{IActive, Issue, IssueConfidence, IssueLevel, ModuleMeta, ModuleType},
     st_error,
     utils::STError,
@@ -16,7 +16,8 @@ pub struct UnauthBypass {
     meta: Option<ModuleMeta>,
 }
 
-static HEADER_PAYLOADS: Lazy<Vec<(&str, &str)>> = Lazy::new(|| {vec![
+static HEADER_PAYLOADS: Lazy<Vec<(&str, &str)>> = Lazy::new(|| {
+    vec![
         ("Client-IP", "127.0.0.1"),
         ("X-Real-Ip", "127.0.0.1"),
         ("Redirect", "127.0.0.1"),
@@ -31,7 +32,6 @@ static HEADER_PAYLOADS: Lazy<Vec<(&str, &str)>> = Lazy::new(|| {vec![
     ]
 });
 
-
 fn run(
     method: Method,
     url: &str,
@@ -43,7 +43,6 @@ fn run(
         "*",
     ];
 
-    
     let uri = match Uri::from_str(url) {
         Ok(u) => u,
         Err(e) => {
@@ -63,7 +62,8 @@ fn run(
             return Err(e);
         }
     };
-    let resp = match HttpRequest::send(method.clone(), &not_found) {
+
+    let resp = match HttpRequest::send(method.clone(), not_found) {
         Ok(o) => o,
         Err(e) => {
             return Err(e);
@@ -122,7 +122,6 @@ fn run(
                     )
                 }
             };
-
             
             for header in HEADER_PAYLOADS.iter() {
                 let mut request = match HttpRequest::from_url(&target_u) {
@@ -131,15 +130,17 @@ fn run(
                         return Err(e);
                     }
                 };
+
                 request.set_headers(headers);
                 request.set_body(body.clone());
                 let m = method.clone();
                 let not_found2 = not_found.clone();
                 let h_port = host_with_port.clone();
                 let mut r = request.clone();
-                let handle = thread::spawn( move || {
-                    r.set_header(header.0, header.1);
-                    let resp = match HttpRequest::send(m, &r) {
+
+                r.set_header(header.0, header.1);
+                let h = rt.spawn(async move {
+                    let resp = match HttpRequest::send2(m, r).await {
                         Ok(o) => o,
                         Err(e) => {
                             error!("{}", e);
@@ -150,11 +151,11 @@ fn run(
                     if resp.get_status().eq(&StatusCode::FORBIDDEN)
                         || resp.get_status().eq(&StatusCode::NOT_FOUND)
                     {
-                        return;
+                        return ;
                     }
                     let content = String::from_utf8_lossy(&resp.get_body()).to_string();
                     if normalized_levenshtein(&content, &not_found2) > 0.9 {
-                        return;
+                        return ;
                     }
     
                     let issue = Issue::new(
@@ -165,26 +166,22 @@ fn run(
                         &h_port,
                     );
     
-                    Issue::add_issue(issue, &Arc::new(resp.get_httplog()))
+                    Issue::add_issue(issue, &Arc::new(resp.get_httplog()));
+    
+                    request.remove_header(header.0);
                 });
-                handles.push(handle);
-                request.remove_header(header.0);
+                handles.push(h);
+                
             }
-            
         }
         i += 1
     }
-
-
+    rt.block_on(async move {
         for h in handles {
-            let s = match h.join() {
-                Ok(o) => o,
-                Err(e) => {
-                    continue;
-                }
-            };
+            let result = h.await;
         }
-
+    });
+    
 
     Ok(vec![])
 }
@@ -201,7 +198,7 @@ impl IActive for UnauthBypass {
         url: &str,
         args: crate::modules::Args,
     ) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
-        let result = Vec::default();
+
         let uri = match Uri::from_str(url) {
             Ok(o) => o,
             Err(e) => {
@@ -219,8 +216,10 @@ impl IActive for UnauthBypass {
         let mut headers = HeaderMap::new();
         let host_key = HeaderValue::from_str("host").unwrap();
         headers.insert(HOST, host_with_port.parse().unwrap());
-        let s = run(Method::GET, url, &headers, Arc::new(Bytes::from("")));
-        return Ok(result);
+        let u = url.to_string();
+        let h = headers.clone();
+        let result = run(Method::GET, &u, &h, Arc::new(Bytes::from("")));
+        return result;
     }
 
     fn metadata(&self) -> &Option<crate::modules::ModuleMeta> {

@@ -20,7 +20,7 @@ impl STError {
         }
     }
 
-    pub fn from(err: Box<dyn Error>) -> STError{
+    pub fn from(err: Box<dyn Error + Send>) -> STError{
         let mut result = STError {
             detail: "".to_string(),
             ..Default::default()

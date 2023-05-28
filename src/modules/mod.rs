@@ -63,7 +63,7 @@ impl Issue {
                 return;
             }
         };
-
+        let issue = Arc::new(issue);
         match sitemap.push_issue(issue) {
             Ok(()) => {
 
@@ -74,7 +74,7 @@ impl Issue {
         }
     }
 
-    pub fn get_issues() -> Vec<&'static Issue> {
+    pub fn get_issues() -> Vec<&'static Arc<Issue>> {
         let mut ret = Vec::default();
         let sitemap = SiteMap::single();
         let sitemap = match sitemap {
@@ -95,8 +95,10 @@ impl Issue {
             };
 
             let issues = site.get_issues();
-            for issue in issues {
-                ret.push(issue);
+            for issues_group in issues.values() {
+                for issue in issues_group {
+                    ret.push(issue);
+                }
             }
         }
         ret

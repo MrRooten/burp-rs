@@ -48,7 +48,7 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
             return Err(e);
         }
     };
-    let resp = HttpRequest::send(Method::GET, &not_found_request);
+    let resp = HttpRequest::send(Method::GET, not_found_request);
     let resp = match resp {
         Ok(o) => o,
         Err(e) => {
@@ -116,7 +116,7 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
                 }
             };
             let aq = sem_clone.acquire();
-            let resp = HttpRequest::send(Method::GET, &request);
+            let resp = HttpRequest::send(Method::GET, request);
             
             let resp = match resp {
                 Ok(o) => o,
