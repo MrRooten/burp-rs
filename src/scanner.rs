@@ -16,7 +16,7 @@ use log::{error, info};
 use crate::{
     cmd::handlers::{SCAN_RECEIVER, SCAN_SENDER},
     modules::{
-        remotescan::{information::dirscan::DirScan, fuzz::unauth_bypass::UnauthBypass},
+        remotescan::{information::{dirscan::DirScan, test::TestScan}, fuzz::unauth_bypass::UnauthBypass},
         get_next_to_scan, get_will_run_mods, IActive, ModuleType, GLOB_MODS, Task,
     },
     st_error,
@@ -207,7 +207,7 @@ pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
     //Add Rust module in here
     add_module!(DirScan);
     add_module!(UnauthBypass);
-
+    add_module!(TestScan);
     unsafe { &MODULES }
 }
 
