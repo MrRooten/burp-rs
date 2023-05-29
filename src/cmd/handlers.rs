@@ -252,7 +252,7 @@ impl CMDProc for ListHistory {
                 if status_first == 1 {
                     status_s = status.as_str().green();
                 } else if status_first == 2 {
-                    status_s = status.as_str().blue();
+                    status_s = status.as_str().bright_blue();
                 } else if status_first == 3 {
                     status_s = status.as_str().yellow();
                 } else if status_first == 4 {
@@ -330,7 +330,7 @@ impl CMDProc for ListHistory {
                 if status_first == 1 {
                     status_s = status.as_str().green();
                 } else if status_first == 2 {
-                    status_s = status.as_str().blue();
+                    status_s = status.as_str().bright_blue();
                 } else if status_first == 3 {
                     status_s = status.as_str().yellow();
                 } else if status_first == 4 {
@@ -842,7 +842,7 @@ impl CMDProc for SearchLog {
             if status_first == 1 {
                 status_s = status.as_str().green();
             } else if status_first == 2 {
-                status_s = status.as_str().blue();
+                status_s = status.as_str().bright_blue();
             } else if status_first == 3 {
                 status_s = status.as_str().yellow();
             } else if status_first == 4 {
@@ -1281,7 +1281,7 @@ impl CMDProc for Filter {
             if status_first == 1 {
                 status_s = status.as_str().green();
             } else if status_first == 2 {
-                status_s = status.as_str().blue();
+                status_s = status.as_str().bright_blue();
             } else if status_first == 3 {
                 status_s = status.as_str().yellow();
             } else if status_first == 4 {

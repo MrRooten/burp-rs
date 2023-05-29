@@ -1,6 +1,6 @@
-use colored::Colorize;
+use colored::{Colorize, ColoredString};
 
-use crate::{utils::STError, proxy::log::SiteMap};
+use crate::{utils::STError, proxy::log::SiteMap, modules::IssueLevel};
 
 use super::cmd_handler::{CMDProc, CMDOptions};
 
@@ -121,11 +121,22 @@ impl CMDProc for ListIssues {
         let hosts = map.get_hosts();
         for host in hosts {
             let site = map.get_site(&host).unwrap();
-            println!("{}", host.blue());
-            let mut index = 1;
+            println!("{}", host.bright_blue());
             let issues = site.get_issues();
             for issue_group in issues {
-                println!("\t{}: {} times", issue_group.0, issue_group.1.len());
+                let level: ColoredString;
+                if issue_group.1.len() > 0 {
+                    if issue_group.1.get(0).unwrap().get_level().eq(&IssueLevel::HighRisk) {
+                        level = "high".red();
+                    } else if issue_group.1.get(0).unwrap().get_level().eq(&IssueLevel::Medium) {
+                        level = "medium".yellow();
+                    } else {
+                        level = "low".green();
+                    }
+                } else {
+                    level = "none".green();
+                }
+                println!("[{}] {}: {} times", level, issue_group.0, issue_group.1.len());
             }
         }
         Ok(())

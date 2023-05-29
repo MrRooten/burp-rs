@@ -1,14 +1,13 @@
-use std::{collections::HashMap, ops::Range, str::FromStr, sync::{Arc, Mutex}, io::Read};
+use std::{collections::HashMap, ops::Range, str::FromStr, sync::{Arc, Mutex}};
 
 extern crate hyper;
-extern crate hyper_native_tls;
 
-use html5ever::tendril::fmt::Slice;
+
 use hyper::{
-    body::{self, Bytes},
+    body::Bytes,
     header::*,
     http::uri::Scheme,
-    Body, Client, Method, Request, Response, StatusCode, Uri, Version,
+    Body, Method, Request, Response, StatusCode, Uri, Version,
 };
 use log::error;
 use once_cell::sync::Lazy;
@@ -421,7 +420,7 @@ impl HttpResponse {
     }
 
     pub fn get_httplog(&self) -> ReqResLog {
-        unimplemented!()
+        ReqResLog::from_http_response(self)
     }
 
     pub fn get_request(&self) -> &HttpRequest {

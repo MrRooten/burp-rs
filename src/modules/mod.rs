@@ -1,9 +1,11 @@
 pub mod remotescan;
 pub mod localscan;
+pub mod lib;
 
 #[derive(Default)]
 pub struct Helper {}
 
+#[derive(PartialEq)]
 pub enum IssueLevel {
     Info,
     Medium,
@@ -115,7 +117,7 @@ impl Issue {
         &self.detail
     }
 
-    fn get_level(&self) -> &IssueLevel {
+    pub fn get_level(&self) -> &IssueLevel {
         &self.level
     }
 
@@ -139,6 +141,8 @@ impl Issue {
 
         return request.get_url();
     }
+
+
 }
 
 pub trait IPassive {

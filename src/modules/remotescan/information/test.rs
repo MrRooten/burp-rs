@@ -1,10 +1,9 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
-use hyper::{Uri, HeaderMap, http::HeaderValue, header::HOST};
+use hyper::{Uri, HeaderMap, http::HeaderValue, header::HOST, Method};
 use log::info;
-use tracing::Metadata;
 
-use crate::{modules::{IActive, ModuleMeta, ModuleType}, utils::STError};
+use crate::{modules::{IActive, ModuleMeta, ModuleType, Issue, IssueLevel, IssueConfidence}, utils::STError, librs::http::utils::HttpRequest};
 
 pub struct TestScan {
     meta: Option<ModuleMeta>
@@ -34,12 +33,26 @@ impl IActive for TestScan {
                 format!("{}", uri.host().unwrap())
             }
         };
+
+        let host = match uri.host() {
+            Some(h) => h,
+            None => ""
+        };
         let mut headers = HeaderMap::new();
         let host_key = HeaderValue::from_str("host").unwrap();
         headers.insert(HOST, host_with_port.parse().unwrap());
         let u = url.to_string();
         let h = headers.clone();
+        let request = HttpRequest::from_url(url).unwrap();
+        let resp = match HttpRequest::send(Method::GET, request) {
+            Ok(o) => o, 
+            Err(e) => {
+                return Err(e);
+            }
+        };
         info!("passive_run...");
+        let issue = Issue::new("test_issue", IssueLevel::HighRisk, "ok", IssueConfidence::Confirm, host);
+        Issue::add_issue(issue, &Arc::new(resp.get_httplog()));
         return Ok(result);
     }
 

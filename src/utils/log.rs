@@ -16,7 +16,7 @@ impl Log for Logger {
             if record.level() == log::Level::Debug {
                 log = Some(format!(
                     "{} {} {}",
-                    record.level().to_string().blue(),
+                    record.level().to_string().bright_blue(),
                     record.file().unwrap_or(""),
                     record.args()
                 ));

@@ -728,7 +728,7 @@ impl LogResponse {
         ret.push_str("\n");
         for kv in self.orignal.headers() {
             let key = kv.0.as_str();
-            ret.push_str(&key.blue());
+            ret.push_str(&key.bright_blue());
             ret.push_str(": ");
             ret.push_str(&kv.1.to_str().unwrap().red());
             ret.push_str("\n");
@@ -1192,7 +1192,7 @@ impl SiteMap {
         };
 
         let s = format!("{} {} {} {} {}",
-        url.method.as_str().green(), uri.path().yellow(),url.status.to_string().blue(), url.length, url.c_type.green());
+        url.method.as_str().green(), uri.path().yellow(),url.status.to_string().bright_blue(), url.length, url.c_type.green());
         site.add_paths(&s);
     }
 }

@@ -1,9 +1,6 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
-use std::fs::File;
-use std::io::Write;
 
 use colored::Colorize;
-use pprof::protos::Message;
 use rustyline::completion::{Completer};
 
 use rustyline::error::ReadlineError;

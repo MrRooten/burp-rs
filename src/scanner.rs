@@ -8,7 +8,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH, self},
 };
 
-use chrono::{DateTime, Local, Duration};
+use chrono::{DateTime, Local};
 use colored::{ColoredString, Colorize};
 use log::{error, info};
 //use rutie::{eval, Fixnum, Object, Thread};

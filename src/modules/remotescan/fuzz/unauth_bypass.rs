@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc, thread, vec};
+use std::{str::FromStr, sync::Arc, vec};
 
 use hyper::{body::Bytes, header::HOST, http::HeaderValue, HeaderMap, Method, StatusCode, Uri};
 use log::error;
@@ -6,10 +6,10 @@ use once_cell::sync::Lazy;
 use strsim::normalized_levenshtein;
 
 use crate::{
-    librs::http::utils::{get_req_rt, HttpRequest},
+    librs::http::utils::{HttpRequest},
     modules::{IActive, Issue, IssueConfidence, IssueLevel, ModuleMeta, ModuleType},
     st_error,
-    utils::STError,
+    utils::STError
 };
 
 pub struct UnauthBypass {

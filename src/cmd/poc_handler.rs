@@ -202,7 +202,7 @@ impl CMDProc for RunningMods {
             }
             println!("{: >3} {: <20} {} {: >3} {: <10} {: >7}{}" , 
             i,
-            modules.get(&i).unwrap().get_name().blue(), 
+            modules.get(&i).unwrap().get_name().bright_blue(), 
             modules.get(&i).unwrap().get_starttime().to_rfc2822(), 
             modules.get(&i).unwrap().get_args().to_string().yellow(), 
             modules.get(&i).unwrap().get_state_colored(),

@@ -1,12 +1,11 @@
 use std::{
-    env,
-    thread::{self}, fs::File, io::Write, sync::Arc, time,
+    env, sync::Arc, time, thread,
 };
 
 use burp_rs::{
     cmd::cmd::cmd,
     proxy::{proxy::proxy},
-    utils::{banner, log::init, config::{get_config}}, scanner::scaner_thread, librs::http::utils::{HttpRequest},
+    utils::{banner, log::init, config::{get_config}}, scanner::scaner_thread, 
 };
 use tokio::sync::Semaphore;
 
@@ -27,7 +26,7 @@ async fn test() {
     for i in 1..100 {
         let _s = sem.clone();
         let h = tokio::spawn(async move  {
-            let s = _s.acquire().await;
+            let _ = _s.acquire().await;
             println!("i:{}", i);
             thread::sleep(time::Duration::from_millis(1000));
         });
@@ -35,7 +34,7 @@ async fn test() {
     }
 
     for i in v {
-        i.await;
+        let _ = i.await;
     }
 }
 

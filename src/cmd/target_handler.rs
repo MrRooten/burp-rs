@@ -164,11 +164,11 @@ impl CMDProc for ListTarget {
     }
 }
 
-pub struct PassiveScan {
+pub struct LocalScan {
     opts: CMDOptions,
 }
 
-impl PassiveScan {
+impl LocalScan {
     pub fn new() -> Self {
         Self {
             opts: CMDOptions::default(),
@@ -178,9 +178,9 @@ impl PassiveScan {
 
 static mut PASSIVE_SCAN_DONE: Lazy<HashSet<u32>> = Lazy::new(|| HashSet::new());
 
-impl CMDProc for PassiveScan {
+impl CMDProc for LocalScan {
     fn get_name(&self) -> &str {
-        "passive_scan"
+        "local_scan"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -258,11 +258,11 @@ impl CMDProc for PassiveScan {
     }
 
     fn get_detail(&self) -> String {
-        "".to_string()
+        "Scan http log history, not send request to target".to_string()
     }
 
     fn get_help(&self) -> String {
-        "".to_string()
+        "localscan".to_string()
     }
 }
 

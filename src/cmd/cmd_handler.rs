@@ -2,7 +2,7 @@ use colored::Colorize;
 
 use crate::{utils::STError, cmd::{handlers::{Log, CatResponse, ClearScreen
     , CatRequest, DebugLogInfo, DebugLevel, Sitemap, GetRequest, Scan, Test, SearchLog, Filter}, 
-    issue_handler::{InfoIssue, ListIssues}, poc_handler::{PushMod, ListMods, LoadedMods, Reload, RunningMods, RemoveMod}, target_handler::{Push, ListTarget, ActiveScan, PassiveScan}}};
+    issue_handler::{InfoIssue, ListIssues}, poc_handler::{PushMod, ListMods, LoadedMods, Reload, RunningMods, RemoveMod}, target_handler::{Push, ListTarget, ActiveScan, LocalScan}}};
 
 use super::handlers::{Exit, Helper, ListHistory, ProxyLogInfo};
 static mut CMD_HANDLER: CMDHandler = CMDHandler::new();
@@ -95,7 +95,7 @@ impl CMDHandler {
         hi!(RemoveMod);
         hi!(ActiveScan);
         hi!(SearchLog);
-        hi!(PassiveScan);
+        hi!(LocalScan);
         hi!(Filter);
     }
 

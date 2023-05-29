@@ -2,4 +2,3 @@
 pub mod information;
 pub mod fuzz;
 pub mod vulns;
-pub mod yaml_scan;
