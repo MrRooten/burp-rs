@@ -1,11 +1,8 @@
 use std::{
-    collections::HashMap,
-    sync::{
-        mpsc::{self},
+    collections::HashMap, ptr::addr_of_mut, sync::{
+        mpsc,
         Arc, Mutex,
-    },
-    thread::{spawn, JoinHandle},
-    time::{SystemTime, UNIX_EPOCH, self},
+    }, thread::{spawn, JoinHandle}, time::{self, SystemTime, UNIX_EPOCH}
 };
 
 use chrono::{DateTime, Local};
@@ -110,7 +107,7 @@ static mut INDEX_OF_RUNNING_MODULE: i32 = 0;
 static META_LOCKER: Mutex<i32> = Mutex::new(0);
 pub fn add_running_modules(module: &mut RunningModuleWrapper) {
     unsafe {
-        let _ = META_LOCKER.lock();
+        let _unused = META_LOCKER.lock();
         let v = match &mut RUNING_MODULES {
             Some(s) => s,
             None => {
@@ -125,8 +122,8 @@ pub fn add_running_modules(module: &mut RunningModuleWrapper) {
 
 pub fn remove_running_modules(module: &RunningModuleWrapper, cost: u128, state: RunningState) {
     unsafe {
-        let _ = META_LOCKER.lock();
-        let v = match &mut RUNING_MODULES {
+        let _unused = META_LOCKER.lock();
+        let v = match &mut *addr_of_mut!(RUNING_MODULES) {
             Some(s) => s,
             None => {
                 return;

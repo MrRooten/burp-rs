@@ -225,11 +225,11 @@ impl CMDProc for ListHistory {
             for key in httplog {
                 let request = history.get(key).unwrap().get_request();
                 let response = history.get(key).unwrap().get_response();
-                let status = match response {
+                let status = match &*response.borrow() {
                     Some(r) => r.get_status(),
                     None => StatusCode::GONE,
                 };
-                let size = match response {
+                let size = match &*response.borrow() {
                     Some(r) => r.get_size(),
                     None => 0,
                 };
@@ -240,7 +240,7 @@ impl CMDProc for ListHistory {
                     url_brief.push_str("...");
                 }
 
-                let c_type = match response {
+                let c_type = match &*response.borrow() {
                     Some(r) => match r.get_header("content-type") {
                         Some(v) => v,
                         None => "".to_string(),
@@ -303,11 +303,11 @@ impl CMDProc for ListHistory {
             for key in keys {
                 let request = history.get(key).unwrap().get_request();
                 let response = history.get(key).unwrap().get_response();
-                let status = match response {
+                let status = match &*response.borrow() {
                     Some(r) => r.get_status(),
                     None => StatusCode::GONE,
                 };
-                let size = match response {
+                let size = match &*response.borrow() {
                     Some(r) => r.get_size(),
                     None => 0,
                 };
@@ -318,7 +318,7 @@ impl CMDProc for ListHistory {
                     url_brief.push_str("...");
                 }
 
-                let c_type = match response {
+                let c_type = match &*response.borrow() {
                     Some(r) => match r.get_header("content-type") {
                         Some(v) => v,
                         None => "".to_string(),
@@ -449,7 +449,7 @@ impl CMDProc for CatResponse {
                 return Err(STError::new("Not such a response"));
             }
         };
-        let s = match s.get_response() {
+        let s = match &*s.get_response().borrow() {
             Some(s) => s.get_beauty_string(),
             None => "".to_string(),
         };
@@ -802,24 +802,22 @@ impl CMDProc for SearchLog {
             let request = history.get(key).unwrap().get_request();
             let response = history.get(key).unwrap().get_response();
             let mut flag = false;
-            if let Some(r) = response {
+            if let Some(r) = &*response.borrow() {
                 if request.contains(target, false) || r.contains(target, false) {
                     flag = true;
                 }
-            } else {
-                if request.contains(target, false) {
-                    flag = true;
-                }
+            } else if request.contains(target, false) {
+                flag = true;
             }
 
             if flag == false {
                 continue;
             }
-            let status = match response {
+            let status = match &*response.borrow() {
                 Some(r) => r.get_status(),
                 None => StatusCode::GONE,
             };
-            let size = match response {
+            let size = match &*response.borrow() {
                 Some(r) => r.get_size(),
                 None => 0,
             };
@@ -830,7 +828,7 @@ impl CMDProc for SearchLog {
                 url_brief.push_str("...");
             }
 
-            let c_type = match response {
+            let c_type = match &*response.borrow() {
                 Some(r) => match r.get_header("content-type") {
                     Some(v) => v,
                     None => "".to_string(),
@@ -967,14 +965,14 @@ impl CMDProc for Sitemap {
         for key in httplog {
             let request = LogHistory::get_httplog(*key).unwrap().get_request();
             let response = LogHistory::get_httplog(*key).unwrap().get_response();
-            let status = match response {
+            let status = match &*response.borrow() {
                 Some(r) => {
                     response_size += r.get_body().len();
                     r.get_status()
                 }
                 None => StatusCode::GONE,
             };
-            let size = match response {
+            let size = match &*response.borrow() {
                 Some(r) => r.get_size(),
                 None => 0,
             };
@@ -1224,7 +1222,8 @@ impl CMDProc for Filter {
             let history = history.get_history();
             for h in history {
                 let resp = h.1.get_response();
-                let resp = match resp {
+                let v = &*resp.borrow();
+                let resp = match v {
                     Some(s) => s,
                     None => {
                         continue;
@@ -1254,11 +1253,11 @@ impl CMDProc for Filter {
         for key in httplog {
             let request = key.1.get_request();
             let response = key.1.get_response();
-            let status = match response {
+            let status = match &*response.borrow() {
                 Some(r) => r.get_status(),
                 None => StatusCode::GONE,
             };
-            let size = match response {
+            let size = match &*response.borrow() {
                 Some(r) => r.get_size(),
                 None => 0,
             };
@@ -1269,7 +1268,7 @@ impl CMDProc for Filter {
                 url_brief.push_str("...");
             }
 
-            let c_type = match response {
+            let c_type = match &*response.borrow() {
                 Some(r) => match r.get_header("content-type") {
                     Some(v) => v,
                     None => "".to_string(),

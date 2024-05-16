@@ -31,7 +31,9 @@ impl IPassive for CookieMatch {
             );
             Issue::add_issue(issue, log);
         }
-        let response = match log.get_response() {
+
+        let v = &*log.get_response().borrow();
+        let response = match v {
             Some(r) => r,
             None => {
                 return Err(STError::new("Not found history log request"));

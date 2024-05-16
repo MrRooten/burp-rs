@@ -14,8 +14,10 @@ use hyper::body::Bytes;
 use hyper::{http, StatusCode, Version, Method, Uri};
 use log::error;
 use serde_json::{Value, Error};
+use std::cell::RefCell;
 use std::collections::{HashMap};
 use std::io::Read;
+use std::ptr::addr_of_mut;
 use std::str::FromStr;
 use std::sync::{Mutex, Arc};
 use url::Url;
@@ -30,9 +32,13 @@ pub enum LogType {
 #[derive(Debug)]
 pub struct ReqResLog {
     request: LogRequest,
-    response: Option<LogResponse>,
+    response: RefCell<Option<LogResponse>>,
     record_t: DateTime<Utc>,
     log_type: LogType
+}
+
+unsafe impl Sync for ReqResLog {
+    
 }
 
 impl ReqResLog {
@@ -51,7 +57,7 @@ impl ReqResLog {
         };
         ReqResLog {
             request: request,
-            response: Some(resp),
+            response: RefCell::new(Some(resp)),
             record_t: Utc::now(),
             log_type: LogType::Module
         }
@@ -60,7 +66,7 @@ impl ReqResLog {
     pub fn new(req: LogRequest) -> Self {
         ReqResLog {
             request: req,
-            response: None,
+            response: RefCell::new(None),
             record_t: Utc::now(),
             log_type: LogType::Proxy
         }
@@ -79,7 +85,7 @@ impl ReqResLog {
     }
 
     pub fn set_resp(&self, resp: LogResponse) {
-        i_to_m(self).response = Some(resp);
+        self.response.replace(Some(resp));
     }
 
     pub fn get_request(&self) -> &LogRequest {
@@ -87,8 +93,8 @@ impl ReqResLog {
     }
 
     pub fn get_size(&self) -> usize {
-
-        let response = match &self.response {
+        let v = &*self.response.borrow();
+        let response = match v {
             Some(r) => r,
             None => {
                 return self.request.body.len();
@@ -97,25 +103,19 @@ impl ReqResLog {
 
         let ret = self.request.body.len() + response.body.len();
 
-        return ret;
+        ret
     }
 
-    pub fn get_response(&self) -> Option<&LogResponse> {
-        match &self.response {
-            Some(r) => {
-                return Some(r);
-            }
-            None => {
-                return None;
-            }
-        }
+    pub fn get_response(&self) -> &RefCell<Option<LogResponse>> {
+        &self.response
     }
 
-    pub fn clone(&self) -> Option<ReqResLog> {
+    pub fn clone_from_log(&self) -> Option<ReqResLog> {
 
 
         let log = ReqResLog::new(self.request.clone());
-        let s = match &self.response {
+        let v = &*self.response.borrow();
+        let s = match v {
             Some(s) => s,
             None => {
                 return Some(log);
@@ -123,7 +123,7 @@ impl ReqResLog {
         };
 
         log.set_resp(s.clone());
-        return Some(log);
+        Some(log)
     }
 }
 
@@ -884,13 +884,7 @@ pub struct LogHistory {
     lock: Mutex<i32>,
 }
 
-fn i_to_m<T>(reference: &T) -> &mut T {
-    unsafe {
-        let const_ptr = reference as *const T;
-        let mut_ptr = const_ptr as *mut T;
-        &mut *mut_ptr
-    }
-}
+
 impl LogHistory {
     fn new() -> Self {
         LogHistory::default()
@@ -901,7 +895,7 @@ impl LogHistory {
             if HTTP_LOG.is_none() {
                 HTTP_LOG = Some(LogHistory::default());
             }
-            &mut HTTP_LOG
+            &mut *addr_of_mut!(HTTP_LOG)
         }
     }
 
