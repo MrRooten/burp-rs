@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     modules::{IPassive, Issue, IssueConfidence, IssueLevel},
-    proxy::log::{ReqResLog},
+    proxy::log::ReqResLog,
     utils::STError, librs::http::utils::{BurpRequest, BurpParam},
 };
 
@@ -63,7 +63,7 @@ impl IPassive for BodyMatch {
     }
 
     fn name(&self) -> String {
-        return "CookieMatch".to_string();
+        "CookieMatch".to_string()
     }
 
     fn help(&self) -> crate::modules::Helper {

@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc, fs::{File}, io::{BufReader, BufRead}, thread};
+use std::{str::FromStr, sync::Arc, fs::File, io::{BufReader, BufRead}, thread};
 
 use colored::Colorize;
 use hyper::{Method, StatusCode, Uri};
@@ -10,7 +10,7 @@ use crate::{
     librs::http::utils::HttpRequest,
     modules::{IActive, ModuleMeta, ModuleType},
     st_error,
-    utils::{STError, config::{get_config}}, proxy::log::{SiteMap, FoundUrl},
+    utils::{STError, config::get_config}, proxy::log::{SiteMap, FoundUrl},
 };
 
 pub struct DirScan {
@@ -30,17 +30,16 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
         }
     };
 
-    let base_url: String;
-    if url.port().is_none() {
-        base_url = format!("{}://{}/", url.scheme_str().unwrap(), url.host().unwrap());
+    let base_url = if url.port().is_none() {
+        format!("{}://{}/", url.scheme_str().unwrap(), url.host().unwrap())
     } else {
-        base_url = format!(
+        format!(
             "{}://{}:{}/",
             url.scheme_str().unwrap(),
             url.host().unwrap(),
             url.port().unwrap()
-        );
-    }
+        )
+    };
     let not_found_url = format!("{}fjaskdfbasjdkhfasdjfhbvjasdfhjsadh", base_url);
     let not_found_request = match HttpRequest::from_url(&not_found_url) {
         Ok(o) => o,
@@ -70,12 +69,9 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
     let config = get_config();
     let num_parallel = config.get("modules.dir_scan.parallel").as_i64();
     let dict_path = config.get("modules.dir_scan.wordlist").as_str();
-    let num_parallel = match num_parallel {
-        Some(s) => s,
-        None => {
-            3
-        }
-    };
+    let num_parallel = num_parallel.unwrap_or({
+        3
+    });
 
     let dict_path = match dict_path {
         Some(s) => s,
@@ -138,18 +134,17 @@ fn dir_scan(url: &str) -> Result<Vec<crate::modules::Issue>, STError> {
             if result > 0.9 {
                 return None::<FoundUrl>;
             }
-            let length: u32;
-            if resp.get_header("content-length").len() == 0 {
-                length = 0;
+            let length = if resp.get_header("content-length").is_empty() {
+                0
             } else {
-                length = match resp.get_header("content-length").parse::<u32>() {
+                match resp.get_header("content-length").parse::<u32>() {
                     Ok(o) => o,
                     Err(e) => {
                         error!("{}", e);
                         0
                     }
-                };
-            }
+                }
+            };
             let ret = FoundUrl::new(
                 Method::GET,
                 &target_url,
@@ -204,7 +199,7 @@ impl IActive for DirScan {
     fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
         let result = vec![];
 
-        return Ok(result);
+        Ok(result)
     }
 
     fn active_run(
@@ -214,7 +209,7 @@ impl IActive for DirScan {
     ) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
         //println!("test");
         let result = dir_scan(url);
-        return Ok(vec![]);
+        Ok(vec![])
     }
 
     fn metadata(&self) -> &Option<crate::modules::ModuleMeta> {
@@ -227,6 +222,12 @@ impl IActive for DirScan {
 
     fn update(&mut self) -> Result<(), crate::utils::STError> {
         Ok(())
+    }
+}
+
+impl Default for DirScan {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

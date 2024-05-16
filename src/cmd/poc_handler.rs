@@ -1,4 +1,4 @@
-use colored::{Colorize, ColoredString};
+use colored::Colorize;
 
 use crate::{modules::{get_will_run_mods, get_modules_meta, push_will_run_mod, remove_loaded_mod, ModuleType}, utils::STError, scanner::{set_reload, remove_dead_modules, get_running_modules}};
 
@@ -8,6 +8,12 @@ use super::cmd_handler::{CMDProc, CMDOptions};
 
 pub struct PushMod {
     opts    : CMDOptions
+}
+
+impl Default for PushMod {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PushMod {
@@ -46,6 +52,12 @@ pub struct ListMods {
     opts    : CMDOptions
 }
 
+impl Default for ListMods {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ListMods {
     pub fn new() -> Self {
         ListMods { opts: Default::default() }
@@ -64,12 +76,11 @@ impl CMDProc for ListMods {
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         let modules = get_modules_meta();
         for module in modules {
-            let s: ColoredString;
-            if module.get_type().eq(&ModuleType::RustModule) {
-                s = "RustModule".yellow();
+            let s = if module.get_type().eq(&ModuleType::RustModule) {
+                "RustModule".yellow()
             } else {
-                s = "RubyModule".red();
-            }
+                "RubyModule".red()
+            };
             println!("{: <20}: {: <20}  {}",module.get_name().green(), s, module.get_description());
         }
         Ok(())
@@ -86,6 +97,12 @@ impl CMDProc for ListMods {
 
 pub struct LoadedMods {
     opts    : CMDOptions
+}
+
+impl Default for LoadedMods {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LoadedMods {
@@ -106,12 +123,12 @@ impl CMDProc for LoadedMods {
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         let pocs = get_will_run_mods();
         for module in pocs {
-            let s: ColoredString;
-            if module.get_type().eq(&ModuleType::RustModule) {
-                s = "RustModule".yellow();
+
+            let s = if module.get_type().eq(&ModuleType::RustModule) {
+                "RustModule".yellow()
             } else {
-                s = "RubyModule".red();
-            }
+                "RubyModule".red()
+            };
             println!("{: <20}: {: <20}  {}",module.get_name().green(), s, module.get_description());
         }
 
@@ -129,6 +146,12 @@ impl CMDProc for LoadedMods {
 
 pub struct Reload {
     opts    : CMDOptions
+}
+
+impl Default for Reload {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Reload {
@@ -165,6 +188,12 @@ pub struct RunningMods {
     opts    : CMDOptions
 }
 
+impl Default for RunningMods {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RunningMods {
     pub fn new() -> Self { 
         RunningMods { opts: Default::default() }
@@ -181,10 +210,8 @@ impl CMDProc for RunningMods {
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
-        if line.len() >= 2 {
-            if line[1].eq("--remove-dead") || line[1].eq("-rd") {
-                remove_dead_modules();
-            }
+        if line.len() >= 2 && (line[1].eq("--remove-dead") || line[1].eq("-rd")) {
+            remove_dead_modules();
         }
         let modules = get_running_modules();
         let modules = match modules {
@@ -206,7 +233,7 @@ impl CMDProc for RunningMods {
             modules.get(&i).unwrap().get_starttime().to_rfc2822(), 
             modules.get(&i).unwrap().get_args().to_string().yellow(), 
             modules.get(&i).unwrap().get_state_colored(),
-            (modules.get(&i).unwrap().get_cost() as f32 / 1000 as f32) as f32,
+            (modules.get(&i).unwrap().get_cost() as f32 / 1000_f32) as f32,
             " second".green()
         );
         }
@@ -226,6 +253,12 @@ impl CMDProc for RunningMods {
 
 pub struct RemoveMod {
     opts    : CMDOptions
+}
+
+impl Default for RemoveMod {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RemoveMod {

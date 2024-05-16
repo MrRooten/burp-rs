@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 use crate::librs::http::utils::{HttpResponse, HttpRequest};
-use crate::librs::object::object::IObject;
+use crate::librs::object::object_inner::IObject;
 use crate::modules::Issue;
 use crate::utils::config::get_config;
-use crate::utils::utils::tidy_html;
+use crate::utils::utils_inner::tidy_html;
 use crate::utils::STError;
 use chrono::{DateTime, Utc};
 use colored::Colorize;
@@ -15,7 +15,7 @@ use hyper::{http, StatusCode, Version, Method, Uri};
 use log::error;
 use serde_json::{Value, Error};
 use std::cell::RefCell;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::io::Read;
 use std::ptr::addr_of_mut;
 use std::str::FromStr;
@@ -56,7 +56,7 @@ impl ReqResLog {
             c_type: response.get_header("content-type"),
         };
         ReqResLog {
-            request: request,
+            request,
             response: RefCell::new(Some(resp)),
             record_t: Utc::now(),
             log_type: LogType::Module
@@ -101,9 +101,9 @@ impl ReqResLog {
             }
         };
 
-        let ret = self.request.body.len() + response.body.len();
+        
 
-        ret
+        self.request.body.len() + response.body.len()
     }
 
     pub fn get_response(&self) -> &RefCell<Option<LogResponse>> {
@@ -113,7 +113,7 @@ impl ReqResLog {
     pub fn clone_from_log(&self) -> Option<ReqResLog> {
 
 
-        let log = ReqResLog::new(self.request.clone());
+        let log = ReqResLog::new(self.request.clone_log_request());
         let v = &*self.response.borrow();
         let s = match v {
             Some(s) => s,
@@ -122,7 +122,7 @@ impl ReqResLog {
             }
         };
 
-        log.set_resp(s.clone());
+        log.set_resp(s.clone_from_response());
         Some(log)
     }
 }
@@ -203,11 +203,11 @@ impl IObject for LogRequest {
     */
     fn get_object(&self, path: &str) -> Option<String> {
         let path = path.trim();
-        if path.len() == 0 {
+        if path.is_empty() {
             return None;
         }
-        let spl = path.split(".").collect::<Vec<&str>>();
-        if spl.len() == 0 {
+        let spl = path.split('.').collect::<Vec<&str>>();
+        if spl.is_empty() {
             return None;
         }
 
@@ -238,7 +238,7 @@ impl IObject for LogRequest {
             let s = format!("{:?}", self.orignal.version());
             return Some(s);
         }
-        return None;
+        None
     }
 }
 
@@ -246,7 +246,7 @@ impl LogRequest {
     pub fn from(req: Request<Body>, body: Arc<Bytes>) -> LogRequest {
         LogRequest {
             orignal: req,
-            body: body,
+            body,
             record_t: Utc::now(),
         }
     }
@@ -275,7 +275,7 @@ impl LogRequest {
     }
 
 
-    pub fn clone(&self) -> LogRequest {
+    pub fn clone_log_request(&self) -> LogRequest {
         let mut new_req = Request::new(Body::from(""));
         new_req.headers_mut().clone_from(self.orignal.headers());
         new_req.method_mut().clone_from(self.orignal.method());
@@ -285,7 +285,7 @@ impl LogRequest {
         LogRequest {
             orignal: new_req,
             body: self.body.clone(),
-            record_t: self.record_t.clone(),
+            record_t: self.record_t,
         }
     }
 
@@ -316,9 +316,9 @@ impl LogRequest {
             return "options".to_string();
         }
 
-        return "get".to_string();
+        "get".to_string()
     }
-    fn update_params(&mut self, params: &Vec<RequestParam>) {
+    fn update_params(&mut self, params: &[RequestParam]) {
         
     }
 
@@ -334,7 +334,7 @@ impl LogRequest {
             }
         }
 
-        if found == false {
+        if !found {
             params.push(param);
         }
 
@@ -352,7 +352,7 @@ impl LogRequest {
 
         let cookies = self.get_header_array("cookie");
         for cookie in cookies {
-            let sp = cookie.split("=").collect::<Vec<&str>>();
+            let sp = cookie.split('=').collect::<Vec<&str>>();
             if sp.len() != 2 {
                 continue;
             }
@@ -385,28 +385,28 @@ impl LogRequest {
             
         } else if con_type.to_lowercase().contains("multipart/form-data") {
             let s = self.get_header("content-type").unwrap();
-            let ss = s.split(";").collect::<Vec<&str>>();
+            let ss = s.split(';').collect::<Vec<&str>>();
             let mut boundary = String::new();
             for t in ss {
                 let t = t.trim();
                 if t.starts_with("boundary") {
-                    let kv = t.split("=").collect::<Vec<&str>>();
+                    let kv = t.split('=').collect::<Vec<&str>>();
                     if kv.len() == 2 {
                         boundary = kv[1].to_string();
                     }
                 }
             }
 
-            if boundary.len() == 0 {
+            if boundary.is_empty() {
                 return ret;
             }
 
             let multipart = MultiPart::new(&self.body, boundary);
         } else if con_type.to_lowercase().contains("application/x-www-form-urlencoded") {
             let body = String::from_utf8_lossy(&self.body).to_string();
-            let params = body.split("&").collect::<Vec<&str>>();
+            let params = body.split('&').collect::<Vec<&str>>();
             for param in params {
-                let kv = param.split("=").collect::<Vec<&str>>();
+                let kv = param.split('=').collect::<Vec<&str>>();
                 if kv.len() == 2 {
                     ret.push(RequestParam::new(ParamType::Post, kv[0], kv[1]));
                 } else if kv.len() == 1 {
@@ -444,7 +444,7 @@ impl LogRequest {
             result.push_str("https://");
             result.push_str(&url_s);
         }
-        return result;
+        result
     }
     /** `get_host` Return url's host ,append port to the end
 
@@ -474,7 +474,7 @@ impl LogRequest {
             match value.to_str() {
                 Ok(v) => {
                     ret.push_str(v);
-                    ret.push_str(";");
+                    ret.push(';');
                 }
                 Err(e) => {
                     return None;
@@ -502,11 +502,11 @@ impl LogRequest {
         ret
     }
     pub fn get_cookie(&self, key: &str) -> Option<String> {
-        return self.get_header(key);
+        self.get_header(key)
     }
 
     pub fn get_body(&self) -> &Bytes {
-        return &self.body;
+        &self.body
     }
 
     fn find_subsequence(&self, haystack: &[u8], needle: &[u8]) -> Option<usize> {
@@ -547,7 +547,7 @@ impl LogRequest {
                 return true;
             }
 
-            return false;
+            false
         } else {
             if self.orignal.uri().to_string().contains(s) {
                 return true;
@@ -569,23 +569,17 @@ impl LogRequest {
             }
 
             let find = self.find_subsequence(&self.body, s.as_bytes());
-            if find.is_none() {
-                return false;
-            } else {
-                return true;
-            }
+            find.is_some()
         }
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn as_string(&self) -> String {
         let mut ret = String::new();
-        ret.push_str(&self.orignal.method().to_string());
-        ret.push_str(" ");
+        ret.push_str(self.orignal.method().as_ref());
+        ret.push(' ');
         ret.push_str(self.orignal.uri().path_and_query().unwrap().as_str());
-        ret.push_str(" ");
-        if self.orignal.version() == Version::HTTP_09 {
-            ret.push_str("HTTP/0.9");
-        } else if self.orignal.version() == Version::HTTP_10 {
+        ret.push(' ');
+        if self.orignal.version() == Version::HTTP_09 || self.orignal.version() == Version::HTTP_10 {
             ret.push_str("HTTP/0.9");
         } else if self.orignal.version() == Version::HTTP_2 {
             ret.push_str("HTTP/2");
@@ -603,7 +597,7 @@ impl LogRequest {
         }
         ret.push_str("\r\n");
         ret.push_str(&String::from_utf8_lossy(self.get_body()));
-        return ret;
+        ret
     }
 }
 
@@ -622,14 +616,14 @@ impl LogResponse {
             None => {
                 return LogResponse {
                     orignal: res,
-                    body: body,
+                    body,
                     c_type: "".to_string(),
                 };
             }
         };
         LogResponse {
             orignal: res,
-            body: body,
+            body,
             c_type: content_type,
         }
     }
@@ -648,11 +642,11 @@ impl LogResponse {
 
     pub fn get_object(&self, path: &str) -> Option<String> {
         let path = path.trim();
-        if path.len() == 0 {
+        if path.is_empty() {
             return None;
         }
-        let spl = path.split(".").collect::<Vec<&str>>();
-        if spl.len() == 0 {
+        let spl = path.split('.').collect::<Vec<&str>>();
+        if spl.is_empty() {
             return None;
         }
 
@@ -679,7 +673,7 @@ impl LogResponse {
             return Some(String::from_utf8_lossy(&self.body).to_string());
         }
         
-        return None;
+        None
     }
 
     pub fn get_header(&self, key: &str) -> Option<String> {
@@ -689,7 +683,7 @@ impl LogResponse {
             match value.to_str() {
                 Ok(v) => {
                     ret.push_str(v);
-                    ret.push_str(";");
+                    ret.push(';');
                 }
                 Err(e) => {
                     return None;
@@ -705,9 +699,9 @@ impl LogResponse {
     }
 
     pub fn get_size(&self) -> usize {
-        return self.body.len();
+        self.body.len()
     }
-    pub fn to_string(&self) -> String {
+    pub fn as_string(&self) -> String {
         let mut ret = String::new();
         ret.push_str(&self.orignal.status().to_string());
         ret.push_str("\r\n");
@@ -725,28 +719,25 @@ impl LogResponse {
     pub fn get_beauty_string(&self) -> String {
         let mut ret = String::new();
         ret.push_str(&self.orignal.status().to_string().green());
-        ret.push_str("\n");
+        ret.push('\n');
         for kv in self.orignal.headers() {
             let key = kv.0.as_str();
             ret.push_str(&key.bright_blue());
             ret.push_str(": ");
             ret.push_str(&kv.1.to_str().unwrap().red());
-            ret.push_str("\n");
+            ret.push('\n');
         }
-        ret.push_str("\n");
+        ret.push('\n');
         let c_type = self.get_header("content-type");
         let body = match c_type {
             Some(c) => {
                 if c.contains("html") {
-                    let s = tidy_html(&self.get_body_string());
-                    s
-                } else if c.contains("json") {
+                    
+                    tidy_html(&self.get_body_string())
+                } else if c.contains("json") || c.contains("javascript") {
                     let (s, _) = prettify_js::prettyprint(&self.get_body_string());
                     s
-                } else if c.contains("javascript") {
-                    let (s, _) = prettify_js::prettyprint(&self.get_body_string());
-                    s
-                } else {
+                }  else {
                     self.get_body_string()
                 }
             }
@@ -764,17 +755,17 @@ impl LogResponse {
         &self.body
     }
 
-    pub fn clone(&self) -> Self {
+    pub fn clone_from_response(&self) -> Self {
         let mut new_res = Response::new(Body::from(""));
         new_res.extensions().clone_from(&self.orignal.extensions());
         new_res.headers_mut().clone_from(self.orignal.headers());
         new_res.status_mut().clone_from(&self.orignal.status());
         new_res.version_mut().clone_from(&self.orignal.version());
-        return Self {
+        Self {
             orignal: new_res,
             body: self.body.clone(),
             c_type: self.c_type.clone(),
-        };
+        }
     }
     fn find_subsequence(&self, haystack: &[u8], needle: &[u8]) -> Option<usize> {
         haystack
@@ -818,7 +809,7 @@ impl LogResponse {
                 return true;
             }
 
-            return false;
+            false
         } else {
             if self.orignal.status().to_string().contains(s) {
                 return true;
@@ -840,11 +831,7 @@ impl LogResponse {
             }
 
             let find = self.find_subsequence(&self.body, s.as_bytes());
-            if find.is_none() {
-                return false;
-            } else {
-                return true;
-            }
+            find.is_some()
         }
     }
 
@@ -905,7 +892,7 @@ impl LogHistory {
             ret += vk.1.get_size();
         }
 
-        return ret;
+        ret
     }
 
     pub fn push_log(&mut self, log: ReqResLog) -> Result<u32, STError> {
@@ -949,7 +936,7 @@ impl LogHistory {
             }
         };
         log.set_resp(resp);
-        return Ok(());
+        Ok(())
     }
 
     pub fn get_httplog(index: u32) -> Option<&'static Arc<ReqResLog>> {
@@ -965,7 +952,7 @@ impl LogHistory {
     }
 
     pub fn get_req_num(&self) -> usize {
-        return self.history.len();
+        self.history.len()
     }
 
     pub fn get_history(&self) -> &HashMap<u32, Arc<ReqResLog>> {
@@ -990,10 +977,10 @@ impl FoundUrl {
         c_type : &str
     ) -> Self {
         Self {
-            method : method,
+            method,
             url    : url.to_string(),
-            length : length,
-            status : status,
+            length,
+            status,
             c_type : c_type.to_string(),
         }
     }
@@ -1003,6 +990,12 @@ pub struct Site {
     logs    : Vec<u32>,
     issues  : HashMap<String,Vec<Arc<Issue>>>,
     paths   : Vec<String>
+}
+
+impl Default for Site {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Site {
@@ -1057,7 +1050,7 @@ impl SiteMap {
                     map: HashMap::default(),
                 });
             }
-            &mut SITE_MAP
+            &mut *addr_of_mut!(SITE_MAP)
         }
     }
 
@@ -1079,7 +1072,7 @@ impl SiteMap {
         };
         let request = log.get_request();
         let host = request.get_host();
-        if self.map.contains_key(&host) == false {
+        if !self.map.contains_key(&host) {
             self.map.insert(host.to_string(), Site::new());
         }
 
@@ -1117,7 +1110,7 @@ impl SiteMap {
     */
     pub fn push_issue(&mut self, issue: Arc<Issue>) -> Result<(),STError> {
         let host = issue.get_host();
-        if self.map.contains_key(host) == false {
+        if !self.map.contains_key(host) {
             self.map.insert(host.to_string(), Site::new());
         }
 
@@ -1137,7 +1130,7 @@ impl SiteMap {
             }
         }
         site.push_issue(issue);
-        return Ok(());
+        Ok(())
     }
 
     pub fn get_site(&self, host: &str) -> Option<&Site> {
@@ -1154,8 +1147,8 @@ impl SiteMap {
             }
         };
 
-        let key: String;
-        if uri.port().is_none() {
+
+        let key = if uri.port().is_none() {
             let host = match uri.host() {
                 Some(s) => s,
                 None => {
@@ -1163,7 +1156,7 @@ impl SiteMap {
                     return ;
                 }
             };
-            key = format!("{}",host);
+            host.to_string()
         } else {
             let host = match uri.host() {
                 Some(s) => s,
@@ -1172,9 +1165,9 @@ impl SiteMap {
                     return ;
                 }
             };
-            key = format!("{}:{}", host, uri.port().unwrap());
-        }
-        if self.map.contains_key(&key) == false {
+            format!("{}:{}", host, uri.port().unwrap())
+        };
+        if !self.map.contains_key(&key) {
             self.map.insert(key.to_string(), Site::new());
         }
         let site = match self.map.get_mut(&key) {

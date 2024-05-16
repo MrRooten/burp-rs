@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap, ptr::addr_of_mut, sync::{
+    collections::HashMap, ptr::{addr_of, addr_of_mut}, sync::{
         mpsc,
         Arc, Mutex,
     }, thread::{spawn, JoinHandle}, time::{self, SystemTime, UNIX_EPOCH}
@@ -87,7 +87,7 @@ impl RunningModuleWrapper {
             return "EXCEPTION".to_string().yellow();
         }
 
-        return "".to_string().red();
+        "".to_string().red()
     }
 
     pub fn get_args(&self) -> &String {
@@ -108,7 +108,7 @@ static META_LOCKER: Mutex<i32> = Mutex::new(0);
 pub fn add_running_modules(module: &mut RunningModuleWrapper) {
     unsafe {
         let _unused = META_LOCKER.lock();
-        let v = match &mut RUNING_MODULES {
+        let v = match &mut *addr_of_mut!(RUNING_MODULES) {
             Some(s) => s,
             None => {
                 return;
@@ -130,28 +130,23 @@ pub fn remove_running_modules(module: &RunningModuleWrapper, cost: u128, state: 
             }
         };
 
-        match v.get_mut(&module.index) {
-            Some(s) => {
+        if let Some(s) =  v.get_mut(&module.index) {
                 s.state = state;
                 s.cost = cost;
-            }
-            None => {
-                return;
-            }
         }
     }
 }
 
 pub fn remove_dead_modules() {
     unsafe {
-        let v = match &mut RUNING_MODULES {
+        let v = match &mut *addr_of_mut!(RUNING_MODULES) {
             Some(s) => s,
             None => {
                 return;
             }
         };
 
-        let v2 = match &mut RUNING_MODULES {
+        let v2 = match &mut *addr_of_mut!(RUNING_MODULES) {
             Some(s) => s,
             None => {
                 return;
@@ -159,22 +154,21 @@ pub fn remove_dead_modules() {
         };
         for i in v {
             if i.1.get_state().eq(&RunningState::DEAD) {
-                let i = i.0.clone();
+                let i = *i.0;
                 v2.remove(&i);
             }
         }
     }
 }
 pub fn get_running_modules() -> &'static Option<HashMap<i32, RunningModuleWrapper>> {
-    unsafe { &RUNING_MODULES }
+    unsafe { &*addr_of!(RUNING_MODULES) }
 }
 pub fn update_modules() {
     unsafe {
-        let len = MODULES.len();
-        for i in 0..len {
-            if MODULES[i].is_change() {
-                info!("{:?} file has changed", MODULES[i].metadata());
-                let _ = MODULES[i].update();
+        for i in MODULES.iter_mut() {
+            if i.is_change() {
+                info!("{:?} file has changed", i.metadata());
+                let _ = i.update();
             }
         }
     }
@@ -182,7 +176,7 @@ pub fn update_modules() {
 
 pub fn get_modules() -> &'static Vec<Box<dyn IActive + Sync>> {
     unsafe {
-        &MODULES
+        &*addr_of!(MODULES)
     }
 }
 pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
@@ -205,14 +199,14 @@ pub fn initialize_modules(dir: &str) -> &Vec<Box<dyn IActive + Sync>> {
     add_module!(DirScan);
     add_module!(UnauthBypass);
     add_module!(TestScan);
-    unsafe { &MODULES }
+    unsafe { &*addr_of!(MODULES) }
 }
 
 pub static mut RUBY_COMMAND_SENDER: Option<std::sync::mpsc::Sender<String>> = None;
 pub static mut RUBY_COMMAND_RECEIVER: Option<std::sync::mpsc::Receiver<String>> = None;
 pub fn get_command() -> String {
     unsafe {
-        let receiver = match &RUBY_COMMAND_RECEIVER {
+        let receiver = match &*addr_of!(RUBY_COMMAND_RECEIVER) {
             Some(s) => s,
             None => return "error".to_string(),
         };
@@ -224,13 +218,13 @@ pub fn get_command() -> String {
                 return "error".to_string();
             }
         };
-        return command.clone();
+        command.clone()
     }
 }
 
 pub fn send_command(command: &str) -> Result<(), STError> {
     unsafe {
-        let sender = match &RUBY_COMMAND_SENDER {
+        let sender = match &*addr_of!(RUBY_COMMAND_SENDER) {
             Some(s) => s,
             None => {
                 return Err(STError::new("Sender is not available"));
@@ -238,10 +232,10 @@ pub fn send_command(command: &str) -> Result<(), STError> {
         };
         match sender.send(command.to_string()) {
             Ok(_) => {
-                return Ok(());
+                Ok(())
             }
             Err(e) => {
-                return Err(st_error!(e));
+                Err(st_error!(e))
             }
         }
     }
@@ -287,7 +281,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                 }
             };
             let index = task.get_index();
-            if task.is_once() == true {
+            if task.is_once() {
                 for module in modules {
                     let meta = match module.metadata() {
                         Some(o) => o,
@@ -295,7 +289,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                             continue;
                         }
                     };
-                    if meta.get_name().eq(task.get_mod_name()) == false {
+                    if !meta.get_name().eq(task.get_mod_name()) {
                         continue;
                     }
 
@@ -303,7 +297,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                 continue;
             }
             unsafe {
-                if WILL_RELOAD == true {
+                if WILL_RELOAD {
                     update_modules();
                     unset_reload();
                 }
@@ -316,7 +310,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                         continue;
                     }
                 };
-                if will_run_modules.contains(&meta) == false {
+                if !will_run_modules.contains(meta) {
                     
                     continue;
                 }
@@ -325,7 +319,7 @@ pub fn scaner_thread() -> JoinHandle<()> {
                     
                 } else if meta.get_type().eq(&ModuleType::RustModule) {
                     std::thread::spawn(move || {
-                        let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &index.to_string());
+                        let mut running_module = RunningModuleWrapper::new(meta.get_name(), &index.to_string());
                         add_running_modules(&mut running_module);
                         let start = SystemTime::now();
                         let since_the_epoch = start

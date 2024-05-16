@@ -1,9 +1,8 @@
 use std::{
-    process,
-    sync::{
+    process, ptr::addr_of, sync::{
         mpsc::{self, Receiver, Sender},
         Arc,
-    },
+    }
 };
 
 use colored::{ColoredString, Colorize};
@@ -12,7 +11,7 @@ use log::Level;
 use minus::Pager;
 
 use crate::{
-    librs::object::object::IObject,
+    librs::object::object_inner::IObject,
     modules::Task,
     proxy::log::{LogHistory, ReqResLog, SiteMap},
     st_error,
@@ -32,11 +31,11 @@ pub struct Helper {
 
 impl CMDProc for Helper {
     fn get_name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     fn get_opts(&self) -> &CMDOptions {
-        return &self.opts;
+        &self.opts
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
@@ -84,11 +83,11 @@ pub struct Exit {
 
 impl CMDProc for Exit {
     fn get_name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     fn get_opts(&self) -> &CMDOptions {
-        return &self.opts;
+        &self.opts
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
@@ -120,11 +119,11 @@ pub struct ProxyLogInfo {
 
 impl CMDProc for ProxyLogInfo {
     fn get_name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     fn get_opts(&self) -> &CMDOptions {
-        return &self.opts;
+        &self.opts
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), crate::utils::STError> {
@@ -148,11 +147,17 @@ impl CMDProc for ProxyLogInfo {
     }
 
     fn get_detail(&self) -> String {
-        return "Show info of proxy".to_string();
+        "Show info of proxy".to_string()
     }
 
     fn get_help(&self) -> String {
         "proxylog_info".to_string()
+    }
+}
+
+impl Default for ProxyLogInfo {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -168,6 +173,12 @@ impl ProxyLogInfo {
 pub struct ListHistory {
     name: String,
     opts: CMDOptions,
+}
+
+impl Default for ListHistory {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ListHistory {
@@ -271,7 +282,7 @@ impl CMDProc for ListHistory {
                 output = item + &output;
             }
 
-            if output.split("\n").count() < 50 {
+            if output.split('\n').count() < 50 {
                 println!("{}", output);
             } else {
                 let p = Pager::new();
@@ -282,7 +293,7 @@ impl CMDProc for ListHistory {
                     }
                 }
             }
-            return Ok(());
+            Ok(())
         } else {
             let history = LogHistory::single();
             let history = match history {
@@ -294,7 +305,7 @@ impl CMDProc for ListHistory {
 
             let history = history.get_history();
             let mut keys = history.keys().collect::<Vec<&u32>>();
-            if keys.len() == 0 {
+            if keys.is_empty() {
                 return Err(STError::new("No log"));
             }
             keys.sort();
@@ -349,7 +360,7 @@ impl CMDProc for ListHistory {
                 output = item + &output;
             }
 
-            if output.split("\n").count() < 50 {
+            if output.split('\n').count() < 50 {
                 println!("{}", output);
             } else {
                 let p = Pager::new();
@@ -360,7 +371,7 @@ impl CMDProc for ListHistory {
                     }
                 }
             }
-            return Ok(());
+            Ok(())
         }
     }
 
@@ -376,6 +387,12 @@ impl CMDProc for ListHistory {
 pub struct Log {
     name: String,
     opts: CMDOptions,
+}
+
+impl Default for Log {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Log {
@@ -398,7 +415,7 @@ impl CMDProc for Log {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         unsafe {
-            for log in &LOGS {
+            for log in &*addr_of!(LOGS) {
                 println!("{}", log);
             }
         }
@@ -453,7 +470,7 @@ impl CMDProc for CatResponse {
             Some(s) => s.get_beauty_string(),
             None => "".to_string(),
         };
-        if s.split("\n").count() < 50 {
+        if s.split('\n').count() < 50 {
             println!("{}", s);
         } else {
             let p = Pager::new();
@@ -473,6 +490,12 @@ impl CMDProc for CatResponse {
 
     fn get_help(&self) -> String {
         "cat_resp ${{log_id}}".to_string()
+    }
+}
+
+impl Default for CatResponse {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -512,6 +535,12 @@ impl CMDProc for ClearScreen {
     }
 }
 
+impl Default for ClearScreen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ClearScreen {
     pub fn new() -> Self {
         Self {
@@ -538,7 +567,7 @@ impl CMDProc for DebugLevel {
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         unsafe {
             if line.len() == 1 {
-                println!("{}", LEVEL.to_string());
+                println!("{}", LEVEL);
                 return Ok(());
             }
             if line[1].eq("info") {
@@ -553,7 +582,7 @@ impl CMDProc for DebugLevel {
                 println!("Only support <info> <debug> <warn> <error>");
             }
         }
-        return Ok(());
+        Ok(())
     }
 
     fn get_detail(&self) -> String {
@@ -562,6 +591,12 @@ impl CMDProc for DebugLevel {
 
     fn get_help(&self) -> String {
         "debug_level ${{opt:level}}".to_string()
+    }
+}
+
+impl Default for DebugLevel {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -608,9 +643,9 @@ impl CMDProc for CatRequest {
                 return Err(STError::new("Not such a request"));
             }
         };
-        let s = s.get_request().to_string();
+        let s = s.get_request().as_string();
         let p = Pager::new();
-        if s.split("\n").count() < 50 {
+        if s.split('\n').count() < 50 {
             println!("{}", s);
         } else {
             let p = Pager::new();
@@ -633,6 +668,12 @@ impl CMDProc for CatRequest {
     }
 }
 
+impl Default for CatRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CatRequest {
     pub fn new() -> Self {
         Self {
@@ -645,6 +686,12 @@ impl CatRequest {
 pub struct GetRequest {
     name: String,
     opts: CMDOptions,
+}
+
+impl Default for GetRequest {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GetRequest {
@@ -662,7 +709,7 @@ impl CMDProc for GetRequest {
     }
 
     fn get_opts(&self) -> &CMDOptions {
-        &&self.opts
+        &self.opts
     }
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
@@ -671,7 +718,7 @@ impl CMDProc for GetRequest {
             return Err(STError::new(&s));
         }
 
-        let path = line[1].split(".").collect::<Vec<&str>>();
+        let path = line[1].split('.').collect::<Vec<&str>>();
         let index = path[0].to_string().parse::<u32>();
         let index = match index {
             Ok(o) => o,
@@ -715,6 +762,12 @@ pub struct DebugLogInfo {
     opts: CMDOptions,
 }
 
+impl Default for DebugLogInfo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DebugLogInfo {
     pub fn new() -> Self {
         Self {
@@ -737,7 +790,7 @@ impl CMDProc for DebugLogInfo {
         unsafe {
             let mut size = 0;
             let mut num = 0;
-            for log in &LOGS {
+            for log in &*addr_of!(LOGS) {
                 size += log.as_bytes().len();
                 num += 1;
             }
@@ -770,7 +823,7 @@ pub struct SearchLog {
 
 impl CMDProc for SearchLog {
     fn get_name(&self) -> &str {
-        return "search_log";
+        "search_log"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -792,7 +845,7 @@ impl CMDProc for SearchLog {
 
         let history = history.get_history();
         let mut keys = history.keys().collect::<Vec<&u32>>();
-        if keys.len() == 0 {
+        if keys.is_empty() {
             return Err(STError::new("No log"));
         }
         keys.sort();
@@ -810,7 +863,7 @@ impl CMDProc for SearchLog {
                 flag = true;
             }
 
-            if flag == false {
+            if !flag {
                 continue;
             }
             let status = match &*response.borrow() {
@@ -859,7 +912,7 @@ impl CMDProc for SearchLog {
             output = item + &output;
         }
 
-        if output.split("\n").count() < 50 {
+        if output.split('\n').count() < 50 {
             println!("{}", output);
         } else {
             let p = Pager::new();
@@ -870,7 +923,7 @@ impl CMDProc for SearchLog {
                 }
             }
         }
-        return Ok(());
+        Ok(())
     }
 
     fn get_detail(&self) -> String {
@@ -879,6 +932,12 @@ impl CMDProc for SearchLog {
 
     fn get_help(&self) -> String {
         "search_log ${string}".to_string()
+    }
+}
+
+impl Default for SearchLog {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -908,7 +967,7 @@ pub struct Sitemap {
 
 impl CMDProc for Sitemap {
     fn get_name(&self) -> &str {
-        return "sitemap";
+        "sitemap"
     }
 
     fn get_opts(&self) -> &CMDOptions {
@@ -930,7 +989,7 @@ impl CMDProc for Sitemap {
                 result.push_str(&push);
             }
             let p = Pager::new();
-            if result.split("\n").count() < 50 {
+            if result.split('\n').count() < 50 {
                 println!("{}", result);
             } else {
                 let p = Pager::new();
@@ -1007,6 +1066,12 @@ impl CMDProc for Sitemap {
     }
 }
 
+impl Default for Sitemap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Sitemap {
     pub fn new() -> Sitemap {
         Sitemap {
@@ -1020,6 +1085,12 @@ pub static mut SCAN_SENDER: Option<std::sync::mpsc::Sender<Task>> = None::<Sende
 pub static mut SCAN_RECEIVER: Option<std::sync::mpsc::Receiver<Task>> = None::<Receiver<Task>>;
 pub struct Scan {
     opts: CMDOptions,
+}
+
+impl Default for Scan {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Scan {
@@ -1045,13 +1116,13 @@ impl CMDProc for Scan {
                 SCAN_SENDER = Some(tx);
                 SCAN_RECEIVER = Some(rx);
             }
-            let sender = match &SCAN_SENDER {
+            let sender = match &*addr_of!(SCAN_SENDER) {
                 Some(o) => o,
                 None => {
                     return Err(STError::new("SCAN_SENDER is none"));
                 }
             };
-            while TO_SCAN_QUEUE.len() != 0 {
+            while !TO_SCAN_QUEUE.is_empty() {
                 let ret = sender.send(TO_SCAN_QUEUE.remove(0));
                 match ret {
                     Ok(o) => {}
@@ -1073,6 +1144,12 @@ impl CMDProc for Scan {
 
 pub struct Test {
     opts: CMDOptions,
+}
+
+impl Default for Test {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Test {
@@ -1131,6 +1208,12 @@ pub struct Filter {
     opts: CMDOptions,
 }
 
+impl Default for Filter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Filter {
     pub fn new() -> Self {
         Self {
@@ -1161,15 +1244,15 @@ impl CMDProc for Filter {
         if line[1].split("==").collect::<Vec<&str>>().len() == 2 {
             flag = MatchFlag::Equal;
             kv = line[1].split("==").collect::<Vec<&str>>();
-        } else if line[1].split("=").collect::<Vec<&str>>().len() == 2 {
+        } else if line[1].split('=').collect::<Vec<&str>>().len() == 2 {
             flag = MatchFlag::Contains;
-            kv = line[1].split("=").collect::<Vec<&str>>();
+            kv = line[1].split('=').collect::<Vec<&str>>();
         } else {
             flag = MatchFlag::Exist;
             kv = line[1].split("==").collect::<Vec<&str>>();
         }
 
-        let path = kv[0].split(".").collect::<Vec<&str>>();
+        let path = kv[0].split('.').collect::<Vec<&str>>();
 
         if path[0].eq("req") {
             let mut object_path = String::new();
@@ -1299,7 +1382,7 @@ impl CMDProc for Filter {
             output = item + &output;
         }
 
-        if output.split("\n").count() < 50 {
+        if output.split('\n').count() < 50 {
             println!("{}", output);
         } else {
             let p = Pager::new();

@@ -1,13 +1,16 @@
-use std::{collections::HashMap, ops::Range, str::FromStr, sync::{Arc, Mutex}};
+use std::{
+    collections::HashMap,
+    ops::Range,
+    ptr::addr_of_mut,
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 
 extern crate hyper;
 
-
 use hyper::{
-    body::Bytes,
-    header::*,
-    http::uri::Scheme,
-    Body, Method, Request, Response, StatusCode, Uri, Version,
+    body::Bytes, header::*, http::uri::Scheme, Body, Method, Request, Response, StatusCode, Uri,
+    Version,
 };
 use log::error;
 use once_cell::sync::Lazy;
@@ -17,53 +20,47 @@ use tokio::{runtime::Runtime, sync::Semaphore};
 use crate::{
     proxy::log::{LogRequest, ReqResLog, RequestParam},
     st_error,
-    utils::{STError, config::{get_config}},
+    utils::{config::get_config, STError},
 };
 
 #[derive(Debug)]
 pub struct HttpRequest {
     pub(crate) request: Request<Body>,
     pub(crate) body: Arc<Bytes>,
-    pub(crate) proxy: Arc<String>
+    pub(crate) proxy: Arc<String>,
 }
 
 pub struct RequestPools {
-    pools       : HashMap<String, Arc<Semaphore>>,
-    default     : u32
+    pools: HashMap<String, Arc<Semaphore>>,
+    default: u32,
 }
 
-static mut REQUEST_POOLS: Lazy<RequestPools> = Lazy::new(|| {
-    RequestPools::new()
-});
+static mut REQUEST_POOLS: Lazy<RequestPools> = Lazy::new(RequestPools::new);
 
-static mut REQ_RT: Lazy<Runtime> = Lazy::new(|| {
-    tokio::runtime::Runtime::new().unwrap()
-});
+static mut REQ_RT: Lazy<Runtime> = Lazy::new(|| tokio::runtime::Runtime::new().unwrap());
 
-static mut _REQUEST_POOLS_LOCK: Lazy<Mutex<u32>> = Lazy::new(|| {
-    Mutex::new(0)
-});
+static mut _REQUEST_POOLS_LOCK: Lazy<Mutex<u32>> = Lazy::new(|| Mutex::new(0));
 
 fn get_pools_lock() -> &'static mut Lazy<Mutex<u32>> {
-    unsafe {
-        &mut _REQUEST_POOLS_LOCK
-    }
+    unsafe { &mut *addr_of_mut!(_REQUEST_POOLS_LOCK) }
 }
 
 pub fn get_req_rt() -> &'static mut Lazy<Runtime> {
-    unsafe {
-        &mut REQ_RT
+    unsafe { &mut *addr_of_mut!(REQ_RT) }
+}
+
+impl Default for RequestPools {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl RequestPools {
     pub fn new() -> Self {
-        let num = match get_config().get("http.parallel_per_site").as_i64() {
-            Some(s) => s,
-            None => {
-                5
-            }
-        };
+        let num = get_config()
+            .get("http.parallel_per_site")
+            .as_i64()
+            .unwrap_or(5);
 
         Self {
             pools: HashMap::new(),
@@ -76,17 +73,23 @@ impl RequestPools {
         if self.pools.contains_key(host) {
             return self.pools.get(host).unwrap();
         }
-        
-        self.pools.insert(host.to_string(), Arc::new(Semaphore::new(self.default as usize)));
+
+        self.pools.insert(
+            host.to_string(),
+            Arc::new(Semaphore::new(self.default as usize)),
+        );
         return self.pools.get(host).unwrap();
     }
 
     pub fn get_pools() -> &'static mut Lazy<RequestPools> {
-        unsafe { &mut REQUEST_POOLS }
+        unsafe { &mut *addr_of_mut!(REQUEST_POOLS) }
     }
 
     pub fn resize_pool(&mut self, host: &str, num: u32) {
-        self.pools.insert(host.to_string(), Arc::new(Semaphore::new(self.default as usize)));
+        self.pools.insert(
+            host.to_string(),
+            Arc::new(Semaphore::new(self.default as usize)),
+        );
     }
 }
 
@@ -95,14 +98,14 @@ impl HttpRequest {
         unimplemented!()
     }
 
-    pub fn clone(&self) -> HttpRequest {
+    pub fn clone_from_request(&self) -> HttpRequest {
         let mut request = Request::new(Body::from(""));
         *request.uri_mut() = self.request.uri().clone();
         *request.headers_mut() = self.request.headers().clone();
         HttpRequest {
-            request: request,
+            request,
             body: self.body.clone(),
-            proxy: self.proxy.clone()
+            proxy: self.proxy.clone(),
         }
     }
 
@@ -111,7 +114,7 @@ impl HttpRequest {
     }
 
     pub fn set_version(&mut self, v: &Version) {
-        *self.request.version_mut() = v.clone();
+        *self.request.version_mut() = *v;
     }
 
     pub fn from_url(url: &str) -> Result<HttpRequest, STError> {
@@ -123,11 +126,11 @@ impl HttpRequest {
                 return Err(st_error!(e));
             }
         };
- 
+
         Ok(HttpRequest {
-            request: request,
+            request,
             body: Arc::new(Bytes::new()),
-            proxy: get_config().get_proxy().clone()
+            proxy: get_config().get_proxy().clone(),
         })
     }
 
@@ -146,13 +149,13 @@ impl HttpRequest {
         request.to_http_request()
     }
 
-    pub fn update_with_params(&self, params: &Vec<RequestParam>) -> Result<(), STError> {
+    pub fn update_with_params(&self, params: &[RequestParam]) -> Result<(), STError> {
         let mut get_map: HashMap<String, Option<String>> = HashMap::new();
         let uri = self.request.uri();
         let original = uri.query().unwrap();
-        let querys = original.split("&").collect::<Vec<&str>>();
+        let querys = original.split('&').collect::<Vec<&str>>();
         for query in querys {
-            let kv = query.split("=").collect::<Vec<&str>>();
+            let kv = query.split('=').collect::<Vec<&str>>();
             if kv.len() == 2 {
                 get_map.insert(kv[0].to_string(), Some(kv[1].to_string()));
             }
@@ -169,7 +172,7 @@ impl HttpRequest {
             }
 
             if kv.1.is_some() {
-                query.push(format!("{}={}", kv.0, kv.1.unwrap().to_string()));
+                query.push(format!("{}={}", kv.0, kv.1.unwrap()));
             }
         }
 
@@ -203,31 +206,22 @@ impl HttpRequest {
     pub async fn send2(method: Method, request: HttpRequest) -> Result<HttpResponse, STError> {
         let h = tokio::spawn(async move {
             match HttpRequest::send_async(method, request).await {
-                Ok(s) => {
-                    Ok(s)
-                },
-                Err(e) => {
-                    Err(e)
-                }
+                Ok(s) => Ok(s),
+                Err(e) => Err(e),
             }
         });
         let result = h.await;
 
-
         match result {
             Ok(s) => s,
-            Err(e) => {
-                Err(st_error!(e))
-            }
+            Err(e) => Err(st_error!(e)),
         }
     }
 
     pub async fn send_async(method: Method, request: HttpRequest) -> Result<HttpResponse, STError> {
         let host = match request.request.uri().host() {
             Some(s) => s,
-            None => {
-                return Err(STError::new("No host in request"))
-            }
+            None => return Err(STError::new("No host in request")),
         };
 
         let cli = {
@@ -241,7 +235,7 @@ impl HttpRequest {
                     }
                 };
                 match reqwest::Client::builder().proxy(proxy).build() {
-                    Ok(o) => o, 
+                    Ok(o) => o,
                     Err(e) => {
                         return Err(st_error!(e));
                     }
@@ -249,33 +243,58 @@ impl HttpRequest {
             }
         };
         let pools = RequestPools::get_pools();
-        let sem = pools.get_sem(host).clone();
-        let _ = sem.acquire().await;  
+        let sem = pools.get_sem(host);
+        let _ = sem.acquire().await;
 
         let body = reqwest::Body::from((*request.body).clone());
         let response = {
             if method.eq(&Method::GET) {
-                cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.get(request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::POST) {
-                cli.post(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.post(request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::OPTIONS) {
-                cli.request(reqwest::Method::OPTIONS,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::OPTIONS, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::PATCH) {
-                cli.request(reqwest::Method::PATCH,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::PATCH, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::DELETE) {
-                cli.request(reqwest::Method::DELETE,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::DELETE, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::HEAD) {
-                cli.request(reqwest::Method::HEAD,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::HEAD, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::PUT) {
-                cli.request(reqwest::Method::PUT,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::PUT, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::TRACE) {
-                cli.request(reqwest::Method::TRACE,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
-            } 
-            
-            else {
-                cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::TRACE, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
+            } else {
+                cli.get(request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             }
-        }; 
+        };
         let ret = match response.await {
             Ok(s) => s,
             Err(e) => {
@@ -289,11 +308,9 @@ impl HttpRequest {
     pub fn send(method: Method, request: HttpRequest) -> Result<HttpResponse, STError> {
         let host = match request.request.uri().host() {
             Some(s) => s,
-            None => {
-                return Err(STError::new("No host in request"))
-            }
+            None => return Err(STError::new("No host in request")),
         };
-        
+
         let cli = {
             if request.proxy.len() == 0 {
                 reqwest::blocking::Client::new()
@@ -301,12 +318,11 @@ impl HttpRequest {
                 let proxy = match reqwest::Proxy::http(request.proxy.as_str()) {
                     Ok(s) => s,
                     Err(e) => {
-                        
                         return Err(st_error!(e));
                     }
                 };
                 match reqwest::blocking::Client::builder().proxy(proxy).build() {
-                    Ok(o) => o, 
+                    Ok(o) => o,
                     Err(e) => {
                         return Err(st_error!(e));
                     }
@@ -314,43 +330,66 @@ impl HttpRequest {
             }
         };
         let pools = RequestPools::get_pools();
-        let sem = pools.get_sem(host).clone();
-        let _ = sem.acquire(); 
+        let sem = pools.get_sem(host);
+        let _d = sem.acquire();
         let body = reqwest::blocking::Body::from((*request.body).clone());
         let response = {
             if method.eq(&Method::GET) {
-                cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.get(request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::POST) {
-                cli.post(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.post(request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::OPTIONS) {
-                cli.request(reqwest::Method::OPTIONS,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::OPTIONS, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::PATCH) {
-                cli.request(reqwest::Method::PATCH,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::PATCH, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::DELETE) {
-                cli.request(reqwest::Method::DELETE,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::DELETE, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::HEAD) {
-                cli.request(reqwest::Method::HEAD,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::HEAD, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::PUT) {
-                cli.request(reqwest::Method::PUT,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::PUT, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             } else if method.eq(&Method::TRACE) {
-                cli.request(reqwest::Method::TRACE,request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
-            } 
-            
-            else {
-                cli.get(request.request.uri().to_string()).headers(request.request.headers().clone()).body(body).send()
+                cli.request(reqwest::Method::TRACE, request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
+            } else {
+                cli.get(request.request.uri().to_string())
+                    .headers(request.request.headers().clone())
+                    .body(body)
+                    .send()
             }
-        }; 
+        };
         let ret = match response {
             Ok(s) => s,
             Err(e) => {
                 return Err(st_error!(e));
             }
         };
-        let resp = HttpResponse::from_reqwest_response(&request, ret);
-        resp
-    }
 
-    
+        HttpResponse::from_reqwest_response(&request, ret)
+    }
 }
 
 #[derive(Debug)]
@@ -361,7 +400,10 @@ pub struct HttpResponse {
 }
 
 impl HttpResponse {
-    pub async fn from_reqwest_response_async(req: HttpRequest, resp: reqwest::Response) -> Result<Self,STError> {
+    pub async fn from_reqwest_response_async(
+        req: HttpRequest,
+        resp: reqwest::Response,
+    ) -> Result<Self, STError> {
         let mut _resp = Response::new(Body::from(""));
         _resp.headers_mut().clone_from(resp.headers());
         let body = match resp.bytes().await {
@@ -370,28 +412,33 @@ impl HttpResponse {
                 return Err(st_error!(e));
             }
         };
-        Ok(Self { req: req, 
-            resp: _resp, 
-            body: body
+        Ok(Self {
+            req,
+            resp: _resp,
+            body,
         })
     }
 
-    pub fn from_reqwest_response(req: &HttpRequest, resp: reqwest::blocking::Response) -> Result<Self,STError> {
+    pub fn from_reqwest_response(
+        req: &HttpRequest,
+        resp: reqwest::blocking::Response,
+    ) -> Result<Self, STError> {
         let mut _resp = Response::new(Body::from(""));
         _resp.headers_mut().clone_from(resp.headers());
 
         let body = resp.bytes().unwrap();
-        Ok(Self { req: req.clone(), 
-            resp: _resp, 
-            body: body
+        Ok(Self {
+            req: req.clone_from_request(),
+            resp: _resp,
+            body,
         })
     }
 
     pub fn from(req: HttpRequest, resp: Response<Body>, body: Bytes) -> Self {
         Self {
-            req: req.clone(),
-            resp: resp,
-            body: body,
+            req: req.clone_from_request(),
+            resp,
+            body,
         }
     }
 
@@ -405,9 +452,7 @@ impl HttpResponse {
             Some(s) => {
                 return s.to_str().unwrap().to_string();
             }
-            None => {
-                return "".to_string();
-            }
+            None => "".to_string(),
         }
     }
 
@@ -430,38 +475,35 @@ impl HttpResponse {
     pub fn clone_original(&self) -> Response<Body> {
         let mut response = Response::new(Body::from(""));
         *response.headers_mut() = self.resp.headers().clone();
-        *response.status_mut() = self.resp.status().clone();
+        *response.status_mut() = self.resp.status();
         response
     }
 }
 
 impl HttpRequest {
     pub fn from_burp(burp: &BurpRequest) -> Result<Self, STError> {
-        let domain_with_scheme: String;
-        if burp.ssl {
-            domain_with_scheme = format!("https://{}/", burp.host);
+        let domain_with_scheme = if burp.ssl {
+            format!("https://{}/", burp.host)
         } else {
-            domain_with_scheme = format!("http://{}/", burp.host);
-        }
+            format!("http://{}/", burp.host)
+        };
 
-        let headers = burp.headers.split("\n").collect::<Vec<&str>>();
-        let method: String;
-        let path: String;
-        let proto: String;
+        let headers = burp.headers.split('\n').collect::<Vec<&str>>();
+
         let first = headers[0].trim();
-        let first = first.split(" ").collect::<Vec<&str>>();
+        let first = first.split(' ').collect::<Vec<&str>>();
         if first.len() != 3 {
             return Err(STError::new("first line does not match pattern"));
         }
 
-        method = first[0].to_string();
-        path = first[1].to_string();
-        proto = first[2].to_string();
+        let method: String = first[0].to_string();
+        let path: String = first[1].to_string();
+        let proto: String = first[2].to_string();
         let headers = headers[1..].to_vec();
         let mut header_map: HeaderMap = HeaderMap::new();
         for header in headers {
             let header = header.trim();
-            let index = header.find(":");
+            let index = header.find(':');
             let index = match index {
                 Some(s) => s,
                 None => {
@@ -520,38 +562,30 @@ impl HttpRequest {
         *request.version_mut() = p;
 
         Ok(Self {
-            request: request,
+            request,
             body: burp.body.clone(),
-            proxy: get_config().get_proxy().clone()
+            proxy: get_config().get_proxy().clone(),
         })
     }
 
     pub fn to_burp(&self) -> BurpRequest {
         let mut result: String = String::new();
-        let ssl: bool;
+
         let _ssl = self.request.uri().scheme().unwrap();
-        if _ssl.eq(&Scheme::HTTP) {
-            ssl = false;
-        } else {
-            ssl = true;
-        }
+        let ssl: bool = !_ssl.eq(&Scheme::HTTP);
 
         let path = self.request.uri().path_and_query().unwrap().to_string();
         let version = self.request.version();
-        let v: &str;
-        if version.eq(&Version::HTTP_09) {
-            v = "HTTP/0.9"
-        } else if version.eq(&Version::HTTP_10) {
-            v = "HTTP/0.9"
-        } else if version.eq(&Version::HTTP_11) {
-            v = "HTTP/0.9"
-        } else if version.eq(&Version::HTTP_2) {
-            v = "HTTP/0.9"
-        } else if version.eq(&Version::HTTP_3) {
-            v = "HTTP/0.9"
+        let v = if version.eq(&Version::HTTP_3)
+            || version.eq(&Version::HTTP_09)
+            || version.eq(&Version::HTTP_10)
+            || version.eq(&Version::HTTP_11)
+            || version.eq(&Version::HTTP_2)
+        {
+            "HTTP/0.9"
         } else {
-            v = "HTTP/1.1"
-        }
+            "HTTP/1.1"
+        };
         let m: &str;
         let method = self.request.method();
         if method.eq(&Method::GET) {
@@ -603,8 +637,8 @@ impl HttpRequest {
         BurpRequest {
             headers: result,
             body: self.body.clone(),
-            ssl: ssl,
-            host: host,
+            ssl,
+            host,
         }
     }
 }
@@ -618,7 +652,7 @@ pub struct BurpRequest {
 }
 
 impl BurpRequest {
-    pub fn clone(&self) -> BurpRequest {
+    pub fn clone_from_burp_request(&self) -> BurpRequest {
         Self {
             headers: self.headers.clone(),
             body: Arc::new((*self.body).clone()),
@@ -643,7 +677,7 @@ pub enum BParamType {
 #[derive(Debug, PartialEq)]
 pub enum BPlace {
     Headers,
-    Body
+    Body,
 }
 
 #[derive(Debug)]
@@ -655,7 +689,7 @@ pub struct BurpParam {
     value_end: usize,
     value: String,
     param_type: BParamType,
-    place   : BPlace
+    place: BPlace,
 }
 
 impl BurpParam {
@@ -694,14 +728,14 @@ impl BurpRequest {
     pub fn replace(&mut self, start: usize, end: usize, s: &str) {
         if start < self.headers.len() && end < self.headers.len() {
             self.headers.replace_range(start..end, s);
-        } 
+        }
     }
 
     pub fn replace_param(&mut self, param: &BurpParam) -> Result<BurpRequest, STError> {
-        let mut c = (*self).clone();
+        let mut c = (*self).clone_from_burp_request();
         if param.get_place().eq(&BPlace::Headers) {
-            let name = c.headers[param.name_start..(param.name_end+1)].to_string();
-            let value = c.headers[param.value_start..(param.value_end+1)].to_string();
+            let name = c.headers[param.name_start..(param.name_end + 1)].to_string();
+            let value = c.headers[param.value_start..(param.value_end + 1)].to_string();
             if name.eq(param.get_name()) && value.eq(param.get_value()) {
                 return Ok(c);
             }
@@ -711,11 +745,13 @@ impl BurpRequest {
             }
 
             if !name.eq(param.get_name()) {
-                c.headers.replace_range(param.name_start..(param.name_end+1), param.get_name());
+                c.headers
+                    .replace_range(param.name_start..(param.name_end + 1), param.get_name());
             }
 
             if !value.eq(param.get_value()) {
-                c.headers.replace_range(param.value_start..(param.value_end+1), &param.get_value());
+                c.headers
+                    .replace_range(param.value_start..(param.value_end + 1), param.get_value());
             }
         }
         Ok(c)
@@ -727,7 +763,7 @@ impl BurpRequest {
         let first = headers[0];
         let mut query_base: usize = 0;
         let mut query_end: usize = 0;
-        let q_mark = first.find("?");
+        let q_mark = first.find('?');
         let s = match q_mark {
             Some(o) => {
                 query_base = o + 1;
@@ -742,7 +778,7 @@ impl BurpRequest {
             query = "".to_string();
         } else {
             let _tmp = &first[(query_base)..first.len()];
-            let _s = match _tmp.find(" ") {
+            let _s = match _tmp.find(' ') {
                 Some(ss) => {
                     query_end = ss + query_base;
                     ss
@@ -752,7 +788,7 @@ impl BurpRequest {
                 }
             };
 
-            query = (&first[query_base..query_end]).to_string();
+            query = first[query_base..query_end].to_string();
         }
 
         let query_param = BurpParam {
@@ -763,7 +799,7 @@ impl BurpRequest {
             value_end: query_end,
             value: query.clone(),
             param_type: BParamType::GetQuery,
-            place: BPlace::Headers
+            place: BPlace::Headers,
         };
         result.push(query_param);
         let get_pattern = Regex::new(r"(\w+)=([^;\n\r]+)").unwrap();
@@ -780,7 +816,7 @@ impl BurpRequest {
                         value_end: v.end() + first.len() + 2,
                         value: v.as_str().to_string(),
                         param_type: BParamType::Get,
-                        place: BPlace::Headers
+                        place: BPlace::Headers,
                     };
                     result.push(header_param);
                 }
@@ -788,7 +824,7 @@ impl BurpRequest {
         }
         let headers = &headers[1..].join("\r\n");
         let header_pattern = Regex::new(r"([\w\-]+): ?([\r\n]+)").unwrap();
-        for cap in header_pattern.captures_iter(&headers) {
+        for cap in header_pattern.captures_iter(headers) {
             let key = cap.get(1);
             let value = cap.get(2);
             if let Some(k) = key {
@@ -801,7 +837,7 @@ impl BurpRequest {
                         value_end: v.end() + first.len() + 2,
                         value: v.as_str().to_string(),
                         param_type: BParamType::Header,
-                        place: BPlace::Headers
+                        place: BPlace::Headers,
                     };
                     result.push(header_param);
                 }
@@ -809,7 +845,7 @@ impl BurpRequest {
         }
 
         let kv_pattern = Regex::new(r"(\w+)=([^;\n\r]+)").unwrap();
-        for cap in kv_pattern.captures_iter(&headers) {
+        for cap in kv_pattern.captures_iter(headers) {
             let key = cap.get(1);
             let value = cap.get(2);
             if let Some(k) = key {
@@ -822,7 +858,7 @@ impl BurpRequest {
                         value_end: v.end() + first.len() + 2,
                         value: v.as_str().to_string(),
                         param_type: BParamType::HeaderValue,
-                        place: BPlace::Headers
+                        place: BPlace::Headers,
                     };
                     result.push(header_param);
                 }

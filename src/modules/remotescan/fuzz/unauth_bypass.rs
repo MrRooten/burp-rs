@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use strsim::normalized_levenshtein;
 
 use crate::{
-    librs::http::utils::{HttpRequest},
+    librs::http::utils::HttpRequest,
     modules::{IActive, Issue, IssueConfidence, IssueLevel, ModuleMeta, ModuleType},
     st_error,
     utils::STError
@@ -53,7 +53,7 @@ fn run(
     let host_with_port = Arc::new(match uri.port() {
         Some(s) => format!("{}:{}", uri.host().unwrap(), uri.port_u16().unwrap()),
         None => {
-            format!("{}", uri.host().unwrap())
+            uri.host().unwrap().to_string()
         }
     });
     let not_found = match HttpRequest::from_url(&format!("{}sdfdsfsdfgdf", url)) {
@@ -69,15 +69,14 @@ fn run(
             return Err(e);
         }
     };
-    let not_found = Arc::new(String::from_utf8_lossy(&resp.get_body()).to_string());
+    let not_found = Arc::new(String::from_utf8_lossy(resp.get_body()).to_string());
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
-    let nodes = uri.path().split("/").collect::<Vec<&str>>();
-    let mut i = 0;
+    let nodes = uri.path().split('/').collect::<Vec<&str>>();
     let mut handles = vec![];
-    for node in &nodes {
+    for (i, node) in nodes.iter().enumerate() {
         let var_node = node.to_string();
         for payload in &payloads {
             let out = format!("{}/{}", var_node, payload);
@@ -136,7 +135,7 @@ fn run(
                 let m = method.clone();
                 let not_found2 = not_found.clone();
                 let h_port = host_with_port.clone();
-                let mut r = request.clone();
+                let mut r = request.clone_from_request();
 
                 r.set_header(header.0, header.1);
                 let h = rt.spawn(async move {
@@ -153,7 +152,7 @@ fn run(
                     {
                         return ;
                     }
-                    let content = String::from_utf8_lossy(&resp.get_body()).to_string();
+                    let content = String::from_utf8_lossy(resp.get_body()).to_string();
                     if normalized_levenshtein(&content, &not_found2) > 0.9 {
                         return ;
                     }
@@ -174,7 +173,6 @@ fn run(
                 
             }
         }
-        i += 1
     }
     rt.block_on(async move {
         for h in handles {
@@ -190,7 +188,7 @@ impl IActive for UnauthBypass {
     fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
         let result = Vec::default();
         //println!("passive_run...");
-        return Ok(result);
+        Ok(result)
     }
 
     fn active_run(
@@ -210,7 +208,7 @@ impl IActive for UnauthBypass {
                 format!("{}:{}", uri.host().unwrap(), port)
             }
             None => {
-                format!("{}", uri.host().unwrap())
+                uri.host().unwrap().to_string()
             }
         };
         let mut headers = HeaderMap::new();
@@ -218,8 +216,8 @@ impl IActive for UnauthBypass {
         headers.insert(HOST, host_with_port.parse().unwrap());
         let u = url.to_string();
         let h = headers.clone();
-        let result = run(Method::GET, &u, &h, Arc::new(Bytes::from("")));
-        return result;
+        
+        run(Method::GET, &u, &h, Arc::new(Bytes::from("")))
     }
 
     fn metadata(&self) -> &Option<crate::modules::ModuleMeta> {
@@ -232,6 +230,12 @@ impl IActive for UnauthBypass {
 
     fn update(&mut self) -> Result<(), crate::utils::STError> {
         Ok(())
+    }
+}
+
+impl Default for UnauthBypass {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -24,7 +24,7 @@ fn solr(s: &Uri) -> Option<Issue> {
         return Some(issue);
     }
 
-    return None;
+    None
 }
 
 
@@ -44,7 +44,7 @@ impl IPassive for PathMatch {
     }
 
     fn name(&self) -> String {
-        return "PathMatch".to_string();
+        "PathMatch".to_string()
     }
 
     fn help(&self) -> crate::modules::Helper {

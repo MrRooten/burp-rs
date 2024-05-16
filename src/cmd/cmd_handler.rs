@@ -1,3 +1,5 @@
+use std::ptr::{addr_of, addr_of_mut};
+
 use colored::Colorize;
 
 use crate::{utils::STError, cmd::{handlers::{Log, CatResponse, ClearScreen
@@ -17,6 +19,7 @@ pub struct  CMDOptions {
     auto_complete   : Vec<String>
 }
 
+#[allow(clippy::ptr_arg)]
 pub trait CMDProc {
     fn get_name(&self) -> &str;
 
@@ -31,16 +34,16 @@ pub trait CMDProc {
 
 impl CMDHandler {
     pub const fn new() -> Self {
-        let s = Self { procs: Vec::new() };
-        s
+        
+        Self { procs: Vec::new() }
     }
 
     pub fn process(&self, line: String) {
         let opts = line
-            .split(" ")
+            .split(' ')
             .filter(|&x| !x.is_empty())
             .collect::<Vec<&str>>();
-        if opts.len() == 0 {
+        if opts.is_empty() {
             return ;
         }
         let proc_name = opts[0];
@@ -108,10 +111,10 @@ impl CMDHandler {
     }
 
     pub fn get_handler() -> &'static CMDHandler {
-        unsafe { &CMD_HANDLER }
+        unsafe { &*addr_of!(CMD_HANDLER) }
     }
 
     pub fn get_handler_mut() -> &'static mut CMDHandler {
-        unsafe { &mut CMD_HANDLER }
+        unsafe { &mut *addr_of_mut!(CMD_HANDLER) }
     }
 }

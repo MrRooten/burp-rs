@@ -2,7 +2,7 @@ use std::{str::FromStr, sync::Arc};
 
 use regex::Regex;
 
-use crate::{modules::IPassive, proxy::log::{ReqResLog}, utils::STError, librs::http::utils::{BurpRequest, BurpParam}};
+use crate::{modules::IPassive, proxy::log::ReqResLog, utils::STError, librs::http::utils::{BurpRequest, BurpParam}};
 
 
 pub struct JsMiner;
@@ -30,7 +30,7 @@ static CLOUD_URLS_REGEX: &str = "([\\w]+[.]){1,10}(s3.amazonaws.com|\
 
 impl IPassive for JsMiner {
     fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest, params: &Vec<BurpParam>) -> Result<(), crate::utils::STError> {
-        let allow_headers = vec!["javascript", "html", "xml", "json", "text"];
+        let allow_headers = ["javascript", "html", "xml", "json", "text"];
         let screts_regex = Regex::from_str(ECRETS_REGEX);
         if log.get_response().borrow().is_none() {
             return Err(STError::new("Not found history log request"));
@@ -44,7 +44,7 @@ impl IPassive for JsMiner {
 
 
         let header = header.unwrap();
-        if allow_headers.iter().any(|x| { header.contains(x) }) == false {
+        if !allow_headers.iter().any(|x| { header.contains(x) }) {
             return Ok(())
         }
 

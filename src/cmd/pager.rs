@@ -9,7 +9,7 @@ pub(crate) fn pager(s: &str, p: minus::Pager) -> Result<(), STError> {
     p.set_exit_strategy(ExitStrategy::PagerQuit).unwrap();
     // Initialize the pager
     let changes = || {
-        p.push_str(s).unwrap_or_else(|_| {});
+        p.push_str(s).unwrap_or(());
         Result::<(), Box<dyn std::error::Error>>::Ok(())
     };
 

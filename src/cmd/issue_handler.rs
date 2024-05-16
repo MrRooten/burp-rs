@@ -8,6 +8,12 @@ pub struct InfoIssue {
     opts    : CMDOptions
 }
 
+impl Default for InfoIssue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InfoIssue {
     pub fn new() -> Self {
         Self { opts: Default::default() }
@@ -93,6 +99,12 @@ pub struct ListIssues {
     opts    : CMDOptions
 }   
 
+impl Default for ListIssues {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ListIssues {
     pub fn new() -> Self {
         Self {
@@ -125,10 +137,10 @@ impl CMDProc for ListIssues {
             let issues = site.get_issues();
             for issue_group in issues {
                 let level: ColoredString;
-                if issue_group.1.len() > 0 {
-                    if issue_group.1.get(0).unwrap().get_level().eq(&IssueLevel::HighRisk) {
+                if !issue_group.1.is_empty() {
+                    if issue_group.1.first().unwrap().get_level().eq(&IssueLevel::HighRisk) {
                         level = "high".red();
-                    } else if issue_group.1.get(0).unwrap().get_level().eq(&IssueLevel::Medium) {
+                    } else if issue_group.1.first().unwrap().get_level().eq(&IssueLevel::Medium) {
                         level = "medium".yellow();
                     } else {
                         level = "low".green();

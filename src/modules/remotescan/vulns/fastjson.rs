@@ -26,7 +26,7 @@ impl IActive for FastJson {
     }
 
     fn active_run(&self, url: &str, args: crate::modules::Args) -> Result<Vec<crate::modules::Issue>, crate::utils::STError> {
-        return Ok(Vec::new())
+        Ok(Vec::new())
     }
 
     fn metadata(&self) -> &Option<crate::modules::ModuleMeta> {
@@ -38,6 +38,6 @@ impl IActive for FastJson {
     }
 
     fn update(&mut self) -> Result<(), crate::utils::STError> {
-        return Ok(())
+        Ok(())
     }
 }

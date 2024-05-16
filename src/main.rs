@@ -3,8 +3,8 @@ use std::{
 };
 
 use burp_rs::{
-    cmd::cmd::cmd,
-    proxy::{proxy::proxy},
+    cmd::cmd_inner::cmd,
+    proxy::{inner_proxy::proxy},
     utils::{banner, log::init, config::{get_config}}, scanner::scaner_thread, 
 };
 use tokio::sync::Semaphore;

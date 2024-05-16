@@ -16,7 +16,7 @@ use hyper::{
     body::{self, Bytes},
     Body, Method, Request, Response,
 };
-use std::{net::SocketAddr, sync::{mpsc::{Receiver, self, SyncSender}, Arc}, thread::spawn};
+use std::{net::SocketAddr, ptr::addr_of_mut, sync::{mpsc::{self, Receiver, SyncSender}, Arc}, thread::spawn};
 use tracing::*;
 
 async fn shutdown_signal() {
@@ -45,7 +45,7 @@ async fn copy_req(req: &mut Request<Body>) -> LogRequest {
     new_req.uri_mut().clone_from(req.uri());
     new_req.version_mut().clone_from(&req.version());
     new_req.extensions().clone_from(&req.extensions());
-    return LogRequest::from(new_req, Arc::new(s));
+    LogRequest::from(new_req, Arc::new(s))
 }
 
 async fn copy_req_header(req: &mut Request<Body>) -> LogRequest {
@@ -58,7 +58,7 @@ async fn copy_req_header(req: &mut Request<Body>) -> LogRequest {
     new_req.uri_mut().clone_from(req.uri());
     new_req.version_mut().clone_from(&req.version());
     new_req.extensions().clone_from(&req.extensions());
-    return LogRequest::from(new_req, Arc::new(s));
+    LogRequest::from(new_req, Arc::new(s))
 }
 
 async fn copy_resp(resp: &mut Response<Body>) -> LogResponse {
@@ -70,7 +70,7 @@ async fn copy_resp(resp: &mut Response<Body>) -> LogResponse {
     new_res.headers_mut().clone_from(resp.headers());
     new_res.status_mut().clone_from(&resp.status());
     new_res.version_mut().clone_from(&resp.version());
-    return LogResponse::from(new_res, s);
+    LogResponse::from(new_res, s)
 }
 
 async fn copy_resp_header(resp: &mut Response<Body>) -> LogResponse {
@@ -80,7 +80,7 @@ async fn copy_resp_header(resp: &mut Response<Body>) -> LogResponse {
     new_res.headers_mut().clone_from(resp.headers());
     new_res.status_mut().clone_from(&resp.status());
     new_res.version_mut().clone_from(&resp.version());
-    return LogResponse::from(new_res, Bytes::new());
+    LogResponse::from(new_res, Bytes::new())
 }
 
 #[async_trait]
@@ -151,9 +151,9 @@ impl HttpHandler for ProxyHandler {
                 }
             }
         }
-        let index = self.index.clone();
+        let index = self.index;
         unsafe {
-            let sender = &mut PASSIVE_SCAN_SENDER;
+            let sender = &mut *addr_of_mut!(PASSIVE_SCAN_SENDER);
             let sender = match sender {
                 Some(o) => o,
                 None => {
@@ -194,7 +194,7 @@ pub async fn proxy(addr: &str) {
         }
         //Async way to passively scan
         spawn(|| {
-            let receiver = &mut PASSIVE_SCAN_RECEIVER;
+            let receiver = &mut *addr_of_mut!(PASSIVE_SCAN_RECEIVER);
             let receiver = match receiver {
                 Some(o) => o,
                 None => {

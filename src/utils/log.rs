@@ -88,10 +88,10 @@ pub fn init() -> Result<(), STError> {
 
     match result {
         Ok(o) => {
-            return Ok(());
+            Ok(())
         }
         Err(e) => {
-            return Err(st_error!(e));
+            Err(st_error!(e))
         }
     }
 }
@@ -102,5 +102,5 @@ pub fn can_debug() -> bool {
         return true;
     } }
 
-    return false;
+    false
 }

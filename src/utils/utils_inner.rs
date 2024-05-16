@@ -58,7 +58,7 @@ impl TokenPrinter {
             return true;
         }
 
-        return false;
+        false
     }
 }
 
@@ -75,7 +75,7 @@ impl TokenSink for TokenPrinter {
             NullCharacterToken => self.do_char(' '),
             TagToken(tag) => {
                 self.is_char(false);
-                if !tag.name.eq("script") && self.in_script == true {
+                if !tag.name.eq("script") && self.in_script {
                     return TokenSinkResult::Continue;
                 }
                 // This is not proper HTML serialization, of course.
@@ -92,7 +92,7 @@ impl TokenSink for TokenPrinter {
                     EndTag => {
                         if tag.name.eq("script") {
                             let (pretty, _) = prettify_js::prettyprint(&self.unparse_text);
-                            self.result_s.push_str(&format!("{}", pretty));
+                            self.result_s.push_str(&pretty.to_string());
                             self.unparse_text = String::new();
                         }
                         if self.indent_num >= 1 {
@@ -118,16 +118,16 @@ impl TokenSink for TokenPrinter {
                     self_closing = true;
                 }
                 if self_closing {
-                    self.result_s.push_str(&format!(" /"));
+                    self.result_s.push_str(" /");
                     if self.indent_num >= 1 {
                         self.indent_num -= 1;
                     }
                 }
 
-                self.result_s.push_str(&format!(">\n"));
+                self.result_s.push_str(">\n");
             }
             ParseError(err) => {
-                if self.in_script == true {
+                if self.in_script {
                     return TokenSinkResult::Continue;
                 }
                 self.is_char(false);
@@ -141,7 +141,7 @@ impl TokenSink for TokenPrinter {
                 }
             }
             _ => {
-                if self.in_script == true {
+                if self.in_script {
                     return TokenSinkResult::Continue;
                 }
 
@@ -169,10 +169,10 @@ pub fn tidy_html(html: &str) -> String {
             ..Default::default()
         },
     );
-    let chunk: Tendril<fmt::Bytes> = html.as_bytes().try_into().unwrap();
+    let chunk: Tendril<fmt::Bytes> = html.as_bytes().into();
     let mut html_buffer = BufferQueue::new();
     html_buffer.push_back(chunk.try_reinterpret().unwrap());
     let _ = tok.feed(&mut html_buffer);
-    tok.sink.result_s.push_str("\0");
+    tok.sink.result_s.push('\0');
     tok.sink.result_s
 }

@@ -139,12 +139,13 @@ impl Issue {
 
         let request = httplog.get_request();
 
-        return request.get_url();
+        request.get_url()
     }
 
 
 }
 
+#[allow(clippy::ptr_arg)]
 pub trait IPassive {
     fn run(&self, log: &Arc<ReqResLog>, burp: &BurpRequest, params: &Vec<BurpParam>) -> Result<(), STError>;
 
@@ -153,7 +154,7 @@ pub trait IPassive {
     fn help(&self) -> Helper;
 }
 
-use std::{collections::{HashMap, HashSet}, sync::Arc};
+use std::{collections::{HashMap, HashSet}, ptr::{addr_of, addr_of_mut}, sync::Arc};
 
 use log::error;
 use once_cell::unsync::Lazy;
@@ -215,13 +216,13 @@ pub static mut GLOB_MODS: Vec<ModuleMeta> = Vec::<ModuleMeta>::new();
 pub static mut WILL_RUN_MODS:Lazy<HashSet<ModuleMeta>> = Lazy::new(|| {HashSet::<ModuleMeta>::new()});
 pub fn get_modules_meta() -> &'static Vec<ModuleMeta> {
     unsafe {
-        &GLOB_MODS
+        &*addr_of!(GLOB_MODS)
     }
 }
 
 pub fn get_will_run_mods() -> &'static HashSet<ModuleMeta> {
     unsafe {
-        &WILL_RUN_MODS
+        &*addr_of!(WILL_RUN_MODS)
     }
 }
 
@@ -234,7 +235,7 @@ push_will_run_mod("crlf*")
 */
 pub fn push_will_run_mod(name: &str) {
     unsafe {
-        for poc in &GLOB_MODS {
+        for poc in get_modules_meta() {
             if WildMatch::new(name).matches(poc.get_name()) {
                 WILL_RUN_MODS.insert(poc.clone());
             }
@@ -244,7 +245,7 @@ pub fn push_will_run_mod(name: &str) {
 
 pub fn remove_loaded_mod(name: &str) {
     unsafe {
-        for poc in &GLOB_MODS {
+        for poc in get_modules_meta() {
             if WildMatch::new(name).matches(poc.get_name()) {
                 WILL_RUN_MODS.remove(poc);
             }
@@ -267,8 +268,8 @@ pub struct Task {
 impl Task {
     pub fn new(index: u32, mod_name: &str, once: bool) -> Self {
         Self {
-            index: index,
-            once : once,
+            index,
+            once,
             mod_name : mod_name.to_string()
         }
     }
@@ -288,7 +289,7 @@ impl Task {
 
 pub fn get_next_to_scan() -> Option<Task> {
     unsafe {
-        let receiver = &mut SCAN_RECEIVER;
+        let receiver = &mut *addr_of_mut!(SCAN_RECEIVER);
         let receiver = match receiver {
             Some(o) => o,
             None => {
@@ -297,10 +298,10 @@ pub fn get_next_to_scan() -> Option<Task> {
             }
         };
 
-        return match receiver.try_recv() {
+        match receiver.try_recv() {
             Ok(o) => Some(o),
             Err(e) => None
-        };
+        }
     }
 }
 

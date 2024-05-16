@@ -1,8 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
-    sync::mpsc,
-    thread,
-    time::{SystemTime, UNIX_EPOCH},
+    collections::{HashMap, HashSet}, ptr::addr_of, sync::mpsc, thread, time::{SystemTime, UNIX_EPOCH}
 };
 
 use colored::Colorize;
@@ -64,7 +61,7 @@ impl CMDProc for Push {
 
             let logs = site.get_logs();
             for log in logs {
-                let task = Task::new(log.clone(), "dummy", false);
+                let task = Task::new(*log, "dummy", false);
                 unsafe {
                     TO_SCAN_QUEUE.push(task);
                 }
@@ -103,6 +100,12 @@ impl CMDProc for Push {
     }
 }
 
+impl Default for Push {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Push {
     pub fn new() -> Self {
         Self {
@@ -113,6 +116,12 @@ impl Push {
 
 pub struct ListTarget {
     opts: CMDOptions,
+}
+
+impl Default for ListTarget {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ListTarget {
@@ -134,7 +143,7 @@ impl CMDProc for ListTarget {
 
     fn process(&self, line: &Vec<&str>) -> Result<(), STError> {
         unsafe {
-            for target in &TO_SCAN_QUEUE {
+            for target in &*addr_of!(TO_SCAN_QUEUE) {
                 let log = LogHistory::get_httplog(target.get_index());
                 let log = match log {
                     Some(s) => s,
@@ -168,6 +177,12 @@ pub struct LocalScan {
     opts: CMDOptions,
 }
 
+impl Default for LocalScan {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LocalScan {
     pub fn new() -> Self {
         Self {
@@ -176,7 +191,7 @@ impl LocalScan {
     }
 }
 
-static mut PASSIVE_SCAN_DONE: Lazy<HashSet<u32>> = Lazy::new(|| HashSet::new());
+static mut PASSIVE_SCAN_DONE: Lazy<HashSet<u32>> = Lazy::new(HashSet::new);
 
 impl CMDProc for LocalScan {
     fn get_name(&self) -> &str {
@@ -270,6 +285,12 @@ pub struct ActiveScan {
     opts: CMDOptions,
 }
 
+impl Default for ActiveScan {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ActiveScan {
     pub fn new() -> Self {
         Self {
@@ -315,7 +336,7 @@ impl CMDProc for ActiveScan {
             }
         }
 
-        let args = (&line[2..].join(" ")).to_string();
+        let args = line[2..].join(" ").to_string();
         if module.is_some() {
             let meta = match module.unwrap().metadata() {
                 Some(s) => s,
@@ -353,7 +374,7 @@ impl CMDProc for ActiveScan {
                         SCAN_SENDER = Some(tx);
                         SCAN_RECEIVER = Some(rx);
                     }
-                    let sender = match &SCAN_SENDER {
+                    let sender = match &*addr_of!(SCAN_SENDER) {
                         Some(o) => o,
                         None => {
                             return Err(STError::new("SCAN_SENDER is none"));
@@ -376,7 +397,7 @@ impl CMDProc for ActiveScan {
                             return;
                         }
                     };
-                    let mut running_module = RunningModuleWrapper::new(&meta.get_name(), &args);
+                    let mut running_module = RunningModuleWrapper::new(meta.get_name(), &args);
                     add_running_modules(&mut running_module);
                     let start = SystemTime::now();
                     let since_the_epoch = start

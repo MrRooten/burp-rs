@@ -13,7 +13,7 @@ impl IActive for TestScan {
     fn passive_run(&self, index: u32) -> Result<Vec<crate::modules::Issue>,crate::utils::STError> {
         let result = Vec::default();
         println!("passive_run...");
-        return Ok(result);
+        Ok(result)
     }
 
     fn active_run(&self, url: &str, args: crate::modules::Args) -> Result<Vec<crate::modules::Issue>,crate::utils::STError> {
@@ -30,14 +30,11 @@ impl IActive for TestScan {
                 format!("{}:{}", uri.host().unwrap(), port)
             }
             None => {
-                format!("{}", uri.host().unwrap())
+                uri.host().unwrap().to_string()
             }
         };
 
-        let host = match uri.host() {
-            Some(h) => h,
-            None => ""
-        };
+        let host = uri.host().unwrap_or("");
         let mut headers = HeaderMap::new();
         let host_key = HeaderValue::from_str("host").unwrap();
         headers.insert(HOST, host_with_port.parse().unwrap());
@@ -53,7 +50,7 @@ impl IActive for TestScan {
         info!("passive_run...");
         let issue = Issue::new("test_issue", IssueLevel::HighRisk, "ok", IssueConfidence::Confirm, host);
         Issue::add_issue(issue, &Arc::new(resp.get_httplog()));
-        return Ok(result);
+        Ok(result)
     }
 
     fn metadata(&self) -> &Option<crate::modules::ModuleMeta> {
@@ -66,6 +63,12 @@ impl IActive for TestScan {
 
     fn update(&mut self) -> Result<(), crate::utils::STError> {
         Ok(())
+    }
+}
+
+impl Default for TestScan {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

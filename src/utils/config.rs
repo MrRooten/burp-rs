@@ -1,4 +1,4 @@
-use std::{fs, sync::Arc};
+use std::{fs, ptr::addr_of_mut, sync::Arc};
 
 use log::info;
 use once_cell::sync::Lazy;
@@ -14,7 +14,7 @@ static mut CONFIG: Lazy<Config> = Lazy::new(|| {
 
 pub fn get_config() -> &'static mut Lazy<Config> {
     unsafe {
-        &mut CONFIG
+        &mut*addr_of_mut!(CONFIG)
     }
 }
 pub struct Config {
@@ -38,17 +38,14 @@ impl Config {
             }
         };
         let path = "http.proxy";
-        let keys = path.split(".").collect::<Vec<&str>>();
+        let keys = path.split('.').collect::<Vec<&str>>();
 
         let mut sub: &Yaml = &yaml[0];
         for key in keys {
             sub = &sub[key];
         }
 
-        let proxy = match sub.as_str() {
-            Some(s) => s,
-            None => ""
-        };
+        let proxy = sub.as_str().unwrap_or("");
 
         let proxy = proxy.to_string();
         Ok(Self {
@@ -76,9 +73,9 @@ impl Config {
     }
 
     pub fn get(&self, path: &str) -> &Yaml {
-        let keys = path.split(".").collect::<Vec<&str>>();
+        let keys = path.split('.').collect::<Vec<&str>>();
         let doc = &self.config[0];
-        let mut sub: &Yaml = &doc;
+        let mut sub: &Yaml = doc;
         for key in keys {
             sub = &sub[key];
         }
@@ -87,9 +84,9 @@ impl Config {
     }
 
     pub fn set(&mut self, path: &str, value: &str) -> Result<(), STError> {
-        let keys = path.split(".").collect::<Vec<&str>>();
+        let keys = path.split('.').collect::<Vec<&str>>();
         let doc = &self.config[0];
-        let mut sub: &Yaml = &doc;
+        let mut sub: &Yaml = doc;
         for key in keys {
             sub = &sub[key];
         }

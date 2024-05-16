@@ -1,33 +1,36 @@
 use std::{sync::Arc, borrow::Cow, num::ParseIntError};
 use urlencoding::decode;
 
-use crate::{modules::{IPassive, Issue, IssueLevel, IssueConfidence}, proxy::log::{ReqResLog}, librs::http::utils::{BurpRequest, BurpParam}};
+use crate::{modules::{IPassive, Issue, IssueLevel, IssueConfidence}, proxy::log::ReqResLog, librs::http::utils::{BurpRequest, BurpParam}};
 
 pub struct ParamInspect;
 
 pub fn is_base64(s: &str) -> bool {
-    if s.len() == 0 {
+    if s.is_empty() {
         return false;
     }
-    let base64_regex = match base64::decode(s) {
+    match base64::decode(s) {
         Ok(o) => {
-            return true;
+            true
         },
         Err(e) => {
-            return false;
+            false
         }
-    };
+    }
 }
 
 pub fn is_jave_deserialize(s: &Vec<u8>) -> bool {
+    let _ = s;
     false
 }
 
 pub fn is_php_deserialize(s: &Vec<u8>) -> bool {
+    let _ = s;
     false
 }
 
 pub fn is_dotnet_deserialize(s: &Vec<u8>) -> bool {
+    let _ = s;
     false
 }
 
@@ -60,9 +63,7 @@ impl IPassive for ParamInspect {
                 Issue::add_issue(issue, log);
                 let data = base64::decode(&*v);
                 if let Ok(o) = data {
-                    if is_jave_deserialize(&o) {
-
-                    }
+                    is_jave_deserialize(&o);
 
                     if is_php_deserialize(&o) {
 

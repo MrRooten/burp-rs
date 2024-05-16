@@ -17,38 +17,35 @@ pub fn is_capture_res(res: &Response<Body>) -> bool {
         debug!("burp-rs:Recive Response: {:?}", res);
     }
 
-    match content_type {
-        Some(t) => {
-            let s = t.to_str();
-            match s {
-                Ok(o) => {
-                    let filter_type = config.get("body_filter.content_type").as_vec();
-                    if filter_type.is_none() {
-                        if o.contains("text") || o.contains("json") || o.contains("xml") {
-                            return true;
-                        }
-                    }
-                    let filter_types = filter_type.unwrap();
-                    for i in filter_types {
-                        let t = i.as_str().unwrap();
-                        if t.starts_with("!") {
-                            if o.contains(&t[1..]) {
-                                return false;
-                            }
-                        } else {
-                            if o.contains(t) {
-                                return true;
-                            }
-                        }
-                    }
+    if let Some(t) = content_type {
+        let s = t.to_str();
+        match s {
+            Ok(o) => {
+                let filter_type = config.get("body_filter.content_type").as_vec();
+                if filter_type.is_none()
+                    && (o.contains("text") || o.contains("json") || o.contains("xml"))
+                {
+                    return true;
                 }
-                Err(e) => {
-                    error!("{}", e);
+                let filter_types = filter_type.unwrap();
+                for i in filter_types {
+                    let t = i.as_str().unwrap();
+                    if t.starts_with('!') {
+                        let sub = t.get(1..).unwrap();
+                        if o.contains(sub) {
+                            return false;
+                        }
+                    } else if o.contains(t) {
+                        return true;
+                    }
                 }
             }
+            Err(e) => {
+                error!("{}", e);
+            }
         }
-        None => {}
     };
+
     let s = res.headers().get("content-length");
     let value = match s {
         Some(v) => v,
@@ -74,50 +71,32 @@ pub fn is_capture_res(res: &Response<Body>) -> bool {
     match max_size {
         Some(o) => {
             let ratio: u32;
-            if o.ends_with("M") {
+            if o.ends_with('M') {
                 ratio = 1024 * 1024;
-            } else if o.ends_with("K") {
+            } else if o.ends_with('K') {
                 ratio = 1024;
-            } else if o.ends_with("B") {
-                ratio = 1;
             } else {
                 ratio = 1;
             }
             //if empty string, default action
-            if o.len() == 0 {
-                if value < 1024 * 1024 {
-                    return true;
-                } else {
-                    return false;
-                }
+            if o.is_empty() {
+                return value < 1024 * 1024;
             }
             let max = match o[0..o.len() - 1].parse::<u32>() {
                 Ok(o) => o,
                 Err(e) => {
                     //if parse int error, default action
-                    if value < 1024 * 1024 {
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    return value < 1024 * 1024;
                 }
             };
 
             let max = max * ratio;
 
-            if value <= max {
-                return true;
-            } else {
-                return false;
-            }
+            value <= max
         }
         None => {
             //if size_max is not set, default action
-            if value < 1024 * 1024 {
-                return true;
-            } else {
-                return false;
-            }
+            value < 1024 * 1024
         }
-    };
+    }
 }

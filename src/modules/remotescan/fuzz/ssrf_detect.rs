@@ -67,6 +67,12 @@ impl IActive for SSRFDetect {
     }
 }
 
+impl Default for SSRFDetect {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SSRFDetect {
     pub fn new() -> Self {
         let meta = ModuleMeta {
